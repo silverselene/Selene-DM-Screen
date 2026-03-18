@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Legendary DM Screen"
+version = "1.0.0"
+id = "artifacts/dm-screen"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 19619
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/dm-screen run dev"
+
+[services.env]
+PORT = "19619"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/dm-screen", "run", "build"]
+publicDir = "artifacts/dm-screen/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
