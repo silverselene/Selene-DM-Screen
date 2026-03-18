@@ -1,4 +1,4 @@
-import { X, BookOpen, Swords, FileText, Wand2, Skull } from "lucide-react";
+import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked } from "lucide-react";
 import type { WidgetType } from "@/types";
 
 interface Props {
@@ -10,37 +10,44 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
   {
     type: "compendium",
     label: "5.5e Compendium",
-    description: "Search 2024 rules: Weapon Masteries, Exhaustion, spells & more.",
+    description: "2024 rules: Weapon Masteries, conditions, combat, feats & more.",
     icon: <BookOpen className="w-6 h-6" />,
-    color: "from-blue-900/60 to-blue-800/40 border-blue-600/50 hover:border-blue-500",
+    color: "from-blue-900/60 to-blue-800/40 border-blue-600/50 hover:border-blue-400",
   },
   {
     type: "initiative",
     label: "Initiative Tracker",
-    description: "Track combatants, HP, and turn order with a Next Turn button.",
+    description: "Track combatants, HP, and turn order.",
     icon: <Swords className="w-6 h-6" />,
-    color: "from-red-900/60 to-red-800/40 border-red-600/50 hover:border-red-500",
+    color: "from-red-900/60 to-red-800/40 border-red-600/50 hover:border-red-400",
   },
   {
     type: "notepad",
     label: "Session Notepad",
-    description: "Auto-saving scratch pad for session notes, names, and ideas.",
+    description: "Auto-saving scratch pad for session notes.",
     icon: <FileText className="w-6 h-6" />,
-    color: "from-green-900/60 to-green-800/40 border-green-600/50 hover:border-green-500",
+    color: "from-green-900/60 to-green-800/40 border-green-600/50 hover:border-green-400",
   },
   {
     type: "oracle",
     label: "The Oracle",
-    description: "Generate fantasy names, CR-based loot, and random magic items.",
+    description: "Generate names, loot, and random magic items.",
     icon: <Wand2 className="w-6 h-6" />,
-    color: "from-purple-900/60 to-purple-800/40 border-purple-600/50 hover:border-purple-500",
+    color: "from-purple-900/60 to-purple-800/40 border-purple-600/50 hover:border-purple-400",
   },
   {
     type: "bestiary",
     label: "Bestiary",
-    description: "Full stat blocks for 40+ D&D monsters, searchable by name or type.",
+    description: "Full stat blocks for 70+ monsters, searchable.",
     icon: <Skull className="w-6 h-6" />,
-    color: "from-rose-900/60 to-rose-800/40 border-rose-600/50 hover:border-rose-500",
+    color: "from-rose-900/60 to-rose-800/40 border-rose-600/50 hover:border-rose-400",
+  },
+  {
+    type: "wizard-tome",
+    label: "Wizard's Tome",
+    description: "All D&D 5e spells levels 0–9, filterable by class & school.",
+    icon: <BookMarked className="w-6 h-6" />,
+    color: "from-cyan-900/60 to-cyan-800/40 border-cyan-600/50 hover:border-cyan-400",
   },
 ];
 

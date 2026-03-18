@@ -1,9 +1,10 @@
-export type WidgetType = "compendium" | "initiative" | "notepad" | "oracle" | "bestiary" | "empty";
+export type WidgetType = "compendium" | "initiative" | "notepad" | "oracle" | "bestiary" | "wizard-tome" | "empty";
 
-export interface TileConfig {
-  id: number;
+export type TileEntry = {
   widget: WidgetType;
-}
+  colSpan: 1 | 2;
+  rowSpan: 1 | 2;
+} | null;
 
 export interface Combatant {
   id: string;
@@ -12,9 +13,4 @@ export interface Combatant {
   hp: number;
   maxHp: number;
   isPlayer: boolean;
-}
-
-export interface GridState {
-  tiles: TileConfig[];
-  currentTurn: number;
 }
