@@ -61,7 +61,7 @@ export function InitiativeWidget() {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-xs text-purple-400">Round</span>
-          <span className="text-sm font-bold text-amber-400">{round}</span>
+          <span className="text-sm font-bold text-white">{round}</span>
         </div>
         <div className="flex gap-1">
           <button
@@ -148,7 +148,7 @@ export function InitiativeWidget() {
                   : "bg-gray-900/60 border-gray-700/50 hover:border-purple-800/50"
               } ${isDead ? "opacity-50" : ""}`}
             >
-              <span className={`text-xs font-bold w-5 text-center ${isActive ? "text-amber-400" : "text-gray-500"}`}>
+              <span className={`text-xs font-bold w-5 text-center ${isActive ? "text-white" : "text-gray-500"}`}>
                 {c.initiative}
               </span>
               <div className="flex-1 min-w-0">

@@ -3,29 +3,67 @@ export function DragonHeader() {
     <header className="relative h-16 flex items-center justify-center overflow-hidden shrink-0"
       style={{ background: "linear-gradient(180deg, #0d0014 0%, #120020 100%)" }}
     >
-      {/* Ornate border lines */}
-      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-80" />
-      <div className="absolute inset-x-0 top-[3px] h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-60" />
-      <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-80" />
-      <div className="absolute inset-x-0 bottom-[3px] h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-60" />
+      {/* Celtic top border */}
+      <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: "6px" }}>
+        <svg viewBox="0 0 1200 6" className="w-full h-full" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="celtic-top" x="0" y="0" width="48" height="6" patternUnits="userSpaceOnUse">
+              <rect width="48" height="6" fill="none"/>
+              <path d="M0,3 L6,0 L12,3 L18,6 L24,3 L30,0 L36,3 L42,6 L48,3" stroke="#8A2BE2" strokeWidth="1.5" fill="none" opacity="0.8"/>
+              <path d="M0,3 L6,6 L12,3 L18,0 L24,3 L30,6 L36,3 L42,0 L48,3" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" fill="none" opacity="0.6"/>
+              <circle cx="0" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="12" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="24" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="36" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="48" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="6" cy="0" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+              <circle cx="18" cy="6" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+              <circle cx="30" cy="0" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+              <circle cx="42" cy="6" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+            </pattern>
+          </defs>
+          <rect width="1200" height="6" fill="url(#celtic-top)"/>
+          <line x1="0" y1="0" x2="1200" y2="0" stroke="rgba(255,255,255,0.4)" strokeWidth="0.5"/>
+          <line x1="0" y1="5.5" x2="1200" y2="5.5" stroke="#8A2BE2" strokeWidth="0.5" opacity="0.6"/>
+        </svg>
+      </div>
+
+      {/* Celtic bottom border */}
+      <div className="absolute inset-x-0 bottom-0 overflow-hidden" style={{ height: "6px" }}>
+        <svg viewBox="0 0 1200 6" className="w-full h-full" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="celtic-bottom" x="0" y="0" width="48" height="6" patternUnits="userSpaceOnUse">
+              <rect width="48" height="6" fill="none"/>
+              <path d="M0,3 L6,6 L12,3 L18,0 L24,3 L30,6 L36,3 L42,0 L48,3" stroke="#8A2BE2" strokeWidth="1.5" fill="none" opacity="0.8"/>
+              <path d="M0,3 L6,0 L12,3 L18,6 L24,3 L30,0 L36,3 L42,6 L48,3" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" fill="none" opacity="0.6"/>
+              <circle cx="0" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="12" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="24" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="36" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="48" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="6" cy="6" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+              <circle cx="18" cy="0" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+              <circle cx="30" cy="6" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+              <circle cx="42" cy="0" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
+            </pattern>
+          </defs>
+          <rect width="1200" height="6" fill="url(#celtic-bottom)"/>
+          <line x1="0" y1="0" x2="1200" y2="0" stroke="#8A2BE2" strokeWidth="0.5" opacity="0.6"/>
+          <line x1="0" y1="5.5" x2="1200" y2="5.5" stroke="rgba(255,255,255,0.4)" strokeWidth="0.5"/>
+        </svg>
+      </div>
 
       {/* Dragon SVG stretching across the header */}
       <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
         <svg viewBox="0 0 1200 60" className="w-full h-full" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-          {/* Long dragon silhouette body */}
           <path d="M0,30 Q60,10 120,30 Q150,40 180,28 Q240,10 300,30 Q360,50 420,28 Q480,10 540,30 Q580,42 600,30 Q620,18 660,30 Q720,50 780,28 Q840,10 900,30 Q960,50 1020,28 Q1080,10 1140,30 Q1160,36 1200,30" stroke="#8A2BE2" strokeWidth="3" fill="none" opacity="0.8"/>
-          {/* Wings left */}
           <path d="M200,30 Q180,5 150,2 Q130,1 140,18 Q155,28 200,30Z" fill="#6B1EBA" opacity="0.7"/>
           <path d="M200,30 Q190,45 160,52 Q140,56 148,40 Q162,32 200,30Z" fill="#6B1EBA" opacity="0.5"/>
-          {/* Wings right */}
           <path d="M1000,30 Q1020,5 1050,2 Q1070,1 1060,18 Q1045,28 1000,30Z" fill="#6B1EBA" opacity="0.7"/>
           <path d="M1000,30 Q1010,45 1040,52 Q1060,56 1052,40 Q1038,32 1000,30Z" fill="#6B1EBA" opacity="0.5"/>
-          {/* Head left */}
           <path d="M30,30 Q15,20 5,14 Q10,10 20,16 Q35,22 45,30 Q35,35 25,42 Q12,46 5,42 Q15,38 30,30Z" fill="#8A2BE2" opacity="0.9"/>
-          <circle cx="12" cy="20" r="2" fill="#FFD700" opacity="0.9"/>
-          {/* Tail right */}
+          <circle cx="12" cy="20" r="2" fill="white" opacity="0.9"/>
           <path d="M1170,28 Q1185,20 1198,16 Q1197,22 1188,26 Q1183,28 1180,32 Q1190,35 1198,40 Q1185,42 1172,36 Q1168,32 1170,28Z" fill="#8A2BE2" opacity="0.9"/>
-          {/* Spines along body */}
           {[100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100].map((x, i) => (
             <path key={i} d={`M${x},30 L${x - 4},${i % 2 === 0 ? 18 : 22} L${x + 4},30`} fill="#A855F7" opacity="0.5"/>
           ))}
@@ -34,14 +72,14 @@ export function DragonHeader() {
 
       {/* Corner ornaments */}
       <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-60">
-        <span className="text-amber-500 text-lg">⟦</span>
+        <span className="text-white/70 text-lg">⟦</span>
         <span className="text-purple-400 text-sm">✦</span>
-        <span className="text-amber-500 text-lg">⟧</span>
+        <span className="text-white/70 text-lg">⟧</span>
       </div>
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-60">
-        <span className="text-amber-500 text-lg">⟦</span>
+        <span className="text-white/70 text-lg">⟦</span>
         <span className="text-purple-400 text-sm">✦</span>
-        <span className="text-amber-500 text-lg">⟧</span>
+        <span className="text-white/70 text-lg">⟧</span>
       </div>
 
       {/* Title */}
@@ -50,11 +88,11 @@ export function DragonHeader() {
           className="text-2xl font-black tracking-[0.25em] uppercase"
           style={{
             fontFamily: "'Cinzel', 'Georgia', serif",
-            background: "linear-gradient(135deg, #FFD700, #FFA500, #FFD700)",
+            background: "linear-gradient(135deg, #ffffff, #e0d0ff, #ffffff)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             textShadow: "none",
-            filter: "drop-shadow(0 0 8px rgba(255, 215, 0, 0.4))",
+            filter: "drop-shadow(0 0 10px rgba(255,255,255,0.25))",
           }}
         >
           LEGENDARY DM SCREEN

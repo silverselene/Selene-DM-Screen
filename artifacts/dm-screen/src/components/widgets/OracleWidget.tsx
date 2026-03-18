@@ -85,8 +85,8 @@ export function OracleWidget() {
       </button>
 
       {result && (
-        <div className="mt-3 p-3 bg-gray-900/80 border border-amber-700/40 rounded">
-          <div className="text-sm text-amber-300 font-semibold leading-relaxed">{result}</div>
+        <div className="mt-3 p-3 bg-gray-900/80 border border-white/20 rounded">
+          <div className="text-sm text-white font-semibold leading-relaxed">{result}</div>
         </div>
       )}
 

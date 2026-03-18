@@ -1,9 +1,10 @@
-import { Plus, X, BookOpen, Swords, FileText, Wand2 } from "lucide-react";
+import { Plus, X, BookOpen, Swords, FileText, Wand2, Skull } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { CompendiumWidget } from "./widgets/CompendiumWidget";
 import { InitiativeWidget } from "./widgets/InitiativeWidget";
 import { NotepadWidget } from "./widgets/NotepadWidget";
 import { OracleWidget } from "./widgets/OracleWidget";
+import { BestiaryWidget } from "./widgets/BestiaryWidget";
 
 interface Props {
   widget: WidgetType;
@@ -32,6 +33,11 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
     icon: <Wand2 className="w-3 h-3" />,
     accent: "border-purple-700/60 shadow-[inset_0_0_20px_rgba(139,43,226,0.08)]",
   },
+  bestiary: {
+    label: "Bestiary",
+    icon: <Skull className="w-3 h-3" />,
+    accent: "border-rose-800/60 shadow-[inset_0_0_20px_rgba(225,29,72,0.05)]",
+  },
 };
 
 function WidgetContent({ widget }: { widget: WidgetType }) {
@@ -39,6 +45,7 @@ function WidgetContent({ widget }: { widget: WidgetType }) {
   if (widget === "initiative") return <InitiativeWidget />;
   if (widget === "notepad") return <NotepadWidget />;
   if (widget === "oracle") return <OracleWidget />;
+  if (widget === "bestiary") return <BestiaryWidget />;
   return null;
 }
 
@@ -68,10 +75,9 @@ export function DMTile({ widget, onAdd, onClear }: Props) {
         backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M0 0h4v4H0z' fill='%23111' /%3E%3Cpath d='M0 0h1v1H0z' fill='%23161616' /%3E%3C/svg%3E\")",
       }}
     >
-      {/* Tile header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800/60 shrink-0">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400">
-          <span className="text-amber-500">{meta.icon}</span>
+          <span className="text-white/60">{meta.icon}</span>
           {meta.label}
         </div>
         <button
@@ -83,7 +89,6 @@ export function DMTile({ widget, onAdd, onClear }: Props) {
         </button>
       </div>
 
-      {/* Widget content */}
       <div className="flex-1 overflow-hidden p-3">
         <WidgetContent widget={widget} />
       </div>

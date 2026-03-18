@@ -50,7 +50,7 @@ function App() {
       </main>
 
       <footer className="shrink-0 h-6 flex items-center justify-center relative">
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-amber-600/40 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         <span className="text-xs text-gray-700 tracking-widest">
           ✦ &nbsp; LEGENDARY DM SCREEN · D&D 5.5e 2024 · All data is local &amp; persistent &nbsp; ✦
         </span>

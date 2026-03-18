@@ -57,7 +57,7 @@ export function CompendiumWidget() {
           </button>
           <div className="bg-gray-900/80 border border-purple-700/40 rounded p-3">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="text-sm font-bold text-amber-400">{entry.title}</h3>
+              <h3 className="text-sm font-bold text-white">{entry.title}</h3>
               <span className="text-xs text-purple-400 bg-purple-900/40 px-2 py-0.5 rounded-full shrink-0">
                 {entry.category}
               </span>
@@ -87,7 +87,7 @@ export function CompendiumWidget() {
               className="w-full text-left px-2 py-1.5 bg-gray-900/60 hover:bg-purple-900/30 border border-purple-900/30 hover:border-purple-600/50 rounded transition-all group"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-200 group-hover:text-amber-300 transition-colors">
+                <span className="text-xs font-medium text-gray-200 group-hover:text-white transition-colors">
                   {e.title}
                 </span>
                 <span className="text-xs text-purple-500 shrink-0">{e.category}</span>

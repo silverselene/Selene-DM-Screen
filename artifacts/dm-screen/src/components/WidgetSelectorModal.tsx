@@ -1,4 +1,4 @@
-import { X, BookOpen, Swords, FileText, Wand2 } from "lucide-react";
+import { X, BookOpen, Swords, FileText, Wand2, Skull } from "lucide-react";
 import type { WidgetType } from "@/types";
 
 interface Props {
@@ -35,15 +35,22 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
     icon: <Wand2 className="w-6 h-6" />,
     color: "from-purple-900/60 to-purple-800/40 border-purple-600/50 hover:border-purple-500",
   },
+  {
+    type: "bestiary",
+    label: "Bestiary",
+    description: "Full stat blocks for 40+ D&D monsters, searchable by name or type.",
+    icon: <Skull className="w-6 h-6" />,
+    color: "from-rose-900/60 to-rose-800/40 border-rose-600/50 hover:border-rose-500",
+  },
 ];
 
 export function WidgetSelectorModal({ onSelect, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-gray-950 border border-purple-700/60 rounded-xl p-6 w-full max-w-md shadow-[0_0_40px_rgba(139,43,226,0.3)]">
+      <div className="relative z-10 bg-gray-950 border border-purple-700/60 rounded-xl p-6 w-full max-w-lg shadow-[0_0_40px_rgba(139,43,226,0.3)]">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-amber-400 tracking-wide">Choose a Widget</h2>
+          <h2 className="text-lg font-bold text-white tracking-wide">Choose a Widget</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-200 transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -56,7 +63,7 @@ export function WidgetSelectorModal({ onSelect, onClose }: Props) {
               onClick={() => onSelect(w.type)}
               className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br ${w.color} border rounded-lg transition-all hover:scale-105 hover:shadow-[0_0_12px_rgba(139,43,226,0.3)] text-center`}
             >
-              <div className="text-amber-400">{w.icon}</div>
+              <div className="text-white/80">{w.icon}</div>
               <div className="text-sm font-bold text-gray-100">{w.label}</div>
               <div className="text-xs text-gray-400 leading-tight">{w.description}</div>
             </button>

@@ -1,4 +1,4 @@
-export type WidgetType = "compendium" | "initiative" | "notepad" | "oracle" | "empty";
+export type WidgetType = "compendium" | "initiative" | "notepad" | "oracle" | "bestiary" | "empty";
 
 export interface TileConfig {
   id: number;
