@@ -1,0 +1,177 @@
+import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2 } from "lucide-react";
+import type { WidgetType } from "@/types";
+
+const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: React.ReactNode; color: string }> = {
+  compendium: { label: "Compendium", icon: <BookOpen className="w-3.5 h-3.5" />, color: "text-blue-400 bg-blue-900/20 border-blue-800/40" },
+  initiative: { label: "Initiative", icon: <Swords className="w-3.5 h-3.5" />, color: "text-red-400 bg-red-900/20 border-red-800/40" },
+  notepad: { label: "Notepad", icon: <FileText className="w-3.5 h-3.5" />, color: "text-green-400 bg-green-900/20 border-green-800/40" },
+  oracle: { label: "The Oracle", icon: <Wand2 className="w-3.5 h-3.5" />, color: "text-purple-400 bg-purple-900/20 border-purple-800/40" },
+  bestiary: { label: "Bestiary", icon: <Skull className="w-3.5 h-3.5" />, color: "text-rose-400 bg-rose-900/20 border-rose-800/40" },
+  "wizard-tome": { label: "Wizard's Tome", icon: <BookMarked className="w-3.5 h-3.5" />, color: "text-cyan-400 bg-cyan-900/20 border-cyan-800/40" },
+};
+
+const GRID_SIZES = [2, 3, 4] as const;
+
+interface Props {
+  open: boolean;
+  onToggle: () => void;
+  cols: number;
+  rows: number;
+  onGridResize: (cols: number, rows: number) => void;
+  recentWidgets: WidgetType[];
+  onRestoreRecent: (widget: WidgetType) => void;
+  onClearRecent: () => void;
+}
+
+export function Sidebar({
+  open, onToggle,
+  cols, rows, onGridResize,
+  recentWidgets, onRestoreRecent, onClearRecent,
+}: Props) {
+  return (
+    <aside
+      className="relative flex flex-col shrink-0 border-r border-purple-900/30 transition-all duration-200"
+      style={{
+        width: open ? 200 : 36,
+        background: "linear-gradient(180deg, #0b0018 0%, #080012 100%)",
+      }}
+    >
+      {/* Toggle button */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-3 z-20 w-6 h-6 rounded-full bg-gray-900 border border-purple-800/60 flex items-center justify-center text-purple-500 hover:text-purple-300 hover:border-purple-600 transition-all shadow-lg"
+      >
+        {open ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+      </button>
+
+      {open ? (
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* ── Grid Size ── */}
+          <div className="p-3 border-b border-purple-900/20">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <Grid className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-xs font-semibold text-gray-400 tracking-wide uppercase">Grid Size</span>
+            </div>
+
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] text-gray-600 mb-1.5 uppercase tracking-widest">Columns</p>
+                <div className="flex gap-1">
+                  {GRID_SIZES.map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => onGridResize(n, rows)}
+                      className={`flex-1 py-1 text-xs font-bold rounded border transition-all ${
+                        cols === n
+                          ? "bg-purple-700/50 border-purple-500 text-purple-200"
+                          : "bg-gray-900/50 border-gray-800 text-gray-500 hover:border-purple-700 hover:text-gray-300"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] text-gray-600 mb-1.5 uppercase tracking-widest">Rows</p>
+                <div className="flex gap-1">
+                  {GRID_SIZES.map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => onGridResize(cols, n)}
+                      className={`flex-1 py-1 text-xs font-bold rounded border transition-all ${
+                        rows === n
+                          ? "bg-purple-700/50 border-purple-500 text-purple-200"
+                          : "bg-gray-900/50 border-gray-800 text-gray-500 hover:border-purple-700 hover:text-gray-300"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grid preview */}
+              <div
+                className="mt-2 mx-auto"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                  gridTemplateRows: `repeat(${rows}, 1fr)`,
+                  gap: 2,
+                  width: 80,
+                  height: 80,
+                }}
+              >
+                {Array.from({ length: cols * rows }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-sm bg-purple-900/30 border border-purple-800/20"
+                  />
+                ))}
+              </div>
+              <p className="text-center text-[10px] text-gray-600">{cols} × {rows} = {cols * rows} tiles</p>
+            </div>
+          </div>
+
+          {/* ── Recent Widgets ── */}
+          <div className="flex-1 flex flex-col overflow-hidden p-3">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-semibold text-gray-400 tracking-wide uppercase">Recent</span>
+              </div>
+              {recentWidgets.length > 0 && (
+                <button
+                  onClick={onClearRecent}
+                  className="text-gray-700 hover:text-red-400 transition-colors"
+                  title="Clear history"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {recentWidgets.length === 0 && (
+                <p className="text-[10px] text-gray-700 text-center py-3 leading-relaxed">
+                  Closed widgets appear here for quick restore
+                </p>
+              )}
+              {recentWidgets.map((w) => {
+                if (w === "empty") return null;
+                const meta = widgetMeta[w];
+                if (!meta) return null;
+                return (
+                  <button
+                    key={w}
+                    onClick={() => onRestoreRecent(w)}
+                    title="Restore to first empty tile"
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all hover:scale-[1.02] ${meta.color}`}
+                  >
+                    <span className="shrink-0">{meta.icon}</span>
+                    <span className="text-xs font-medium truncate">{meta.label}</span>
+                    <RotateCcw className="w-3 h-3 ml-auto shrink-0 opacity-60" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Collapsed: show icon strip */
+        <div className="flex flex-col items-center gap-3 pt-10 pb-3">
+          <Grid className="w-4 h-4 text-purple-700" title="Grid size" />
+          <div className="w-3 h-px bg-purple-900/50" />
+          <Clock className="w-4 h-4 text-purple-700" title="Recent widgets" />
+          {recentWidgets.length > 0 && (
+            <span className="text-[9px] bg-purple-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
+              {recentWidgets.length}
+            </span>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}

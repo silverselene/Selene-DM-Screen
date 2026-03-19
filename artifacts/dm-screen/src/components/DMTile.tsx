@@ -1,4 +1,7 @@
-import { Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, ArrowRight, ArrowDown, Minimize2 } from "lucide-react";
+import {
+  Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked,
+  ArrowRight, ArrowDown, Minimize2,
+} from "lucide-react";
 import type { TileEntry, WidgetType } from "@/types";
 import { CompendiumWidget } from "./widgets/CompendiumWidget";
 import { InitiativeWidget } from "./widgets/InitiativeWidget";
@@ -10,14 +13,13 @@ import { WizardsTomeWidget } from "./widgets/WizardsTomeWidget";
 interface Props {
   index: number;
   entry: TileEntry;
+  cols: number;
   onAdd: () => void;
   onClear: () => void;
   canExpandRight: boolean;
   canExpandDown: boolean;
-  canExpandBoth: boolean;
   onExpandRight: () => void;
   onExpandDown: () => void;
-  onExpandBoth: () => void;
   onContractRight: () => void;
   onContractDown: () => void;
 }
@@ -73,12 +75,16 @@ export function DMTile({
 }: Props) {
   if (!entry) return null;
 
-  const { widget, colSpan, rowSpan } = entry;
+  const { widget } = entry;
+  const colSpan = (entry as { colSpan: number }).colSpan ?? 1;
+  const rowSpan = (entry as { rowSpan: number }).rowSpan ?? 1;
   const isStretched = colSpan > 1 || rowSpan > 1;
 
+  /* ── Empty tile ── */
   if (widget === "empty") {
     return (
-      <div className="relative h-full rounded-lg border-2 border-dashed border-purple-900/40 hover:border-purple-600/60 transition-all group flex items-center justify-center bg-gray-950/30 hover:bg-purple-950/10">
+      <div className="relative h-full rounded-lg border-2 border-dashed border-purple-900/40 hover:border-purple-700/60 transition-all group flex items-center justify-center bg-gray-950/30 hover:bg-purple-950/10">
+        {/* Center add button */}
         <button
           onClick={onAdd}
           className="flex items-center justify-center text-purple-700 hover:text-purple-400 transition-colors"
@@ -87,17 +93,62 @@ export function DMTile({
             <Plus className="w-4 h-4" />
           </div>
         </button>
+
+        {/* Resize controls — visible on hover */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Expand right handle */}
+          {canExpandRight && (
+            <button
+              onClick={onExpandRight}
+              title="Stretch right"
+              className="pointer-events-auto absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-purple-800 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-800/40 hover:border-purple-500"
+            >
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+          {/* Expand down handle */}
+          {canExpandDown && (
+            <button
+              onClick={onExpandDown}
+              title="Stretch down"
+              className="pointer-events-auto absolute bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 flex items-center justify-center text-purple-800 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-800/40 hover:border-purple-500"
+            >
+              <ArrowDown className="w-3 h-3" />
+            </button>
+          )}
+          {/* Contract handles */}
+          {colSpan > 1 && (
+            <button
+              onClick={onContractRight}
+              title="Contract width"
+              className="pointer-events-auto absolute right-1 top-1 w-5 h-5 flex items-center justify-center text-purple-500 hover:text-purple-300 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-700/40"
+            >
+              <Minimize2 className="w-3 h-3" />
+            </button>
+          )}
+          {rowSpan > 1 && colSpan === 1 && (
+            <button
+              onClick={onContractDown}
+              title="Contract height"
+              className="pointer-events-auto absolute right-1 top-1 w-5 h-5 flex items-center justify-center text-purple-500 hover:text-purple-300 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-700/40"
+            >
+              <Minimize2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
+  /* ── Widget tile ── */
   const meta = widgetMeta[widget];
 
   return (
     <div
       className={`relative h-full rounded-lg border bg-gray-950/80 ${meta.accent} hover:shadow-[0_0_16px_rgba(139,43,226,0.12)] transition-all flex flex-col overflow-hidden`}
       style={{
-        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M0 0h4v4H0z' fill='%23111' /%3E%3Cpath d='M0 0h1v1H0z' fill='%23161616' /%3E%3C/svg%3E\")",
+        backgroundImage:
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M0 0h4v4H0z' fill='%23111' /%3E%3Cpath d='M0 0h1v1H0z' fill='%23161616' /%3E%3C/svg%3E\")",
       }}
     >
       {/* Header */}
@@ -108,7 +159,6 @@ export function DMTile({
         </div>
 
         <div className="flex items-center gap-0.5">
-          {/* Expand controls */}
           {canExpandRight && (
             <button
               onClick={onExpandRight}
@@ -127,7 +177,6 @@ export function DMTile({
               <ArrowDown className="w-3 h-3" />
             </button>
           )}
-          {/* Contract controls */}
           {colSpan > 1 && (
             <button
               onClick={onContractRight}

@@ -2,18 +2,38 @@ import { useState } from "react";
 import { DragonHeader } from "@/components/DragonHeader";
 import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
+import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { TileEntry, WidgetType } from "@/types";
 
 const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
-const DEFAULT_TILES: TileEntry[] = Array.from({ length: 9 }, empty);
+
+const getDefaultTiles = (cols: number, rows: number): TileEntry[] =>
+  Array.from({ length: cols * rows }, empty);
 
 function App() {
-  const [tiles, setTiles] = useLocalStorage<TileEntry[]>("dm-tiles-v2", DEFAULT_TILES);
+  const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3);
+  const [rows, setRows] = useLocalStorage<number>("dm-grid-rows", 3);
+  const [tiles, setTiles] = useLocalStorage<TileEntry[]>(
+    "dm-tiles-v3",
+    getDefaultTiles(3, 3)
+  );
+  const [recentWidgets, setRecentWidgets] = useLocalStorage<WidgetType[]>(
+    "dm-recent-widgets",
+    []
+  );
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const update = (fn: (draft: TileEntry[]) => TileEntry[]) =>
     setTiles((prev) => fn([...prev]));
+
+  const pushRecent = (widget: WidgetType) => {
+    if (widget === "empty") return;
+    setRecentWidgets((prev) =>
+      [widget, ...prev.filter((w) => w !== widget)].slice(0, 8)
+    );
+  };
 
   const handleSelectWidget = (widget: WidgetType) => {
     if (selectingTile === null) return;
@@ -29,6 +49,12 @@ function App() {
     update((t) => {
       const entry = t[i];
       if (!entry) return t;
+      pushRecent(entry.widget);
+      // Restore any cells consumed by this tile's span
+      if (entry.colSpan === 2 && i + 1 < t.length) t[i + 1] = empty();
+      if (entry.rowSpan === 2 && i + cols < t.length) t[i + cols] = empty();
+      if (entry.colSpan === 2 && entry.rowSpan === 2 && i + cols + 1 < t.length)
+        t[i + cols + 1] = empty();
       t[i] = { widget: "empty", colSpan: 1, rowSpan: 1 };
       return t;
     });
@@ -40,7 +66,7 @@ function App() {
       if (!entry || entry.colSpan === 2) return t;
       t[i] = { ...entry, colSpan: 2 };
       t[i + 1] = null;
-      if (entry.rowSpan === 2) t[i + 4] = null;
+      if (entry.rowSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = null;
       return t;
     });
   };
@@ -50,8 +76,8 @@ function App() {
       const entry = t[i];
       if (!entry || entry.rowSpan === 2) return t;
       t[i] = { ...entry, rowSpan: 2 };
-      t[i + 3] = null;
-      if (entry.colSpan === 2) t[i + 4] = null;
+      t[i + cols] = null;
+      if (entry.colSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = null;
       return t;
     });
   };
@@ -61,8 +87,8 @@ function App() {
       const entry = t[i];
       if (!entry || entry.colSpan === 1) return t;
       t[i] = { ...entry, colSpan: 1 };
-      t[i + 1] = empty();
-      if (entry.rowSpan === 2) t[i + 4] = empty();
+      if (i + 1 < t.length) t[i + 1] = empty();
+      if (entry.rowSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = empty();
       return t;
     });
   };
@@ -72,10 +98,40 @@ function App() {
       const entry = t[i];
       if (!entry || entry.rowSpan === 1) return t;
       t[i] = { ...entry, rowSpan: 1 };
-      t[i + 3] = empty();
-      if (entry.colSpan === 2) t[i + 4] = empty();
+      if (i + cols < t.length) t[i + cols] = empty();
+      if (entry.colSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = empty();
       return t;
     });
+  };
+
+  const handleRestoreRecent = (widget: WidgetType) => {
+    const firstEmpty = tiles.findIndex(
+      (t) => t !== null && t.widget === "empty"
+    );
+    if (firstEmpty === -1) return;
+    update((t) => {
+      t[firstEmpty] = { widget, colSpan: 1, rowSpan: 1 };
+      return t;
+    });
+    setRecentWidgets((prev) => prev.filter((w) => w !== widget));
+  };
+
+  const handleGridResize = (newCols: number, newRows: number) => {
+    const newCount = newCols * newRows;
+    // Collect existing widget types (preserving order, skipping nulls/spans)
+    const existing: WidgetType[] = tiles
+      .filter((t): t is NonNullable<TileEntry> => t !== null)
+      .map((t) => (t as { widget: WidgetType; colSpan: number; rowSpan: number }).widget);
+
+    const next: TileEntry[] = Array.from({ length: newCount }, (_, i) => ({
+      widget: existing[i] ?? "empty",
+      colSpan: 1 as const,
+      rowSpan: 1 as const,
+    }));
+
+    setCols(newCols);
+    setRows(newRows);
+    setTiles(next);
   };
 
   return (
@@ -85,60 +141,79 @@ function App() {
     >
       <DragonHeader />
 
-      <main className="flex-1 p-3 overflow-hidden">
-        <div
-          className="h-full"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gridTemplateRows: "repeat(3, 1fr)",
-            gap: "12px",
-          }}
-        >
-          {tiles.map((entry, i) => {
-            if (entry === null) return null;
-            const row = Math.floor(i / 3) + 1;
-            const col = (i % 3) + 1;
-            const canExpandRight = entry.colSpan === 1 && col <= 2 && (tiles[i + 1] === null || tiles[i + 1]?.widget === "empty");
-            const canExpandDown = entry.rowSpan === 1 && row <= 2 && (tiles[i + 3] === null || tiles[i + 3]?.widget === "empty");
-            const canExpandBoth =
-              entry.colSpan === 1 && entry.rowSpan === 1 && col <= 2 && row <= 2 &&
-              (tiles[i + 1] === null || tiles[i + 1]?.widget === "empty") &&
-              (tiles[i + 3] === null || tiles[i + 3]?.widget === "empty") &&
-              (tiles[i + 4] === null || tiles[i + 4]?.widget === "empty");
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen((p) => !p)}
+          cols={cols}
+          rows={rows}
+          onGridResize={handleGridResize}
+          recentWidgets={recentWidgets}
+          onRestoreRecent={handleRestoreRecent}
+          onClearRecent={() => setRecentWidgets([])}
+        />
 
-            return (
-              <div
-                key={i}
-                style={{
-                  gridColumn: `${col} / span ${entry.colSpan}`,
-                  gridRow: `${row} / span ${entry.rowSpan}`,
-                }}
-              >
-                <DMTile
-                  index={i}
-                  entry={entry}
-                  onAdd={() => setSelectingTile(i)}
-                  onClear={() => handleClear(i)}
-                  canExpandRight={canExpandRight}
-                  canExpandDown={canExpandDown}
-                  canExpandBoth={canExpandBoth}
-                  onExpandRight={() => handleExpandRight(i)}
-                  onExpandDown={() => handleExpandDown(i)}
-                  onExpandBoth={() => { handleExpandRight(i); setTimeout(() => handleExpandDown(i), 0); }}
-                  onContractRight={() => handleContractRight(i)}
-                  onContractDown={() => handleContractDown(i)}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </main>
+        {/* Main grid */}
+        <main className="flex-1 p-3 overflow-hidden">
+          <div
+            className="h-full"
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${cols}, 1fr)`,
+              gridTemplateRows: `repeat(${rows}, 1fr)`,
+              gap: "10px",
+            }}
+          >
+            {tiles.map((entry, i) => {
+              if (entry === null) return null;
+              const tileRow = Math.floor(i / cols) + 1;
+              const tileCol = (i % cols) + 1;
+              const colSpan = (entry as { colSpan: number }).colSpan ?? 1;
+              const rowSpan = (entry as { rowSpan: number }).rowSpan ?? 1;
 
-      <footer className="shrink-0 h-6 flex items-center justify-center relative">
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <span className="text-xs text-gray-700 tracking-widest">
-          Silver's DM Screen · D&D 5.5e 2024 · All data local &amp; persistent
+              const canExpandRight =
+                colSpan === 1 &&
+                tileCol < cols &&
+                (tiles[i + 1] === null || tiles[i + 1]?.widget === "empty");
+              const canExpandDown =
+                rowSpan === 1 &&
+                tileRow < rows &&
+                i + cols < tiles.length &&
+                (tiles[i + cols] === null || tiles[i + cols]?.widget === "empty");
+
+              return (
+                <div
+                  key={i}
+                  style={{
+                    gridColumn: `${tileCol} / span ${colSpan}`,
+                    gridRow: `${tileRow} / span ${rowSpan}`,
+                  }}
+                >
+                  <DMTile
+                    index={i}
+                    entry={entry}
+                    cols={cols}
+                    onAdd={() => setSelectingTile(i)}
+                    onClear={() => handleClear(i)}
+                    canExpandRight={canExpandRight}
+                    canExpandDown={canExpandDown}
+                    onExpandRight={() => handleExpandRight(i)}
+                    onExpandDown={() => handleExpandDown(i)}
+                    onContractRight={() => handleContractRight(i)}
+                    onContractDown={() => handleContractDown(i)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </main>
+      </div>
+
+      <footer className="shrink-0 h-5 flex items-center justify-center relative">
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <span className="text-[10px] text-gray-700 tracking-widest">
+          Selene's DM Screen · D&amp;D 5.5e 2024 · All data local &amp; persistent
         </span>
       </footer>
 

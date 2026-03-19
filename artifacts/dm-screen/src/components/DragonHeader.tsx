@@ -77,7 +77,7 @@ export function DragonHeader() {
             filter: "drop-shadow(0 0 10px rgba(255,255,255,0.25))",
           }}
         >
-          Silver's DM Screen
+          Selene's DM Screen
         </h1>
         <div className="text-xs tracking-[0.35em] text-purple-400 uppercase opacity-80 mt-0.5">
           D&amp;D 5.5e · 2024 Revision
