@@ -23,7 +23,7 @@ export function CompendiumWidget() {
   const entry = selectedEntry ? compendiumData.find((e) => e.id === selectedEntry) : null;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <div className="flex items-center gap-2 mb-2">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400" />
@@ -48,7 +48,7 @@ export function CompendiumWidget() {
       </div>
 
       {entry ? (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <button
             onClick={() => setSelectedEntry(null)}
             className="text-xs text-purple-400 hover:text-purple-300 mb-2 flex items-center gap-1"
@@ -73,7 +73,7 @@ export function CompendiumWidget() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto space-y-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
           {filtered.length === 0 && (
             <div className="text-center py-4 text-gray-500 text-xs flex flex-col items-center gap-2">
               <BookOpen className="w-6 h-6 opacity-30" />

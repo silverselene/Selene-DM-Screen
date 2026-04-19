@@ -150,7 +150,7 @@ export function InitiativeWidget() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between mb-2 shrink-0">
         <div className="flex items-center gap-2">
@@ -361,7 +361,7 @@ export function InitiativeWidget() {
       )}
 
       {/* ── Combatant list ── */}
-      <div className="flex-1 overflow-y-auto space-y-1">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
         {sorted.length === 0 && (
           <div className="text-center py-4 text-gray-500 text-xs flex flex-col items-center gap-2">
             <Swords className="w-6 h-6 opacity-30" />

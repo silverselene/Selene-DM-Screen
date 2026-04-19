@@ -27,7 +27,7 @@ export function OracleWidget() {
   ];
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <div className="flex gap-1 mb-2">
         {tabs.map((t) => (
           <button
@@ -91,7 +91,7 @@ export function OracleWidget() {
       )}
 
       {history.length > 1 && (
-        <div className="mt-3 flex-1 overflow-y-auto">
+        <div className="mt-3 flex-1 min-h-0 overflow-y-auto">
           <div className="text-xs text-gray-600 mb-1">Previous Results</div>
           <div className="space-y-1">
             {history.slice(1).map((h, i) => (

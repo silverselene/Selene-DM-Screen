@@ -218,7 +218,7 @@ export function DMTile({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden p-2.5">
+      <div className="flex-1 min-h-0 overflow-hidden p-2.5">
         <WidgetContent widget={widget} bestiaryTarget={bestiaryTarget} onBestiaryTargetClear={onBestiaryTargetClear} />
       </div>
     </div>

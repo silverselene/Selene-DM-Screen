@@ -17,14 +17,14 @@ const schoolColors: Record<string, string> = {
 
 function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <button
         onClick={onBack}
         className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mb-2 shrink-0"
       >
         <ChevronLeft className="w-3 h-3" /> Back
       </button>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="bg-gray-900/80 border border-cyan-900/40 rounded p-3 space-y-2">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <h3 className="text-sm font-bold text-white">{spell.name}</h3>
@@ -94,7 +94,7 @@ export function WizardsTomeWidget() {
   if (selected) return <SpellDetail spell={selected} onBack={() => setSelected(null)} />;
 
   return (
-    <div className="h-full flex flex-col gap-1.5">
+    <div className="h-full min-h-0 flex flex-col gap-1.5">
       {/* Search */}
       <div className="relative shrink-0">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-cyan-500" />
@@ -147,7 +147,7 @@ export function WizardsTomeWidget() {
       </div>
 
       {/* Spell list */}
-      <div className="flex-1 overflow-y-auto space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
         {filtered.length === 0 && (
           <div className="text-center py-4 text-gray-600 text-xs flex flex-col items-center gap-2">
             <BookMarked className="w-6 h-6 opacity-30" />

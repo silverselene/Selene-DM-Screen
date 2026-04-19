@@ -5,7 +5,7 @@ export function NotepadWidget() {
   const [notes, setNotes] = useLocalStorage<string>("dm-notepad", "");
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
           <FileText className="w-3 h-3 text-purple-400" />
