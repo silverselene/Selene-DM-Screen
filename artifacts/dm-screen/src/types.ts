@@ -12,5 +12,6 @@ export interface Combatant {
   initiative: number;
   hp: number;
   maxHp: number;
+  ac?: number;
   isPlayer: boolean;
 }
