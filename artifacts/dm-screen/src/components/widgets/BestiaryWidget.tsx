@@ -316,6 +316,9 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   }
 
   // ── List view ────────────────────────────────────────────────────────────
+  const isFiltered = query.trim() !== "" || crFilter !== "All";
+  const visibleList = isFiltered ? displayList : displayList.slice(0, 15);
+
   return (
     <div className="h-full min-h-0 flex flex-col gap-1.5">
       <div className="flex gap-1.5 shrink-0">
@@ -353,7 +356,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         {dbLoading && query && (
           <div className="text-xs text-purple-500 text-center py-1 animate-pulse">Searching database…</div>
         )}
-        {displayList.map((m) => (
+        {visibleList.map((m) => (
           <button
             key={m.name}
             onClick={() => setSelected(m)}
@@ -369,6 +372,11 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
             </div>
           </button>
         ))}
+        {!isFiltered && displayList.length > 15 && (
+          <div className="text-center py-2 text-[10px] text-gray-600">
+            Showing 15 of {displayList.length} — search to filter
+          </div>
+        )}
       </div>
     </div>
   );
