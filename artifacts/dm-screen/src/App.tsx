@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DragonHeader } from "@/components/DragonHeader";
 import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
@@ -24,6 +24,29 @@ function App() {
   );
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [bestiaryTarget, setBestiaryTarget] = useState<string | null>(null);
+
+  // Listen for open-bestiary events from any widget (e.g. Initiative Tracker)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent<{ name: string }>).detail?.name;
+      if (!name) return;
+      setBestiaryTarget(name);
+      // Find existing bestiary tile or open one in the first empty slot
+      setTiles((prev) => {
+        const hasBestiary = prev.some((t) => t !== null && t.widget === "bestiary");
+        if (hasBestiary) return prev; // already open — just update target
+        const next = [...prev];
+        const firstEmpty = next.findIndex((t) => t !== null && t.widget === "empty");
+        if (firstEmpty !== -1) {
+          next[firstEmpty] = { widget: "bestiary", colSpan: 1, rowSpan: 1 };
+        }
+        return next;
+      });
+    };
+    window.addEventListener("dm-open-bestiary", handler);
+    return () => window.removeEventListener("dm-open-bestiary", handler);
+  }, [setTiles]);
 
   const update = (fn: (draft: TileEntry[]) => TileEntry[]) =>
     setTiles((prev) => fn([...prev]));
@@ -202,6 +225,8 @@ function App() {
                     onExpandDown={() => handleExpandDown(i)}
                     onContractRight={() => handleContractRight(i)}
                     onContractDown={() => handleContractDown(i)}
+                    bestiaryTarget={entry.widget === "bestiary" ? bestiaryTarget : null}
+                    onBestiaryTargetClear={() => setBestiaryTarget(null)}
                   />
                 </div>
               );

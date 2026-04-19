@@ -22,6 +22,8 @@ interface Props {
   onExpandDown: () => void;
   onContractRight: () => void;
   onContractDown: () => void;
+  bestiaryTarget?: string | null;
+  onBestiaryTargetClear?: () => void;
 }
 
 const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: React.ReactNode; accent: string }> = {
@@ -57,12 +59,20 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
   },
 };
 
-function WidgetContent({ widget }: { widget: WidgetType }) {
+function WidgetContent({
+  widget,
+  bestiaryTarget,
+  onBestiaryTargetClear,
+}: {
+  widget: WidgetType;
+  bestiaryTarget?: string | null;
+  onBestiaryTargetClear?: () => void;
+}) {
   if (widget === "compendium") return <CompendiumWidget />;
   if (widget === "initiative") return <InitiativeWidget />;
   if (widget === "notepad") return <NotepadWidget />;
   if (widget === "oracle") return <OracleWidget />;
-  if (widget === "bestiary") return <BestiaryWidget />;
+  if (widget === "bestiary") return <BestiaryWidget target={bestiaryTarget} onTargetClear={onBestiaryTargetClear} />;
   if (widget === "wizard-tome") return <WizardsTomeWidget />;
   return null;
 }
@@ -72,6 +82,7 @@ export function DMTile({
   canExpandRight, canExpandDown,
   onExpandRight, onExpandDown,
   onContractRight, onContractDown,
+  bestiaryTarget, onBestiaryTargetClear,
 }: Props) {
   if (!entry) return null;
 
@@ -208,7 +219,7 @@ export function DMTile({
 
       {/* Content */}
       <div className="flex-1 overflow-hidden p-2.5">
-        <WidgetContent widget={widget} />
+        <WidgetContent widget={widget} bestiaryTarget={bestiaryTarget} onBestiaryTargetClear={onBestiaryTargetClear} />
       </div>
     </div>
   );

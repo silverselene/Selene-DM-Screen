@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Swords,
-  SkipForward, RotateCcw, Search, Skull, User, Shield,
+  SkipForward, RotateCcw, Search, Skull, User, Shield, ExternalLink,
 } from "lucide-react";
 import type { Combatant } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -385,11 +385,26 @@ export function InitiativeWidget() {
                 {c.initiative}
               </span>
 
-              {/* Name */}
+              {/* Name — clickable for monsters to open bestiary */}
               <div className="flex-1 min-w-0">
-                <div className={`text-xs font-semibold truncate ${c.isPlayer ? "text-green-400" : "text-rose-300"}`}>
-                  {isActive && "▶ "}{c.name}
-                </div>
+                {c.isPlayer ? (
+                  <div className="text-xs font-semibold truncate text-green-400">
+                    {isActive && "▶ "}{c.name}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent("dm-open-bestiary", { detail: { name: c.name } })
+                      )
+                    }
+                    title="Open bestiary entry"
+                    className="text-xs font-semibold truncate text-rose-300 hover:text-rose-100 hover:underline text-left w-full flex items-center gap-0.5 group/name"
+                  >
+                    {isActive && "▶ "}{c.name}
+                    <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover/name:opacity-60 shrink-0 transition-opacity" />
+                  </button>
+                )}
               </div>
 
               {/* AC badge */}
