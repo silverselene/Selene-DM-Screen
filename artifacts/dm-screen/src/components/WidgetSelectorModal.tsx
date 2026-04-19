@@ -55,10 +55,10 @@ export function WidgetSelectorModal({ onSelect, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-gray-950 border border-purple-700/60 rounded-xl p-6 w-full max-w-lg shadow-[0_0_40px_rgba(139,43,226,0.3)]">
+      <div className="relative z-10 border border-purple-700/60 rounded-xl p-6 w-full max-w-lg shadow-[0_0_40px_rgba(139,43,226,0.3)]" style={{ background: "var(--dm-bg-card)" }}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white tracking-wide">Choose a Widget</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-200 transition-colors">
+          <h2 className="text-lg font-bold tracking-wide" style={{ color: "var(--dm-thead)" }}>Choose a Widget</h2>
+          <button onClick={onClose} className="hover:text-gray-200 transition-colors" style={{ color: "var(--dm-t3)" }}>
             <X className="w-5 h-5" />
           </button>
         </div>

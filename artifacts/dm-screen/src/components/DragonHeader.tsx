@@ -1,4 +1,9 @@
+import { Sun, Moon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+
 export function DragonHeader() {
+  const { isDark, toggle } = useTheme();
+
   return (
     <header className="relative h-16 flex items-center justify-center overflow-hidden shrink-0"
       style={{ background: "linear-gradient(180deg, #0d0014 0%, #120020 100%)" }}
@@ -10,10 +15,8 @@ export function DragonHeader() {
             <pattern id="celtic-top" x="0" y="0" width="48" height="6" patternUnits="userSpaceOnUse">
               <path d="M0,3 L6,0 L12,3 L18,6 L24,3 L30,0 L36,3 L42,6 L48,3" stroke="#8A2BE2" strokeWidth="1.5" fill="none" opacity="0.8"/>
               <path d="M0,3 L6,6 L12,3 L18,0 L24,3 L30,6 L36,3 L42,0 L48,3" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" fill="none" opacity="0.6"/>
-              <circle cx="0" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
-              <circle cx="12" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
-              <circle cx="24" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
-              <circle cx="36" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="0" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/><circle cx="12" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="24" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/><circle cx="36" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
               <circle cx="48" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
               <circle cx="6" cy="0" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
               <circle cx="18" cy="6" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
@@ -34,10 +37,8 @@ export function DragonHeader() {
             <pattern id="celtic-bottom" x="0" y="0" width="48" height="6" patternUnits="userSpaceOnUse">
               <path d="M0,3 L6,6 L12,3 L18,0 L24,3 L30,6 L36,3 L42,0 L48,3" stroke="#8A2BE2" strokeWidth="1.5" fill="none" opacity="0.8"/>
               <path d="M0,3 L6,0 L12,3 L18,6 L24,3 L30,0 L36,3 L42,6 L48,3" stroke="rgba(255,255,255,0.5)" strokeWidth="0.8" fill="none" opacity="0.6"/>
-              <circle cx="0" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
-              <circle cx="12" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
-              <circle cx="24" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
-              <circle cx="36" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="0" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/><circle cx="12" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
+              <circle cx="24" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/><circle cx="36" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
               <circle cx="48" cy="3" r="1.5" fill="#8A2BE2" opacity="0.7"/>
               <circle cx="6" cy="6" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
               <circle cx="18" cy="0" r="1" fill="rgba(255,255,255,0.6)" opacity="0.6"/>
@@ -83,6 +84,26 @@ export function DragonHeader() {
           D&amp;D 5.5e · 2024 Revision
         </div>
       </div>
+
+      {/* ── Theme toggle ── */}
+      <button
+        onClick={toggle}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-600/50 bg-black/30 hover:bg-purple-900/50 backdrop-blur-sm transition-all duration-200 group"
+      >
+        {isDark ? (
+          <>
+            <Sun className="w-3.5 h-3.5 text-yellow-300 group-hover:text-yellow-200 transition-colors" />
+            <span className="text-[10px] font-medium text-purple-300 group-hover:text-white transition-colors hidden sm:block tracking-wide">LIGHT</span>
+          </>
+        ) : (
+          <>
+            <Moon className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-100 transition-colors" />
+            <span className="text-[10px] font-medium text-purple-300 group-hover:text-white transition-colors hidden sm:block tracking-wide">DARK</span>
+          </>
+        )}
+      </button>
     </header>
   );
 }

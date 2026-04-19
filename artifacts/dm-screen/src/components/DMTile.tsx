@@ -94,7 +94,7 @@ export function DMTile({
   /* ── Empty tile ── */
   if (widget === "empty") {
     return (
-      <div className="relative h-full rounded-lg border-2 border-dashed border-purple-900/40 hover:border-purple-700/60 transition-all group flex items-center justify-center bg-gray-950/30 hover:bg-purple-950/10">
+      <div className="relative h-full rounded-lg border-2 border-dashed border-purple-900/40 hover:border-purple-700/60 transition-all group flex items-center justify-center hover:bg-purple-950/10" style={{ background: "var(--dm-bg-tile)" }}>
         {/* Center add button */}
         <button
           onClick={onAdd}
@@ -156,15 +156,12 @@ export function DMTile({
 
   return (
     <div
-      className={`relative h-full rounded-lg border bg-gray-950/80 ${meta.accent} hover:shadow-[0_0_16px_rgba(139,43,226,0.12)] transition-all flex flex-col overflow-hidden`}
-      style={{
-        backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M0 0h4v4H0z' fill='%23111' /%3E%3Cpath d='M0 0h1v1H0z' fill='%23161616' /%3E%3C/svg%3E\")",
-      }}
+      className={`relative h-full rounded-lg border ${meta.accent} hover:shadow-[0_0_16px_rgba(139,43,226,0.12)] transition-all flex flex-col overflow-hidden`}
+      style={{ background: "var(--dm-bg-tile)" }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-800/60 shrink-0">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400">
+      <div className="flex items-center justify-between px-2.5 py-1.5 border-b shrink-0" style={{ borderBottomColor: "var(--dm-border)" }}>
+        <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--dm-t2)" }}>
           <span className="text-white/60">{meta.icon}</span>
           {meta.label}
         </div>

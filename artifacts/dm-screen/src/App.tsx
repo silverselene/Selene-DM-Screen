@@ -4,6 +4,7 @@ import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
 import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import type { TileEntry, WidgetType } from "@/types";
 
 const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
@@ -11,7 +12,8 @@ const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
 const getDefaultTiles = (cols: number, rows: number): TileEntry[] =>
   Array.from({ length: cols * rows }, empty);
 
-function App() {
+function AppContent() {
+  const { isDark } = useTheme();
   const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3);
   const [rows, setRows] = useLocalStorage<number>("dm-grid-rows", 3);
   const [tiles, setTiles] = useLocalStorage<TileEntry[]>(
@@ -26,16 +28,14 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [bestiaryTarget, setBestiaryTarget] = useState<string | null>(null);
 
-  // Listen for open-bestiary events from any widget (e.g. Initiative Tracker)
   useEffect(() => {
     const handler = (e: Event) => {
       const name = (e as CustomEvent<{ name: string }>).detail?.name;
       if (!name) return;
       setBestiaryTarget(name);
-      // Find existing bestiary tile or open one in the first empty slot
       setTiles((prev) => {
         const hasBestiary = prev.some((t) => t !== null && t.widget === "bestiary");
-        if (hasBestiary) return prev; // already open — just update target
+        if (hasBestiary) return prev;
         const next = [...prev];
         const firstEmpty = next.findIndex((t) => t !== null && t.widget === "empty");
         if (firstEmpty !== -1) {
@@ -73,7 +73,6 @@ function App() {
       const entry = t[i];
       if (!entry) return t;
       pushRecent(entry.widget);
-      // Restore any cells consumed by this tile's span
       if (entry.colSpan === 2 && i + 1 < t.length) t[i + 1] = empty();
       if (entry.rowSpan === 2 && i + cols < t.length) t[i + cols] = empty();
       if (entry.colSpan === 2 && entry.rowSpan === 2 && i + cols + 1 < t.length)
@@ -141,17 +140,14 @@ function App() {
 
   const handleGridResize = (newCols: number, newRows: number) => {
     const newCount = newCols * newRows;
-    // Collect existing widget types (preserving order, skipping nulls/spans)
     const existing: WidgetType[] = tiles
       .filter((t): t is NonNullable<TileEntry> => t !== null)
       .map((t) => (t as { widget: WidgetType; colSpan: number; rowSpan: number }).widget);
-
     const next: TileEntry[] = Array.from({ length: newCount }, (_, i) => ({
       widget: existing[i] ?? "empty",
       colSpan: 1 as const,
       rowSpan: 1 as const,
     }));
-
     setCols(newCols);
     setRows(newRows);
     setTiles(next);
@@ -159,13 +155,16 @@ function App() {
 
   return (
     <div
-      className="h-screen w-screen flex flex-col overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #090010 0%, #0d0018 50%, #080012 100%)" }}
+      className={`h-screen w-screen flex flex-col overflow-hidden transition-colors duration-300${!isDark ? " light-mode" : ""}`}
+      style={{
+        background: isDark
+          ? "linear-gradient(135deg, #090010 0%, #0d0018 50%, #080012 100%)"
+          : "var(--dm-bg-page)",
+      }}
     >
       <DragonHeader />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
         <Sidebar
           open={sidebarOpen}
           onToggle={() => setSidebarOpen((p) => !p)}
@@ -177,7 +176,6 @@ function App() {
           onClearRecent={() => setRecentWidgets([])}
         />
 
-        {/* Main grid */}
         <main className="flex-1 p-3 overflow-hidden">
           <div
             className="h-full"
@@ -237,7 +235,7 @@ function App() {
 
       <footer className="shrink-0 h-5 flex items-center justify-center relative">
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        <span className="text-[10px] text-gray-700 tracking-widest">
+        <span className="text-[10px] tracking-widest" style={{ color: "var(--dm-t3)" }}>
           Selene's DM Screen · D&amp;D 5.5e 2024 · All data local &amp; persistent
         </span>
       </footer>
@@ -249,6 +247,14 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 
