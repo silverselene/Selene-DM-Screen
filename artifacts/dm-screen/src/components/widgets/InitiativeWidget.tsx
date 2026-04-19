@@ -18,6 +18,11 @@ interface MonsterSummary {
   ac_type: string;
   hp: string;
   cr: string;
+  source?: string;
+  is_legendary?: boolean;
+  initiative_modifier?: number;
+  initiative_roll?: number;
+  environment?: string;
 }
 
 function parseMaxHp(hpStr: string): number {
@@ -75,6 +80,10 @@ export function InitiativeWidget() {
     setMonsterHpOverride(String(parseMaxHp(m.hp)));
     setMonsterResults([]);
     setMonsterQuery(m.name);
+    // Pre-fill initiative with the monster's modifier (displayed as e.g. "+2" or "−1")
+    if (m.initiative_modifier != null) {
+      setMonsterInitiative(String(m.initiative_modifier));
+    }
   };
 
   // ── Add combatant ───────────────────────────────────────────────
@@ -266,17 +275,25 @@ export function InitiativeWidget() {
 
               {/* Results dropdown */}
               {monsterResults.length > 0 && !selectedMonster && (
-                <div className="max-h-28 overflow-y-auto rounded border border-gray-700 bg-gray-900 divide-y divide-gray-800">
+                <div className="max-h-36 overflow-y-auto rounded border border-gray-700 bg-gray-900 divide-y divide-gray-800">
                   {monsterResults.map((m) => (
                     <button
                       key={m.id}
                       onClick={() => selectMonster(m)}
                       className="w-full text-left px-2 py-1 text-xs hover:bg-rose-900/30 transition-colors"
                     >
-                      <span className="text-gray-200 font-medium">{m.name}</span>
-                      <span className="text-gray-500 ml-2">
-                        {m.size} {m.type} · CR {m.cr} · AC {m.ac} · {m.hp.split(" ")[0]} HP
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-200 font-medium">{m.name}</span>
+                        {m.is_legendary && (
+                          <span className="text-[9px] text-amber-400 border border-amber-700/50 rounded px-0.5 leading-tight">LEG</span>
+                        )}
+                        {m.source && (
+                          <span className="text-[9px] text-gray-600 ml-auto shrink-0">{m.source}</span>
+                        )}
+                      </div>
+                      <div className="text-gray-500 mt-0.5">
+                        {[m.size, m.type].filter(Boolean).join(" ")} · CR {m.cr} · AC {m.ac} · {m.hp.split(" ")[0]} HP
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -289,11 +306,26 @@ export function InitiativeWidget() {
               {/* Selected monster stat preview */}
               {selectedMonster && (
                 <div className="bg-rose-950/30 border border-rose-800/40 rounded px-2 py-1.5 text-xs">
-                  <div className="font-semibold text-rose-300 mb-0.5">{selectedMonster.name}</div>
-                  <div className="text-gray-400 flex gap-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="font-semibold text-rose-300">{selectedMonster.name}</span>
+                    {selectedMonster.is_legendary && (
+                      <span className="text-[9px] text-amber-400 border border-amber-700/50 rounded px-1 leading-tight">LEGENDARY</span>
+                    )}
+                    {selectedMonster.source && (
+                      <span className="text-[9px] text-gray-500 ml-auto">{selectedMonster.source}</span>
+                    )}
+                  </div>
+                  <div className="text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span>CR {selectedMonster.cr}</span>
-                    <span className="flex items-center gap-0.5"><Shield className="w-3 h-3" /> {selectedMonster.ac} {selectedMonster.ac_type && `(${selectedMonster.ac_type})`}</span>
+                    <span className="flex items-center gap-0.5">
+                      <Shield className="w-3 h-3" />
+                      {selectedMonster.ac}
+                      {selectedMonster.ac_type && ` (${selectedMonster.ac_type})`}
+                    </span>
                     <span>HP {selectedMonster.hp}</span>
+                    {selectedMonster.initiative_modifier != null && (
+                      <span>Init {selectedMonster.initiative_modifier >= 0 ? "+" : ""}{selectedMonster.initiative_modifier}</span>
+                    )}
                   </div>
                 </div>
               )}

@@ -1,0 +1,2171 @@
+﻿Name,AC,Alignment,CR,Current HP,Damage,Environment,Hit Points,Initiative,Initiative Roll,Legendary,Page Number,Size,Source,Speed (ft),Type
+Pech,15,,2,33,,,33,0,10,,294,,Creature Codex,,Elemental
+"Minotaur, Ravening",14,,3,85,,,85,0,10,,272,,Tome of Beasts 3,,Monstrosity
+Reef Shark,12,,0.5,22,,,22,1,11,,336,,5e SRD,,Beast
+Xenabsorber,15,,3,65,,,65,1,11,,387,,Creature Codex,,Aberration
+Cambion,16,,5,93,,,93,4,14,,42,,A5e Monstrous Menagerie,,Fiend
+Pact Lich,17,,15,195,,,195,3,13,Legendary,152,,Creature Codex,,Undead
+Brimstone Locusthound,15,,3,60,,,60,2,12,,51,,Tome of Beasts 2,,Monstrosity
+"Musk Deer, Swarm",13,,2,44,,,44,3,13,,282,,Tome of Beasts 3,,Beast
+Lazavik,14,,3,36,,,36,4,14,,236,,Tome of Beasts 2,,Fey
+Labyrinth Keeper,15,,5,119,,,119,0,10,,267,,Creature Codex,,Monstrosity
+Master Thief,18,,17,143,,,143,5,15,,469,,A5e Monstrous Menagerie,,Humanoid
+Rock Roach,16,,2,67,,,67,2,12,,308,,Tome of Beasts 2,,Beast
+Obsidian Ophidian,16,,5,136,,,136,2,12,,295,,Tome of Beasts 3,,Elemental
+Great Wyrm White Dragon,20,,22,740,,,740,1,11,Legendary,121,,A5e Monstrous Menagerie,,Dragon
+Deathwisp,15,,7,82,,,82,5,15,,72,,Tome of Beasts,,Undead
+Centaur Chieftain,16,,5,110,,,110,1,11,,60,,Creature Codex,,Monstrosity
+Wood Golem,14,,3,52,,,52,0,10,,201,,Creature Codex,,Construct
+Skeleton,13,,0.25,13,,,13,2,12,,272,,5e SRD,,Undead
+Zalikum,16,,7,103,,,103,3,13,,382,,Tome of Beasts 2,,Construct
+Servant of the Vine,16,,6,72,,,72,2,12,,144,,Creature Codex,,Humanoid
+Dragon Cultist,12,,2,39,,,39,2,12,,473,,A5e Monstrous Menagerie,,Humanoid
+Warhordling Orc War Chief,16,,5,90,,,90,4,14,,497,,A5e Monstrous Menagerie,,Humanoid
+Silver Dragon Wyrmling,17,,2,45,,,45,0,10,,118,,5e SRD,,Dragon
+Banshee,13,,4,58,,,58,3,13,,30,,A5e Monstrous Menagerie,,Undead
+Spire Walker,16,,3,38,,,38,4,14,,367,,Tome of Beasts,,Fey
+Ratfolk Warlock,13,,1,27,,,27,3,13,,314,,Creature Codex,,Humanoid
+Devil Shark,16,,13,198,,,198,2,12,,98,,Creature Codex,,Monstrosity
+Swarm of Khalkos Spawn,16,,2,71,,,71,3,13,,295,,A5e Monstrous Menagerie,,Aberration
+Flesh Golem,9,,5,93,,,93,-1,9,,169,,5e SRD,,Construct
+Giant Owl,12,,0.25,19,,,19,2,12,,327,,5e SRD,,Beast
+Merfolk Knight,15,,3,52,,,52,1,11,,329,,A5e Monstrous Menagerie,,Humanoid
+Undead Phoenix,17,,12,142,,,142,2,12,,361,,Creature Codex,,Undead
+Marid Noble,17,,11,344,,,344,3,13,,224,,A5e Monstrous Menagerie,,Elemental
+Degenerate Titan,12,,8,161,,,161,-2,8,,381,,Tome of Beasts,,Giant
+Giant Goat,11,,0.5,19,,,19,0,10,,326,,5e SRD,,Beast
+Zilaq,15,,4,82,,,82,2,12,,399,,Tome of Beasts 3,,Dragon
+Tigebra,18,,13,190,,,190,1,11,,369,,Tome of Beasts 3,,Monstrosity
+"Kobold, Drake Rider",15,,3,71,,,71,3,13,,252,,Tome of Beasts 3,,Humanoid
+One-Headed Clockwork Dragon,16,,8,178,,,178,0,10,,111,,Creature Codex,,Construct
+Weaving Spider,15,,1,25,,,25,3,13,,66,,Tome of Beasts,,Construct
+Mead Archon,14,,4,82,,,82,3,13,,18,,Tome of Beasts 2,,Celestial
+Lotus Golem,14,,9,82,,,82,4,14,,201,,Creature Codex,,Construct
+Elvish Veteran Archer,15,,3,77,,,77,3,13,,422,,Tome of Beasts,,Humanoid
+Faerie Dragon Familiar,15,,1,14,,,14,5,15,,205,,A5e Monstrous Menagerie,,Dragon
+Alp,13,,1,44,,,44,3,13,,14,,Creature Codex,,Fey
+Yathon,15,,7,152,,,152,2,12,,378,,Tome of Beasts 2,,Humanoid
+Arcane Leviathan,17,,16,279,,,279,-3,7,,40,,Tome of Beasts 3,,Construct
+Adult Sapphire Dragon,19,,19,304,,,304,6,16,Legendary,150,,A5e Monstrous Menagerie,,Dragon
+"Hag, Pesta",17,,4,105,,,105,2,12,,227,,Tome of Beasts 3,,Fey
+Spy,12,,1,27,,,27,2,12,,349,,5e SRD,,Humanoid
+Giant Moth,11,,0.125,7,,,7,1,11,,178,,Creature Codex,,Beast
+Rust Drake,17,,8,161,,,161,2,12,,155,,Tome of Beasts,,Dragon
+Bearfolk Thunderstomper,15,,6,105,,,105,2,12,,53,,Tome of Beasts 3,,Humanoid
+Wilderness Crone,17,,6,105,,,105,0,10,,392,,Tome of Beasts 3,,Fey
+Light Drake,13,,0.5,24,,,24,3,13,,231,,Tome of Beasts 2,,Dragon
+Baleful Miasma,13,,2,52,,,52,3,13,,50,,Tome of Beasts 3,,Elemental
+Beach Weird,14,,3,65,,,65,1,11,,52,,Tome of Beasts 3,,Elemental
+Jaanavar Jal,15,,7,172,,,172,2,12,,229,,Creature Codex,,Monstrosity
+Archmage,12,,12,99,,,99,2,12,,342,,5e SRD,,Humanoid
+Sewer Weird,15,,8,136,,,136,4,14,,341,,Tome of Beasts 3,,Elemental
+Goblin Shieldbearer,13,,1,10,,,10,1,11,,250,,A5e Monstrous Menagerie,,Humanoid
+Deer,13,,0,4,,,4,3,13,,321,,5e SRD,,Beast
+Young Mithral Dragon,16,,6,92,,,92,6,16,,134,,Tome of Beasts,,Dragon
+Wickerman,8,,9,138,,,138,-1,9,,380,,Creature Codex,,Construct
+Elementalist,15,,2,45,,,45,3,13,,121,,Creature Codex,,Humanoid
+Trollkin Reaver,14,,4,82,,,82,1,11,,390,,Tome of Beasts,,Humanoid
+Ancient Bronze Dragon,22,,22,444,,,444,0,10,Legendary,107,,5e SRD,,Dragon
+Wood Elf Scout,15,,0.5,19,,,19,3,13,,491,,A5e Monstrous Menagerie,,Humanoid
+Derro Fetal Savant,15,,4,2,,,2,-5,5,,92,,Tome of Beasts,,Humanoid
+Earth Dragon Wyrmling,17,,3,58,,,58,1,11,,128,,A5e Monstrous Menagerie,,Dragon
+Black Shuck,17,,11,157,,,157,3,13,,59,,Tome of Beasts 3,,Fiend
+Star Drake,19,,15,189,,,189,3,13,Legendary,156,,Tome of Beasts,,Dragon
+Shadow Elf Mage,12,,6,67,,,67,2,12,,483,,A5e Monstrous Menagerie,,Humanoid
+Clockwork Tiger,16,,6,112,,,112,3,13,,68,,Tome of Beasts 2,,Construct
+Balor General,19,,24,379,,,379,4,14,,66,,A5e Monstrous Menagerie,,Fiend
+Gold Dragon Wyrmling,17,,3,60,,,60,2,12,,115,,5e SRD,,Dragon
+Ushabti,18,,9,105,,,105,3,13,,394,,Tome of Beasts,,Construct
+Necrotech Thunderer,14,,8,126,,,126,-3,7,,287,,Tome of Beasts 3,,Undead
+Ratatosk,14,,4,42,,,42,4,14,,319,,Tome of Beasts,,Celestial
+Lich Hound,14,,4,119,,,119,4,14,,274,,Tome of Beasts,,Undead
+Giant Pufferfish,13,,2,52,,,52,1,11,,200,,Tome of Beasts 3,,Beast
+Sand Ray,13,,8,97,,,97,3,13,,50,,A5e Monstrous Menagerie,,Aberration
+Psychic Vampire,17,,13,144,,,144,4,14,Legendary,0,,Tome of Beasts 2,,Undead
+Midnight Sun,16,,7,136,,,136,3,13,,270,,Tome of Beasts 3,,Aberration
+Scitalis,13,,2,58,,,58,1,11,,321,,Creature Codex,,Monstrosity
+Deathweaver,16,,5,95,,,95,2,12,,83,,Tome of Beasts 2,,Monstrosity
+Automata Devil,17,,10,168,,,168,3,13,,102,,Tome of Beasts,,Fiend
+Imp,13,,1,10,,,10,3,13,,76,,5e SRD,,Fiend
+Qwyllion,16,,8,110,,,110,5,15,,316,,Tome of Beasts,,Aberration
+Kobold Sorcerer,12,,1,27,,,27,2,12,,298,,A5e Monstrous Menagerie,,Humanoid
+Npc: Infiltrator,13,,2,55,,,55,2,12,,410,,Tome of Beasts 3,,Humanoid
+Black Crier,16,,11,150,,,150,4,14,,42,,Tome of Beasts 2,,Undead
+Hound of Tindalos,17,,8,93,,,93,6,16,,221,,Creature Codex,,Aberration
+Eonic Savant,13,,7,115,,,115,3,13,,137,,Tome of Beasts 2,,Humanoid
+Adult Earth Dragon,19,,18,287,,,287,2,12,Legendary,127,,A5e Monstrous Menagerie,,Dragon
+Cave Dragon Wyrmling,16,,2,75,,,75,1,11,,127,,Tome of Beasts,,Dragon
+Ouroboros,15,,6,94,,,94,0,10,Legendary,293,,Creature Codex,,Dragon
+Young Red Dragon Zombie,16,,11,178,,,178,-2,8,,436,,A5e Monstrous Menagerie,,Undead
+Wraith,13,,5,67,,,67,3,13,,302,,5e SRD,,Undead
+"Rakshasa, Pustakam",15,,5,91,,,91,2,12,,329,,Tome of Beasts 3,,Fiend
+Skeletal Champion,15,,3,58,,,58,3,13,,393,,A5e Monstrous Menagerie,,Undead
+Jackalwere,12,,0.5,18,,,18,2,12,,291,,A5e Monstrous Menagerie,,Fiend
+Crimson Shambler,12,,0.5,32,,,32,0,10,,73,,Tome of Beasts 2,,Plant
+Dread Walker Excavator,16,,5,75,,,75,4,14,,129,,Tome of Beasts 2,,Construct
+Mammoth,13,,6,126,,,126,-1,9,,332,,5e SRD,,Beast
+Kobold Broodguard Dragon Servitor,16,,2,44,,,44,2,12,,298,,A5e Monstrous Menagerie,,Humanoid
+Giant Scorpion,15,,3,52,,,52,1,11,,327,,5e SRD,,Beast
+Npc: First Servant,17,,12,162,,,162,2,12,,407,,Tome of Beasts 3,,Humanoid
+Wirbeln Fungi,13,,1,16,,,16,3,13,,166,,Creature Codex,,Plant
+Storm Giant Monarch,16,,14,460,,,460,2,12,,243,,A5e Monstrous Menagerie,,Giant
+Ogrekin,11,,1,32,,,32,1,11,,347,,A5e Monstrous Menagerie,,Humanoid
+"Crab, Duffel",15,,3,60,,,60,1,11,,97,,Tome of Beasts 3,,Monstrosity
+Red Hag,15,,7,119,,,119,3,13,,244,,Tome of Beasts,,Fey
+Wind Demon,15,,2,28,,,28,4,14,,381,,Creature Codex,,Fiend
+Roachling Skirmisher,13,,0.25,7,,,7,2,12,,329,,Tome of Beasts,,Humanoid
+Dread Knight,18,,19,262,,,262,3,13,,184,,A5e Monstrous Menagerie,,Undead
+Avatar of Shoth,18,,21,341,,,341,-1,9,Legendary,332,,Creature Codex,,Aberration
+Abominable Beauty,18,,11,187,,,187,4,14,,11,,Tome of Beasts,,Fey
+Mytholabe,18,,9,152,,,152,1,11,,271,,Creature Codex,,Construct
+Flame Eater Swarm,12,,2,33,,,33,2,12,,204,,Creature Codex,,Beast
+Chelicerae,16,,7,153,,,153,3,13,,54,,Tome of Beasts,,Aberration
+Deep One Hybrid Priest,14,,4,120,,,120,2,12,,73,,Tome of Beasts,,Humanoid
+Myrmex Speaker,16,,9,119,,,119,1,11,,283,,Tome of Beasts 3,,Elemental
+Plague Spirit,14,,9,150,,,150,4,14,,296,,Tome of Beasts 2,,Fey
+Adult Boreal Dragon,19,,17,212,,,212,0,10,Legendary,143,,Tome of Beasts 2,,Dragon
+Silver Dragon Wyrmling Skeleton,17,,2,45,,,45,0,10,,113,,Tome of Beasts 2,,Undead
+Firegeist,14,,2,87,,,87,4,14,,202,,Tome of Beasts,,Elemental
+Owl,11,,0,1,,,1,1,11,,333,,5e SRD,,Beast
+Hobgoblin Captain,18,,3,52,,,52,2,12,,281,,A5e Monstrous Menagerie,,Humanoid
+Leech Swarm,13,,2,32,,,32,3,13,,396,,Tome of Beasts 2,,Beast
+Equitox,15,,13,178,,,178,1,11,Legendary,171,,Tome of Beasts 3,,Fiend
+Swamp Naga,15,,6,102,,,102,3,13,,342,,Tome of Beasts 2,,Monstrosity
+Boneshard Wraith,16,,12,127,,,127,1,11,,46,,Tome of Beasts 2,,Undead
+Shadow Dragon Wyrmling,16,,3,52,,,52,2,12,,137,,A5e Monstrous Menagerie,,Dragon
+Merrow,13,,2,45,,,45,0,10,,219,,5e SRD,,Monstrosity
+Salamander Monarch,17,,13,161,,,161,4,14,,311,,Tome of Beasts 2,,Elemental
+Flying Sword,17,,0.25,17,,,17,2,12,,20,,5e SRD,,Construct
+Faceless Wanderer,13,,4,58,,,58,3,13,,139,,Tome of Beasts 2,,Aberration
+Krake Spawn,16,,9,150,,,150,1,11,,269,,Tome of Beasts,,Monstrosity
+"Scarab, Ruin",15,,6,136,,,136,2,12,,337,,Tome of Beasts 3,,Undead
+Deep Troll,15,,4,63,,,63,1,11,,352,,Tome of Beasts 2,,Giant
+Psoglav Demon,17,,7,115,,,115,6,16,,79,,Tome of Beasts,,Fiend
+Sunset Raptor,13,,1,32,,,32,2,12,,351,,Creature Codex,,Monstrosity
+Dancing Foliage,13,,4,66,,,66,3,13,,79,,Tome of Beasts 2,,Plant
+Gray Orc,13,,0.25,15,,,15,3,13,,162,,Tome of Beasts 2,,Humanoid
+Nightgaunt,17,,10,142,,,142,3,13,,277,,Creature Codex,,Aberration
+Green Dragon Wyrmling,17,,2,38,,,38,1,11,,95,,5e SRD,,Dragon
+Garmvvolf,14,,9,189,,,189,2,12,,194,,Tome of Beasts 3,,Monstrosity
+Monarch Skeleton,16,,9,142,,,142,2,12,,249,,Creature Codex,,Undead
+Darkmantle,11,,0.5,22,,,22,1,11,,46,,5e SRD,,Monstrosity
+"Kobold, Planes Hunter",16,,10,181,,,181,3,13,,256,,Tome of Beasts 3,,Humanoid
+Chatterlome,16,,7,93,,,93,4,14,,60,,Tome of Beasts 2,,Fiend
+Fennec Fox,11,,0.125,7,,,7,1,11,,0,,Tome of Beasts 2,,Beast
+Acolyte,10,,0.25,9,,,9,0,10,,342,,5e SRD,,Humanoid
+Crystalline Monolith,15,,7,123,,,123,0,10,Legendary,77,,Tome of Beasts 2,,Aberration
+Couatl,19,,4,97,,,97,5,15,,43,,5e SRD,,Celestial
+Minotaur,14,,3,76,,,76,0,10,,223,,5e SRD,,Monstrosity
+Adult Void Dragon,19,,14,229,,,229,0,10,Legendary,139,,Tome of Beasts,,Dragon
+"Gremlin, Bilge Bosun",15,,2,60,,,60,4,14,,219,,Tome of Beasts 3,,Fey
+Blestsessebe,16,,8,144,,,144,4,14,,61,,Tome of Beasts 3,,Celestial
+Giant Water Scorpion,14,,4,93,,,93,1,11,,393,,Tome of Beasts 2,,Beast
+"Drake, Bakery",14,,3,82,,,82,3,13,,151,,Tome of Beasts 3,,Dragon
+Wereowl,13,,5,117,,,117,3,13,,194,,Tome of Beasts 2,,Humanoid
+Qumdaq,13,,0.25,18,,,18,2,12,,326,,Tome of Beasts 3,,Elemental
+Nalfeshnee,18,,13,184,,,184,0,10,,62,,5e SRD,,Fiend
+Flesh Reaver,12,,0.5,19,,,19,2,12,,160,,Creature Codex,,Undead
+Millitaur,14,,3,85,,,85,2,12,,288,,Tome of Beasts,,Monstrosity
+Guardian Naga,18,,10,127,,,127,4,14,,234,,5e SRD,,Monstrosity
+Void Dragon Wyrmling,17,,2,45,,,45,0,10,,140,,Tome of Beasts,,Dragon
+Massive Malleable,14,,16,248,,,248,-1,9,,254,,Tome of Beasts 2,,Aberration
+Khargi,16,,9,147,,,147,1,11,,251,,Tome of Beasts 3,,Fiend
+Egret Harpy,12,,2,75,,,75,2,12,,122,,Tome of Beasts 2,,Monstrosity
+"Dinosaur, Therizinosaurus",13,,5,95,,,95,-1,9,,128,,Tome of Beasts 3,,Beast
+Gelatinous Cube,6,,2,84,,,84,-4,6,,242,,5e SRD,,Ooze
+Conniption Bug,13,,1,55,,,55,2,12,,93,,Tome of Beasts 3,,Beast
+Goblin Warlock,15,,1,21,,,21,2,12,,251,,A5e Monstrous Menagerie,,Humanoid
+Venomous Mummy,11,,3,58,,,58,-1,9,,299,,Tome of Beasts,,Undead
+Pine Doom,16,,9,172,,,172,-2,8,,295,,Tome of Beasts 2,,Plant
+Hobgoblin Warlord,18,,3,104,,,104,2,12,,282,,A5e Monstrous Menagerie,,Humanoid
+Cueyatl Warrior,13,,1,36,,,36,2,12,,69,,Creature Codex,,Humanoid
+"Ogre, Kadag",14,,7,133,,,133,-1,9,,300,,Tome of Beasts 3,,Giant
+"Elf, Shadow Fey Executioner",16,,8,172,,,172,2,12,,169,,Tome of Beasts 3,,Humanoid
+"Kobold, Ghost Hunter",18,,11,176,,,176,6,16,,254,,Tome of Beasts 3,,Humanoid
+"Devil, Infernal Tutor",17,,13,182,,,182,3,13,,121,,Tome of Beasts 3,,Fiend
+Crinaea,13,,2,44,,,44,3,13,,74,,Tome of Beasts 2,,Fey
+Culicoid,18,,12,190,,,190,2,12,,94,,Tome of Beasts 2,,Fiend
+Kelp Eel,17,,10,157,,,157,2,12,,227,,Tome of Beasts 2,,Plant
+Fierstjerren,14,,5,105,,,105,2,12,,157,,Creature Codex,,Undead
+Lord Of The Hunt,18,,18,229,,,229,4,14,Legendary,188,,Tome of Beasts,,Fey
+Underworld Sentinel,17,,10,126,,,126,2,12,,381,,Tome of Beasts 3,,Undead
+Hydra,15,,8,172,,,172,1,11,,190,,5e SRD,,Monstrosity
+Light Cavalry,14,,1,39,,,39,1,11,,256,,Creature Codex,,Humanoid
+"Devil, Moldering",13,,0.5,27,,,27,0,10,,123,,Tome of Beasts 3,,Fiend
+Malphas (Storm Crow),16,,6,120,,,120,4,14,,283,,Tome of Beasts,,Fey
+Lizard,10,,0,2,,,2,0,10,,332,,5e SRD,,Beast
+Stone-Eater Slime,12,,4,90,,,90,0,10,,357,,Tome of Beasts 3,,Ooze
+Magma Mephit,11,,0.5,22,,,22,1,11,,216,,5e SRD,,Elemental
+Umbral Vampire,14,,7,84,,,84,4,14,,397,,Tome of Beasts,,Fiend
+Kobold Broodguard,16,,2,44,,,44,2,12,,298,,A5e Monstrous Menagerie,,Humanoid
+Marsh Dire,15,,8,142,,,142,1,11,,258,,,,Undead
+Irid,13,,1,20,,,20,3,13,,217,,Tome of Beasts 2,,Celestial
+Tormented Qiqirn,16,,10,133,,,133,4,14,,301,,Tome of Beasts 2,,Fiend
+Scorchrunner Jackal,13,,1,38,,,38,3,13,,340,,Tome of Beasts 3,,Monstrosity
+Desert Slime,8,,3,75,,,75,-2,8,,115,,Tome of Beasts 3,,Ooze
+Xing Tian,16,,11,168,,,168,1,11,,376,,Tome of Beasts 2,,Giant
+Edjet,14,,3,52,,,52,1,11,,0,,Creature Codex,,Humanoid
+Adult Black Dragon Lich,19,,17,253,,,253,2,12,Legendary,96,,A5e Monstrous Menagerie,,Undead
+Vellso,15,,7,120,,,120,2,12,,92,,Creature Codex,,Fiend
+Wormhearted Suffragan,12,,5,97,,,97,2,12,,410,,Tome of Beasts,,Undead
+Aalpamac,16,,7,136,,,136,0,10,,8,,Tome of Beasts 2,,Monstrosity
+Sasori Fukurowashi,17,,9,123,,,123,4,14,,224,,Tome of Beasts 2,,Fey
+Infernal Centaur,15,,4,60,,,60,1,11,,214,,Tome of Beasts 2,,Fiend
+Savager,17,,8,115,,,115,2,12,,338,,Tome of Beasts,,Beast
+Adult Silver Dragon,19,,16,243,,,243,0,10,Legendary,117,,5e SRD,,Dragon
+Giant Ant Queen,15,,4,85,,,85,1,11,,23,,Tome of Beasts,,Beast
+Cambium,19,,14,264,,,264,3,13,,51,,Tome of Beasts,,Fiend
+Grimalkin,13,,0.5,22,,,22,3,13,,452,,A5e Monstrous Menagerie,,Monstrosity
+Isonade,18,,14,222,,,222,2,12,,257,,Tome of Beasts,,Monstrosity
+Oni,16,,7,110,,,110,0,10,,239,,5e SRD,,Giant
+Centaur,13,,2,45,,,45,3,13,,44,,A5e Monstrous Menagerie,,Fey
+Putrid Haunt,13,,2,44,,,44,-1,9,,315,,Tome of Beasts,,Undead
+Carrier Mosquito,13,,3,75,,,75,1,11,,389,,Tome of Beasts 2,,Beast
+Kobold Dragon Servitor,12,,1,7,,,7,2,12,,298,,A5e Monstrous Menagerie,,Humanoid
+Kaveph,16,,6,136,,,136,1,11,,225,,Tome of Beasts 2,,Aberration
+Roper,20,,5,93,,,93,-1,9,,261,,5e SRD,,Monstrosity
+Giant Rat (Diseased),12,,0.125,7,,,7,2,12,,327,,5e SRD,,Beast
+Giant Armadillo,12,,0.25,10,,,10,-1,9,,392,,Tome of Beasts 2,,Beast
+Derendian Moth Abomination,14,,12,210,,,210,5,15,Legendary,96,,Tome of Beasts 2,,Monstrosity
+Violet Fungus,5,,0.25,18,,,18,-5,5,,138,,5e SRD,,Plant
+Major Malleable,13,,10,218,,,218,-1,9,,254,,Tome of Beasts 2,,Aberration
+Scroll Mummy,12,,6,105,,,105,-1,9,,0,,Tome of Beasts 2,,Undead
+Pit Fiend General,19,,20,600,,,600,3,13,,88,,A5e Monstrous Menagerie,,Fiend
+Chort Devil,18,,12,187,,,187,5,15,,104,,Tome of Beasts,,Fiend
+Bone Golem,16,,7,60,,,60,3,13,,201,,Creature Codex,,Construct
+Nihilethic Zombie,9,,1,22,,,22,-2,8,,9,,Tome of Beasts,,Undead
+Accursed Spirit Naga,16,,8,85,,,85,3,13,,343,,A5e Monstrous Menagerie,,Monstrosity
+Painted Phantasm,15,,7,97,,,97,3,13,,312,,Tome of Beasts 3,,Construct
+Grove Bear,13,,0.25,13,,,13,1,11,,178,,Tome of Beasts 2,,Beast
+Conjoined Queen,18,,10,168,,,168,3,13,,70,,Tome of Beasts 2,,Monstrosity
+Darakhul High Priestess,17,,9,112,,,112,2,12,,172,,Creature Codex,,Undead
+Apaxrusl,13,,3,60,,,60,1,11,,27,,Tome of Beasts 2,,Construct
+"Lycanthrope, Wereotter",13,,2,44,,,44,3,13,,266,,Tome of Beasts 3,,Humanoid
+Purple Slime,7,,3,76,,,76,-1,9,,307,,Creature Codex,,Ooze
+Efreeti,17,,11,200,,,200,1,11,,145,,5e SRD,,Elemental
+Adult White Dragon,18,,13,200,,,200,0,10,Legendary,101,,5e SRD,,Dragon
+Ink Guardian,8,,4,102,,,102,-2,8,,285,,Creature Codex,,Ooze
+Kobold Spellclerk,12,,0.5,21,,,21,2,12,,232,,Tome of Beasts 2,,Humanoid
+Bandit,12,,0.125,11,,,11,1,11,,343,,5e SRD,,Humanoid
+Philosopher's Ghost,13,,4,77,,,77,3,13,,297,,Creature Codex,,Ooze
+Horakh,17,,9,161,,,161,4,14,,250,,Tome of Beasts,,Monstrosity
+Revilock,12,,2,39,,,39,2,12,,259,,A5e Monstrous Menagerie,,Humanoid
+Young River Dragon,17,,9,142,,,142,3,13,,132,,A5e Monstrous Menagerie,,Dragon
+"Zombie, Smokeplume",15,,3,68,,,68,-1,9,,400,,Tome of Beasts 3,,Undead
+Cikavak,12,,0.125,17,,,17,2,12,,58,,Tome of Beasts,,Fey
+Tosculi Elite Bow Raider,16,,5,97,,,97,4,14,,386,,Tome of Beasts,,Humanoid
+Empusa,16,,5,102,,,102,1,11,,136,,Tome of Beasts 2,,Monstrosity
+"Dragon, Sand Ancient",21,,23,507,,,507,1,11,Legendary,144,,Tome of Beasts 3,,Dragon
+Adult Silver Dragon (+),19,,19,283,,,283,2,12,Legendary,178,,A5e Monstrous Menagerie,,Dragon
+Crab,11,,0,2,,,2,0,10,,320,,5e SRD,,Beast
+Corrupted Pixie,15,,0.5,5,,,5,5,15,,72,,Tome of Beasts 2,,Fiend
+Ice Devil,18,,14,180,,,180,2,12,,75,,5e SRD,,Fiend
+Great Wyrm Blue Dragon,22,,25,814,,,814,0,10,Legendary,106,,A5e Monstrous Menagerie,,Dragon
+Young Sapphire Dragon,18,,10,161,,,161,4,14,,151,,A5e Monstrous Menagerie,,Dragon
+Buraq,17,,11,152,,,152,4,14,,48,,Tome of Beasts,,Celestial
+"Dwarf, Pike Guard",16,,0.5,30,,,30,-1,9,,166,,Tome of Beasts 3,,Humanoid
+Owl Harpy,14,,5,112,,,112,3,13,,246,,Tome of Beasts,,Monstrosity
+Redcap,15,,6,105,,,105,0,10,,325,,Tome of Beasts,,Fey
+Subek,17,,5,76,,,76,0,10,,371,,Tome of Beasts,,Humanoid
+Adult Blue Dragon,19,,16,225,,,225,0,10,Legendary,91,,5e SRD,,Dragon
+Akaasit,15,,6,91,,,91,4,14,,11,,Tome of Beasts 2,,Construct
+Void Constructor,19,,3,43,,,43,1,11,,385,,Tome of Beasts 3,,Construct
+Pony,10,,0.125,11,,,11,0,10,,335,,5e SRD,,Beast
+Stone Golem,17,,10,178,,,178,-1,9,,170,,5e SRD,,Construct
+Doppelixir,13,,1,45,,,45,3,13,,139,,Tome of Beasts 3,,Ooze
+Chernomoi,13,,1,32,,,32,4,14,,55,,Tome of Beasts,,Fey
+"Rakshasa, Slayer",18,,9,142,,,142,5,15,,330,,Tome of Beasts 3,,Fiend
+Mountain Dryad,17,,11,172,,,172,1,11,,261,,Tome of Beasts 2,,Fey
+Derro Explorer,15,,2,44,,,44,3,13,,97,,Tome of Beasts 2,,Humanoid
+Quipper,13,,0,1,,,1,3,13,,335,,5e SRD,,Beast
+Clockwork Myrmidon,16,,6,153,,,153,2,12,,64,,Tome of Beasts,,Construct
+Adult Gold Dragon (+),19,,20,324,,,324,2,12,Legendary,172,,A5e Monstrous Menagerie,,Dragon
+Nkosi Pridelord,16,,4,93,,,93,4,14,,306,,Tome of Beasts,,Humanoid
+Giant Wolf Spider,13,,0.25,11,,,11,3,13,,330,,5e SRD,,Beast
+Arachnocrat,15,,5,93,,,93,3,13,,102,,Tome of Beasts 2,,Fiend
+Coven Winter Hag,17,,9,135,,,135,3,13,,272,,A5e Monstrous Menagerie,,Fey
+Infernal Knight,18,,16,247,,,247,2,12,,104,,Creature Codex,,Fiend
+Black Knight Commander,18,,5,78,,,78,0,10,,418,,Tome of Beasts,,Humanoid
+Yaojing,15,,15,202,,,202,5,15,,377,,Tome of Beasts 2,,Celestial
+Bulbous Violet,12,,1,38,,,38,2,12,,53,,Tome of Beasts 2,,Plant
+Lakescourge Lotus,15,,5,90,,,90,3,13,,258,,Tome of Beasts 3,,Undead
+Hobgoblin,18,,0.5,11,,,11,1,11,,186,,5e SRD,,Humanoid
+Blood Giant,15,,8,126,,,126,1,11,,180,,Creature Codex,,Giant
+Birgemon Seal,12,,2,60,,,60,2,12,,57,,Tome of Beasts 3,,Aberration
+Phase Giant,15,,5,136,,,136,0,10,,172,,Tome of Beasts 2,,Giant
+Pit Fiend,19,,20,300,,,300,2,12,,77,,5e SRD,,Fiend
+Shield Guardian,17,,7,142,,,142,-1,9,,271,,5e SRD,,Construct
+Doom Creeper,15,,6,137,,,137,5,15,,138,,Tome of Beasts 3,,Plant
+Stone Giant Stonetalker,17,,8,126,,,126,2,12,,241,,A5e Monstrous Menagerie,,Giant
+Galidroo,17,,12,172,,,172,1,11,,161,,Tome of Beasts 2,,Monstrosity
+Knight Captain,20,,14,171,,,171,1,11,,477,,A5e Monstrous Menagerie,,Humanoid
+Mavka,17,,12,170,,,170,2,12,,286,,Tome of Beasts,,Undead
+Arcane Blademaster,20,,19,256,,,256,1,11,,479,,A5e Monstrous Menagerie,,Humanoid
+Haakjir,15,,3,52,,,52,3,13,,224,,Tome of Beasts 3,,Monstrosity
+Owlbear Recluse,13,,3,119,,,119,1,11,,356,,A5e Monstrous Menagerie,,Monstrosity
+Boreas’ Chosen,15,,7,102,,,102,2,12,,48,,Tome of Beasts 2,,Humanoid
+Mountain Dwarf Defender,20,,3,52,,,52,1,11,,477,,A5e Monstrous Menagerie,,Humanoid
+Sarcophagus Slime,11,,5,105,,,105,1,11,,336,,Tome of Beasts,,Undead
+"Harpy, Plague",15,,6,142,,,142,2,12,,229,,Tome of Beasts 3,,Monstrosity
+Ortifex,12,,4,78,,,78,0,10,,287,,Tome of Beasts 2,,Undead
+City Watch Captain,17,,4,91,,,91,3,13,,419,,Tome of Beasts,,Humanoid
+Young Blue Dragon,18,,9,152,,,152,0,10,,91,,5e SRD,,Dragon
+Npc: Wind Acolyte,15,,5,105,,,105,5,15,,412,,Tome of Beasts 3,,Humanoid
+Quickstep,16,,5,49,,,49,4,14,,308,,Creature Codex,,Fey
+Onyx Magistrate,16,,8,123,,,123,0,10,,276,,Tome of Beasts 2,,Construct
+Ice Worm,18,,15,247,,,247,-1,9,,365,,A5e Monstrous Menagerie,,Monstrosity
+Death Shroud Golem,12,,5,95,,,95,2,12,,179,,Tome of Beasts 2,,Construct
+Elemental Locus,16,,17,290,,,290,-5,5,,169,,Tome of Beasts,,Elemental
+Giant Husk,9,,7,76,,,76,-1,9,,393,,Tome of Beasts 2,,Undead
+Lemurfolk,13,,0.25,14,,,14,2,12,,271,,Tome of Beasts,,Humanoid
+"Dragon, Sand Wyrmling",18,,3,52,,,52,1,11,,147,,Tome of Beasts 3,,Dragon
+Alazai,16,,10,149,,,149,2,12,,15,,Tome of Beasts 3,,Elemental
+"Derro, Voidwarped",14,,6,120,,,120,4,14,,114,,Tome of Beasts 3,,Humanoid
+Grimmlet Swarm,15,,14,152,,,152,1,11,,187,,Tome of Beasts 2,,Monstrosity
+High Elf Noble,15,,0.25,13,,,13,1,11,,485,,A5e Monstrous Menagerie,,Humanoid
+Giant Shark Bowl,6,,8,172,,,172,-4,6,,284,,Creature Codex,,Ooze
+Garlicle,12,,1,31,,,31,2,12,,162,,Tome of Beasts 2,,Plant
+Gnoll Demonfang,15,,4,65,,,65,3,13,,247,,A5e Monstrous Menagerie,,Humanoid
+Alnaar,17,,9,212,,,212,6,16,,82,,Creature Codex,,Fiend
+Xhkarsh,19,,8,133,,,133,5,15,,412,,Tome of Beasts,,Aberration
+Sandwyrm,15,,6,142,,,142,1,11,,334,,Tome of Beasts,,Dragon
+Clockwork Armadillo,14,,0.25,22,,,22,4,14,,86,,Tome of Beasts 3,,Construct
+Vexxeh,15,,6,94,,,94,1,11,,360,,Tome of Beasts 2,,Fiend
+Vangsluagh,13,,4,85,,,85,3,13,,359,,Tome of Beasts 2,,Aberration
+Puffinfolk,15,,0.5,22,,,22,4,14,,322,,Tome of Beasts 3,,Humanoid
+Accursed Defiler,12,,4,75,,,75,2,12,,12,,Tome of Beasts,,Undead
+Behir,17,,11,168,,,168,3,13,,25,,5e SRD,,Monstrosity
+Young Red Dragon,18,,10,178,,,178,0,10,,98,,5e SRD,,Dragon
+Derro Guard,13,,0.5,18,,,18,2,12,,97,,Tome of Beasts 2,,Humanoid
+"Giant, Hellfire",16,,9,168,,,168,2,12,,203,,Tome of Beasts 3,,Giant
+Lunarian,16,,5,97,,,97,2,12,,245,,Tome of Beasts 2,,Fey
+Young Emerald Dragon,17,,9,133,,,133,4,14,,146,,A5e Monstrous Menagerie,,Dragon
+Adult Red Dragon (+),19,,20,310,,,310,0,10,Legendary,118,,A5e Monstrous Menagerie,,Dragon
+Rageipede,15,,2,55,,,55,2,12,,310,,Creature Codex,,Beast
+Ravenfolk Doom Croaker,14,,5,88,,,88,2,12,,324,,Tome of Beasts,,Humanoid
+Wood Elf Sharpshooter,16,,5,90,,,90,4,14,,491,,A5e Monstrous Menagerie,,Humanoid
+Myling,13,,2,45,,,45,0,10,,301,,Tome of Beasts,,Undead
+"Troll, Gutter",15,,4,75,,,75,3,13,,373,,Tome of Beasts 3,,Giant
+Duskthorn Dryad,17,,3,77,,,77,5,15,,160,,Tome of Beasts,,Fey
+"Ooze, Sinkhole",7,,4,108,,,108,-3,7,,309,,Tome of Beasts 3,,Ooze
+Uridimmu,18,,14,150,,,150,3,13,,19,,Tome of Beasts 2,,Celestial
+Scarecrow Harvester,14,,4,67,,,67,4,14,,383,,A5e Monstrous Menagerie,,Construct
+Blackguard,18,,5,82,,,82,1,11,,475,,A5e Monstrous Menagerie,,Humanoid
+Stirge,14,,0.125,2,,,2,3,13,,284,,5e SRD,,Beast
+Clacking Skeleton,14,,2,45,,,45,1,11,,319,,Creature Codex,,Undead
+Xecha,15,,6,133,,,133,3,13,,397,,Tome of Beasts 3,,Fiend
+Miremal,13,,0.5,22,,,22,3,13,,292,,Tome of Beasts,,Fey
+Npc: Fixer,13,,2,44,,,44,2,12,,407,,Tome of Beasts 3,,Humanoid
+Blood Elemental,14,,5,95,,,95,1,11,,138,,Creature Codex,,Elemental
+Narshark,14,,0.5,25,,,25,1,11,,266,,Tome of Beasts 2,,Monstrosity
+Grolar Bear,14,,3,68,,,68,0,10,,222,,Tome of Beasts 3,,Beast
+Warlords Ghost,13,,4,58,,,58,3,13,,30,,A5e Monstrous Menagerie,,Undead
+Dire Owlbear,15,,5,102,,,102,1,11,,132,,Tome of Beasts 3,,Monstrosity
+Dretch,11,,0.25,18,,,18,0,10,,57,,5e SRD,,Fiend
+Scorpionfolk Imperator,15,,5,52,,,52,1,11,,385,,A5e Monstrous Menagerie,,Monstrosity
+Chuhaister,16,,7,157,,,157,-1,9,,62,,Creature Codex,,Giant
+Zimwi,17,,4,76,,,76,4,14,,415,,Tome of Beasts,,Giant
+Pixiu,15,,6,112,,,112,2,12,,300,,Creature Codex,,Monstrosity
+Mahoru,15,,3,91,,,91,4,14,,281,,Tome of Beasts,,Monstrosity
+Corpse Mound,16,,11,207,,,207,0,10,,69,,Tome of Beasts,,Undead
+Shadow Fey Forest Hunter,15,,5,104,,,104,4,14,,173,,Tome of Beasts,,Humanoid
+Night Scorpion,14,,3,90,,,90,2,12,,340,,Tome of Beasts,,Beast
+Aphasian Abomination,15,,10,170,,,170,5,15,,39,,Tome of Beasts 3,,Construct
+Foxin,14,,0.5,16,,,16,3,13,,163,,Creature Codex,,Fey
+Cave Giant,16,,10,200,,,200,0,10,,182,,Creature Codex,,Giant
+Giant Shark,13,,5,126,,,126,0,10,,328,,5e SRD,,Beast
+Azer Forgemaster,16,,4,78,,,78,2,12,,28,,A5e Monstrous Menagerie,,Elemental
+"Drake, Riptide",17,,11,231,,,231,-1,9,,155,,Tome of Beasts 3,,Dragon
+"Dawnfly, Desolation Nymph",13,,2,68,,,68,2,12,,105,,Tome of Beasts 3,,Beast
+"Ettin, Kobold",12,,1,34,,,34,0,10,,173,,Tome of Beasts 3,,Giant
+Carnivorous Sod,12,,1,33,,,33,-2,8,,57,,Tome of Beasts 2,,Plant
+Hawk,13,,0,1,,,1,3,13,,330,,5e SRD,,Beast
+Grimmlet,11,,1,28,,,28,1,11,,186,,Tome of Beasts 2,,Monstrosity
+Gulon,14,,6,110,,,110,2,12,,212,,Creature Codex,,Monstrosity
+Harpy,11,,1,38,,,38,1,11,,181,,5e SRD,,Monstrosity
+Alpha Fish,13,,3,59,,,59,1,11,,14,,Tome of Beasts 2,,Beast
+Air Elemental,15,,5,90,,,90,5,15,,124,,5e SRD,,Elemental
+Bugbear Chief,15,,4,71,,,71,2,12,,38,,A5e Monstrous Menagerie,,Humanoid
+Spinosaurus,15,,13,231,,,231,-1,9,Legendary,116,,Tome of Beasts,,Beast
+Cryoceros,15,,6,133,,,133,0,10,,76,,Tome of Beasts 2,,Monstrosity
+Giant Weasel,13,,0.125,9,,,9,3,13,,329,,5e SRD,,Beast
+Swampgas Bubble,8,,2,59,,,59,-2,8,,343,,Tome of Beasts 2,,Ooze
+Snatch Bat,16,,5,97,,,97,5,15,,349,,Tome of Beasts 3,,Aberration
+Cavelight Moss,15,,4,95,,,95,0,10,,50,,Tome of Beasts,,Plant
+Nyctli Swarm,14,,10,110,,,110,4,14,,271,,Tome of Beasts 2,,Fey
+Sand Hag,17,,5,112,,,112,2,12,,245,,Tome of Beasts,,Monstrosity
+"Ghoul, Darakhul EOTG",16,,3,78,,,78,3,13,,216,,Tome of Beasts,,Undead
+Trollkin Shaman,14,,4,78,,,78,1,11,,357,,Creature Codex,,Humanoid
+Kobold Sorcerer Dragon Servitor,12,,2,27,,,27,2,12,,298,,A5e Monstrous Menagerie,,Humanoid
+Ogrepede,13,,6,142,,,142,-1,9,,275,,Tome of Beasts 2,,Undead
+Yakirian,13,,2,67,,,67,0,10,,390,,Creature Codex,,Humanoid
+Angel of Judgment,19,,18,229,,,229,4,14,,16,,Tome of Beasts 2,,Celestial
+Brumalek,13,,0.5,40,,,40,3,13,,70,,Tome of Beasts 3,,Beast
+Rime Worm Grub,13,,1,45,,,45,1,11,,327,,Tome of Beasts,,Elemental
+Vine Drake,16,,7,105,,,105,2,12,,181,,Tome of Beasts 2,,Dragon
+Ophinix,13,,2,60,,,60,3,13,,283,,Tome of Beasts 2,,Monstrosity
+"Illhveli, Nauthveli",18,,16,280,,,280,0,10,,212,,Tome of Beasts 2,,Monstrosity
+"Ogre, Alleybasher",13,,4,85,,,85,1,11,,297,,Tome of Beasts 3,,Giant
+Octopus,12,,0,3,,,3,2,12,,333,,5e SRD,,Beast
+Attercroppe,14,,0.5,21,,,21,4,14,,32,,Tome of Beasts 2,,Fey
+Malakbel,14,,9,102,,,102,3,13,,78,,Tome of Beasts,,Fiend
+Eater Of Dust (Yakat-Shi),17,,9,114,,,114,2,12,,164,,Tome of Beasts,,Aberration
+Stuhac,18,,13,190,,,190,4,14,,370,,Tome of Beasts,,Fiend
+Ghost,11,,4,45,,,45,1,11,,147,,5e SRD,,Undead
+"Archon, Ursan",16,,9,142,,,142,2,12,,43,,Tome of Beasts 3,,Celestial
+"Dragonette, Barnyard",13,,0.25,18,,,18,1,11,,148,,Tome of Beasts 3,,Dragon
+Life Broker,16,,13,190,,,190,4,14,,261,,Tome of Beasts 3,,Fey
+Young Shadow Dragon,17,,10,114,,,114,2,12,,137,,A5e Monstrous Menagerie,,Dragon
+Drow,15,,0.25,13,,,13,2,12,,128,,5e SRD,,Humanoid
+Tidehunter,15,,6,133,,,133,2,12,,348,,Tome of Beasts 2,,Monstrosity
+Swarm of Beetles,12,,0.5,22,,,22,1,11,,337,,5e SRD,,Beast
+Clockwork Huntsman,14,,3,110,,,110,2,12,,63,,Tome of Beasts,,Construct
+Huli Jing,14,,9,130,,,130,4,14,,204,,Tome of Beasts 2,,Fey
+Naina,17,,11,231,,,231,3,13,,302,,Tome of Beasts,,Dragon
+Matriarch Serpentine Lamia,15,,5,90,,,90,3,13,,249,,Creature Codex,,Monstrosity
+Sand Worm,18,,15,247,,,247,-1,9,,365,,A5e Monstrous Menagerie,,Monstrosity
+Adult Wind Dragon,19,,17,237,,,237,4,14,Legendary,143,,Tome of Beasts,,Dragon
+Ancient Emerald Dragon,20,,24,346,,,346,8,18,Legendary,144,,A5e Monstrous Menagerie,,Dragon
+Roc Juvenile,14,,8,147,,,147,1,11,,459,,A5e Monstrous Menagerie,,Beast
+Aboleth,17,,10,135,,,135,-1,9,Legendary,13,,5e SRD,,Aberration
+Warmth Thief,16,,9,112,,,112,4,14,,366,,Tome of Beasts 2,,Fey
+Yann-An-Oed,12,,2,47,,,47,0,10,,391,,Creature Codex,,Aberration
+Diplodocus,14,,7,139,,,139,-1,9,,90,,A5e Monstrous Menagerie,,Beast
+Greater Rakshasa,18,,15,144,,,144,4,14,Legendary,0,,Creature Codex,,Fiend
+"Ghoul, Iron",16,,5,143,,,143,3,13,,220,,Tome of Beasts,,Undead
+Climbing Vine,11,,0.125,13,,,13,-2,8,,85,,Tome of Beasts 3,,Plant
+War Machine Golem,18,,18,232,,,232,-1,9,,205,,Creature Codex,,Construct
+Clockwork Servant,11,,0.125,22,,,22,1,11,,65,,Creature Codex,,Construct
+"Fungi, Mush Marcher",13,,3,85,,,85,1,11,,192,,Tome of Beasts 3,,Plant
+Gray Thirster,13,,2,39,,,39,3,13,,238,,Tome of Beasts,,Undead
+"Elemental, Rockslide",14,,8,147,,,147,-1,9,,168,,Tome of Beasts 3,,Elemental
+Bone Swarm,17,,10,198,,,198,4,14,,41,,Tome of Beasts,,Undead
+Lantern Beetle,13,,0,2,,,2,1,11,,392,,Tome of Beasts 2,,Beast
+Lamia,13,,4,97,,,97,1,11,,201,,5e SRD,,Monstrosity
+Alabaster Tree,18,,7,105,,,105,0,10,,302,,Creature Codex,,Celestial
+Valkruung,13,,0.5,22,,,22,3,13,,355,,Tome of Beasts 2,,Monstrosity
+"Angel, Chained",16,,8,88,,,88,3,13,,20,,Tome of Beasts,,Celestial
+Orphan of the Black,13,,2,49,,,49,3,13,,286,,Tome of Beasts 2,,Fey
+Killer Whale,12,,3,90,,,90,0,10,,331,,5e SRD,,Beast
+Tatzelwurm,15,,6,120,,,120,2,12,Legendary,366,,Tome of Beasts 3,,Dragon
+Red Dragon Wyrmling,17,,4,75,,,75,0,10,,98,,5e SRD,,Dragon
+The Flesh,14,,4,78,,,78,2,12,,367,,Tome of Beasts 3,,Aberration
+Púca,12,,7,142,,,142,2,12,,321,,Tome of Beasts 3,,Fey
+Lemure Band,7,,2,67,,,67,-3,7,,86,,A5e Monstrous Menagerie,,Fiend
+Rockwood,17,,6,94,,,94,-1,9,,334,,Tome of Beasts 3,,Elemental
+Gnyan,14,,4,90,,,90,4,14,,210,,Tome of Beasts 3,,Elemental
+Elder Black Pudding,7,,8,171,,,171,-3,7,,350,,A5e Monstrous Menagerie,,Ooze
+Rat King,14,,5,76,,,76,3,13,,318,,Tome of Beasts,,Monstrosity
+Crusher,20,,10,115,,,115,-1,9,,53,,A5e Monstrous Menagerie,,Construct
+Iceworm,13,,1,38,,,38,3,13,,241,,Tome of Beasts 3,,Monstrosity
+Yumerai,13,,2,65,,,65,3,13,,381,,Tome of Beasts 2,,Fey
+Young Gold Dragon,18,,10,178,,,178,2,12,,115,,5e SRD,,Dragon
+Bronze Golem,13,,3,57,,,57,-2,8,,201,,Creature Codex,,Construct
+Manabane Scarab Swarm,15,,4,75,,,75,3,13,,374,,Tome of Beasts,,Beast
+Bagiennik,15,,3,75,,,75,4,14,,31,,Tome of Beasts,,Aberration
+Dorreq,15,,4,93,,,93,4,14,,124,,Tome of Beasts,,Aberration
+Homunculus,13,,0,5,,,5,2,12,,188,,5e SRD,,Construct
+Likho,15,,6,90,,,90,4,14,,275,,Tome of Beasts,,Monstrosity
+Apprentice Mage,10,,0.5,11,,,11,0,10,,478,,A5e Monstrous Menagerie,,Humanoid
+Ancient Red Dragon,22,,24,546,,,546,0,10,Legendary,97,,5e SRD,,Dragon
+Ghoul Bat,13,,0.25,14,,,14,3,13,,391,,Tome of Beasts 2,,Undead
+Archpriest,20,,16,150,,,150,0,10,,487,,A5e Monstrous Menagerie,,Humanoid
+Shadow Fey Ambassador,16,,9,161,,,161,4,14,,145,,Creature Codex,,Humanoid
+Brain Hood,13,,0.5,22,,,22,3,13,,50,,Tome of Beasts 2,,Aberration
+Ghost Knight,17,,6,97,,,97,2,12,,423,,Tome of Beasts,,Undead
+Bilwis,13,,1,49,,,49,3,13,,53,,Creature Codex,,Elemental
+Gulper Behemoth,16,,9,188,,,188,0,10,,190,,Tome of Beasts 2,,Monstrosity
+Simhamukha,16,,8,115,,,115,2,12,,70,,Creature Codex,,Celestial
+Elephant,12,,4,76,,,76,-1,9,,322,,5e SRD,,Beast
+Death Dog,12,,1,39,,,39,2,12,,321,,5e SRD,,Monstrosity
+"Devil, Rimepacted",15,,6,91,,,91,1,11,,124,,Tome of Beasts 3,,Fiend
+Clockwork Beetle,14,,0.5,15,,,15,3,13,,60,,Tome of Beasts,,Construct
+Darakhul Spy,16,,5,91,,,91,4,14,,168,,Tome of Beasts 2,,Undead
+Ogre Flesh Heap,11,,4,59,,,59,-2,8,,436,,A5e Monstrous Menagerie,,Undead
+Clockwork Assassin,16,,6,99,,,99,3,13,,64,,Creature Codex,,Construct
+Rusalka,14,,6,88,,,88,1,11,,331,,Tome of Beasts,,Undead
+Berstuc,18,,11,157,,,157,0,10,,76,,Tome of Beasts,,Fiend
+Quasit Familiar,13,,0.5,14,,,14,3,13,,74,,A5e Monstrous Menagerie,,Fiend
+Young Flame Dragon,18,,9,161,,,161,2,12,,130,,Tome of Beasts,,Dragon
+Flutterflesh,16,,12,187,,,187,4,14,,203,,Tome of Beasts,,Undead
+Pyrrhic Podthrower,13,,7,127,,,127,4,14,,324,,Tome of Beasts 3,,Plant
+Stegosaurus,16,,3,63,,,63,0,10,,90,,A5e Monstrous Menagerie,,Beast
+Vampiric Vanguard,14,,7,127,,,127,3,13,,383,,Tome of Beasts 3,,Undead
+Eonic Drifter,13,,1,65,,,65,2,12,,177,,Tome of Beasts,,Humanoid
+Spirit Lamp,17,,7,82,,,82,4,14,,349,,Creature Codex,,Undead
+Bannik,13,,2,60,,,60,2,12,,51,,Tome of Beasts 3,,Fey
+Echo,15,,6,102,,,102,5,15,,84,,Creature Codex,,Fiend
+Cave Bear,12,,2,42,,,42,0,10,,456,,A5e Monstrous Menagerie,,Beast
+Slow Storm,19,,15,225,,,225,4,14,,353,,Tome of Beasts,,Elemental
+"Illhveli, Kembingur",17,,12,210,,,210,1,11,,211,,Tome of Beasts 2,,Monstrosity
+Shadow Fey Poisoner,16,,11,112,,,112,4,14,,148,,Creature Codex,,Humanoid
+Alpha Werewolf,12,,6,104,,,104,2,12,,315,,A5e Monstrous Menagerie,,Humanoid
+"Ogre, Rockchewer",14,,5,126,,,126,-2,8,,302,,Tome of Beasts 3,,Giant
+Goblin Siege Engine,20,,11,178,,,178,0,10,,211,,Tome of Beasts 3,,Construct
+Alligator,13,,0.25,11,,,11,0,10,,387,,Tome of Beasts 2,,Beast
+Thrummren,17,,12,198,,,198,4,14,,347,,Tome of Beasts 2,,Celestial
+Bloodsapper,14,,3,90,,,90,2,12,,44,,Tome of Beasts 2,,Aberration
+Skitterhaunt,14,,4,95,,,95,0,10,,352,,Tome of Beasts,,Ooze
+Wererat,12,,2,33,,,33,2,12,,209,,5e SRD,,Humanoid
+Servant of Yig,12,,4,90,,,90,2,12,,325,,Creature Codex,,Aberration
+Hulking Whelp,15,,5,94,,,94,0,10,,252,,Tome of Beasts,,Fey
+Div,17,,5,99,,,99,2,12,,135,,Tome of Beasts 3,,Elemental
+Dragon Turtle,20,,17,341,,,341,0,10,,119,,5e SRD,,Dragon
+Beli,15,,2,45,,,45,3,13,,35,,Tome of Beasts,,Fey
+Andrenjinyi,18,,15,228,,,228,3,13,,18,,Tome of Beasts,,Celestial
+Blood Zombie,10,,2,51,,,51,-2,8,,282,,Creature Codex,,Undead
+Scorpion,11,,0,1,,,1,0,10,,337,,5e SRD,,Beast
+Cave Troll,18,,6,84,,,84,1,11,,413,,A5e Monstrous Menagerie,,Giant
+Ember Glider,15,,2,44,,,44,3,13,,170,,Tome of Beasts 3,,Monstrosity
+Berberoka,16,,7,114,,,114,0,10,,56,,Tome of Beasts 3,,Giant
+Frostjack,17,,10,135,,,135,4,14,,189,,Tome of Beasts 3,,Fey
+Fell Nightmare,13,,5,93,,,93,2,12,,345,,A5e Monstrous Menagerie,,Fiend
+De Ogen,15,,4,45,,,45,5,15,,80,,Tome of Beasts 2,,Undead
+Death Butterfly Swarm,15,,4,60,,,60,1,11,,71,,Tome of Beasts,,Beast
+Tree Skinner,13,,2,38,,,38,3,13,,351,,Tome of Beasts 2,,Fiend
+Virtuoso Lich,17,,12,123,,,123,3,13,Legendary,237,,Tome of Beasts 2,,Undead
+Draft Horse,10,,0.25,19,,,19,0,10,,321,,5e SRD,,Beast
+Ankou Soul Herald,18,,21,407,,,407,0,10,Legendary,37,,Creature Codex,,Dragon
+Bukavac,16,,9,199,,,199,3,13,,47,,Tome of Beasts,,Monstrosity
+Dust Mephit,12,,0.5,17,,,17,2,12,,215,,5e SRD,,Elemental
+Jubjub Bird,13,,4,91,,,91,1,11,,247,,Tome of Beasts 3,,Beast
+Ancient Sapphire Dragon,21,,25,429,,,429,7,17,Legendary,149,,A5e Monstrous Menagerie,,Dragon
+Leonino,13,,0.125,13,,,13,3,13,,250,,Creature Codex,,Beast
+Swamp Adder,13,,0.25,18,,,18,3,13,,354,,Tome of Beasts,,Beast
+Leashed Lesion,15,,3,65,,,65,0,10,,259,,Tome of Beasts 3,,Aberration
+Trickster Priest,12,,2,32,,,32,0,10,,488,,A5e Monstrous Menagerie,,Humanoid
+Adult Bronze Dragon,19,,15,212,,,212,0,10,Legendary,108,,5e SRD,,Dragon
+Giant Poisonous Snake,14,,0.25,11,,,11,4,14,,327,,5e SRD,,Beast
+Inkling,12,,0.25,10,,,10,2,12,,227,,Creature Codex,,Construct
+Spider Of Leng,15,,7,144,,,144,3,13,,365,,Tome of Beasts,,Aberration
+Cyclops,13,,7,126,,,126,0,10,,58,,A5e Monstrous Menagerie,,Giant
+Vampiric Knight,20,,11,127,,,127,2,12,,369,,Creature Codex,,Undead
+Nariphon,10,,13,195,,,195,-2,8,,285,,Tome of Beasts 3,,Plant
+Spawn Of Arbeyach,17,,5,78,,,78,2,12,,97,,Tome of Beasts,,Fiend
+Possessed Pillar,14,,7,95,,,95,-1,9,,314,,Tome of Beasts,,Construct
+Akkorokamui,17,,12,189,,,189,3,13,Legendary,11,,Tome of Beasts 3,,Celestial
+Ankheg Spawn,13,,0.25,11,,,11,1,11,,26,,A5e Monstrous Menagerie,,Monstrosity
+Pyrohydra,16,,13,218,,,218,1,11,Legendary,285,,A5e Monstrous Menagerie,,Monstrosity
+Fractal Golem,18,,8,8,,,8,1,11,,200,,Creature Codex,,Construct
+Zombie,8,,0.25,22,,,22,-2,8,,316,,5e SRD,,Undead
+Frost Mole,14,,3,71,,,71,2,12,,390,,Tome of Beasts 2,,Beast
+"Alseid, Woad Warrior",14,,2,55,,,55,3,13,,20,,Tome of Beasts 3,,Monstrosity
+Satyr,14,,0.5,31,,,31,3,13,,267,,5e SRD,,Fey
+Mastiff,12,,0.125,5,,,5,2,12,,332,,5e SRD,,Beast
+"Derro, Abysswalker",16,,6,112,,,112,4,14,,113,,Tome of Beasts 3,,Humanoid
+Young White Dragon,17,,6,133,,,133,0,10,,101,,5e SRD,,Dragon
+Weasel,13,,0,1,,,1,3,13,,340,,5e SRD,,Beast
+Noth-norren,14,,13,203,,,203,4,14,,270,,Tome of Beasts 2,,Elemental
+Paper Golem,13,,0.25,7,,,7,3,13,,176,,Creature Codex,,Construct
+Windy Wailer,14,,5,75,,,75,4,14,,370,,Tome of Beasts 2,,Undead
+Terror Bird,12,,2,65,,,65,1,11,,352,,Creature Codex,,Beast
+Nkosi War Ostrich,11,,0.5,42,,,42,1,11,,307,,Tome of Beasts,,Beast
+"Drake, Shepherd",16,,5,110,,,110,3,13,,156,,Tome of Beasts 3,,Dragon
+Lymarien Swarm,14,,5,90,,,90,4,14,,248,,Tome of Beasts 2,,Fey
+Primordial Surge,19,,16,232,,,232,6,16,,320,,Tome of Beasts 3,,Elemental
+Vines of Nemthyr,15,,8,133,,,133,1,11,,371,,Creature Codex,,Plant
+"Rakshasa, Myrmidon",18,,3,51,,,51,2,12,,328,,Tome of Beasts 3,,Fiend
+Godslayer,24,,30,580,,,580,2,12,Legendary,211,,Tome of Beasts 3,,Construct
+"Ghoul, Darakhul",16,,3,78,,,78,3,13,,216,,Tome of Beasts,,Undead
+Ravenfolk Scout,14,,0.5,21,,,21,2,12,,322,,Tome of Beasts,,Humanoid
+Swarm of Insects,12,,0.5,22,,,22,1,11,,338,,5e SRD,,Beast
+Ychen Bannog,17,,11,231,,,231,0,10,,413,,Tome of Beasts,,Beast
+Dread Knight Champion,18,,23,346,,,346,3,13,,185,,A5e Monstrous Menagerie,,Undead
+Skeletal Tyrannosaurus Rex,13,,8,126,,,126,0,10,,394,,A5e Monstrous Menagerie,,Undead
+Monkey King,21,,21,262,,,262,7,17,Legendary,337,,Creature Codex,,Celestial
+Adult Emerald Dragon,18,,17,241,,,241,6,16,Legendary,146,,A5e Monstrous Menagerie,,Dragon
+Repository,15,,7,110,,,110,0,10,,306,,Tome of Beasts 2,,Construct
+Ahu-Nixta Mechanon,14,,2,51,,,51,1,11,,9,,Tome of Beasts 3,,Construct
+Simurg,15,,5,108,,,108,0,10,,339,,Creature Codex,,Celestial
+Giant Mantis Shrimp,14,,5,110,,,110,1,11,,198,,Tome of Beasts 3,,Beast
+Lion,12,,1,26,,,26,2,12,,331,,5e SRD,,Beast
+Fabricator,13,,10,147,,,147,-2,8,,138,,Tome of Beasts 2,,Construct
+Ash Phoenix,15,,9,105,,,105,5,15,,28,,Tome of Beasts 2,,Undead
+Edimmu,15,,4,75,,,75,4,14,,165,,Tome of Beasts,,Undead
+Lou Carcolh,14,,2,78,,,78,2,12,,257,,Creature Codex,,Monstrosity
+Gladiator,16,,5,112,,,112,2,12,,346,,5e SRD,,Humanoid
+Hooden Horse,14,,6,117,,,117,2,12,,202,,Tome of Beasts 2,,Undead
+Corpselight Moth,15,,5,136,,,136,4,14,,95,,Tome of Beasts 3,,Beast
+Frost Giant,15,,8,138,,,138,-1,9,,155,,5e SRD,,Giant
+"Dinosaur, Thundercall Hadrosaur",16,,11,168,,,168,-1,9,,129,,Tome of Beasts 3,,Monstrosity
+Glabrezu,17,,9,157,,,157,2,12,,58,,5e SRD,,Fiend
+"Fungi, Mulcher",15,,6,139,,,139,-2,8,,191,,Tome of Beasts 3,,Plant
+Awakened Shrub,9,Evil,0,10,,,10,-1,9,,317,Large,5e SRD,20,Plant
+Salt Devil,13,,6,93,,,93,1,11,,113,,Tome of Beasts,,Fiend
+Red-Banded Line Spider,13,,0.25,2,,,2,3,13,,363,,Tome of Beasts,,Beast
+Alligator Turtle,15,,0.25,11,,,11,1,11,,387,,Tome of Beasts 2,,Beast
+"Ooze, Sinoper",7,,9,170,,,170,-3,7,,310,,Tome of Beasts 3,,Ooze
+Tusked Skyfish,14,,4,102,,,102,1,11,,391,,Tome of Beasts,,Aberration
+Swarm of Ravens,12,,0.25,24,,,24,2,12,,339,,5e SRD,,Beast
+Adult River Dragon,18,,17,252,,,252,5,15,Legendary,132,,A5e Monstrous Menagerie,,Dragon
+"Fungi, Duskwilt",15,,4,97,,,97,4,14,,190,,Tome of Beasts 3,,Plant
+Corrupting Ooze,12,,5,115,,,115,0,10,,311,,Tome of Beasts,,Ooze
+Kallikantzaros,13,,2,59,,,59,1,11,,233,,Creature Codex,,Fey
+Lord Zombie,15,,5,82,,,82,2,12,Legendary,26,,Creature Codex,,Undead
+"Angel, Kalkydra",18,,13,189,,,189,2,12,,26,,Tome of Beasts 3,,Celestial
+Zeitgeist,14,,6,82,,,82,4,14,,383,,Tome of Beasts 2,,Humanoid
+Clockwork Soldier,12,,1,45,,,45,1,11,,65,,Creature Codex,,Construct
+Amphibolt,15,,5,85,,,85,4,14,,21,,Tome of Beasts 3,,Monstrosity
+Holler Spider,12,,0.25,14,,,14,2,12,,395,,Tome of Beasts 2,,Beast
+A-mi-kuk,14,,7,115,,,115,-1,9,,15,,Tome of Beasts 2,,Aberration
+Cats of Ulthar,14,,4,55,,,55,4,14,,58,,Creature Codex,,Beast
+Mountain Nymph,15,,6,112,,,112,4,14,,261,,Tome of Beasts 2,,Fey
+Ley Wanderer,15,,7,136,,,136,-1,9,,260,,Tome of Beasts 3,,Aberration
+Glacial Corrupter,15,,1,34,,,34,1,11,,176,,Tome of Beasts 2,,Undead
+Aridni,15,,5,82,,,82,5,15,,26,,Tome of Beasts,,Fey
+Chamrosh,14,,1,39,,,39,1,11,,59,,Tome of Beasts 2,,Celestial
+"Meerkats, Swarm",12,,0.5,22,,,22,2,12,,268,,Tome of Beasts 3,,Beast
+Wind Witch,13,,3,66,,,66,3,13,,393,,Tome of Beasts 3,,Plant
+Ibexian,15,,6,119,,,119,3,13,,238,,Tome of Beasts 3,,Fiend
+Spawn of Rhopalocerex,17,,6,112,,,112,4,14,,92,,Tome of Beasts 2,,Fiend
+Shadow Demon,13,,4,45,,,45,3,13,,74,,A5e Monstrous Menagerie,,Fiend
+Spree,15,,5,84,,,84,3,13,,91,,Creature Codex,,Fiend
+Adult Rime Worm,15,,6,105,,,105,2,12,,327,,Tome of Beasts,,Elemental
+Zmey,18,,14,189,,,189,1,11,Legendary,416,,Tome of Beasts,,Dragon
+Falsifier Fog,13,,4,52,,,52,3,13,,140,,Tome of Beasts 2,,Undead
+HB,,,,0,,,,,22,,,,,,Character
+Blood Ooze,8,,6,76,,,76,-2,8,,282,,Creature Codex,,Ooze
+Blemmyes,15,,8,168,,,168,1,11,,37,,Tome of Beasts,,Monstrosity
+Skin Bat,13,,0.5,14,,,14,3,13,,87,,Tome of Beasts,,Undead
+"Dinosaur, Guardian Archaeopteryx",15,,2,36,,,36,2,12,,126,,Tome of Beasts 3,,Beast
+"Dragonette, Sedge",13,,0.5,27,,,27,0,10,,149,,Tome of Beasts 3,,Dragon
+Angler Worm,14,,4,133,,,133,-3,7,,22,,Tome of Beasts,,Monstrosity
+Lemurfolk Greyfur,13,,4,67,,,67,3,13,,271,,Tome of Beasts,,Humanoid
+Scribe Devil,15,,5,82,,,82,3,13,,318,,Tome of Beasts 2,,Fiend
+Fey Drake,17,,6,82,,,82,5,15,,130,,Creature Codex,,Dragon
+Swarm of Spiders,12,,0.5,22,,,22,1,11,,339,,5e SRD,,Beast
+Mei Jiao Shou,14,,7,139,,,139,-2,8,,259,,Tome of Beasts 2,,Beast
+Ghoulsteed,13,,3,85,,,85,0,10,,177,,Creature Codex,,Undead
+Wind Eater,14,,2,65,,,65,4,14,,381,,Creature Codex,,Undead
+Alchemical Skunk,15,,4,66,,,66,3,13,,13,,Tome of Beasts 2,,Monstrosity
+"Beetle, Clacker Soldier",15,,1,18,,,18,2,12,,54,,Tome of Beasts 3,,Beast
+Camel,9,,0.125,15,,,15,-1,9,,320,,5e SRD,,Beast
+Kobold War Machine,16,,9,114,,,114,2,12,,233,,Tome of Beasts 2,,Construct
+"Swarm, Biting Gnat",13,,0.25,16,,,16,3,13,,360,,Tome of Beasts 3,,Beast
+Gigantura,16,,13,248,,,248,3,13,,208,,Tome of Beasts 3,,Monstrosity
+Clockwork Archon,18,,13,201,,,201,-1,9,,65,,Tome of Beasts 2,,Construct
+Lobe Lemur,14,,4,93,,,93,4,14,,264,,Tome of Beasts 3,,Monstrosity
+Azi Dahaka,15,,14,157,,,157,2,12,Legendary,45,,Creature Codex,,Dragon
+Guard Squad,15,,3,55,,,55,1,11,,492,,A5e Monstrous Menagerie,,Humanoid
+Ghost Knight Templar,18,,10,127,,,127,4,14,,196,,Tome of Beasts 3,,Undead
+Fleshpod Hornet,14,,6,120,,,120,4,14,,161,,Creature Codex,,Beast
+Bone Collector,13,,0.5,21,,,21,2,12,,64,,Tome of Beasts 3,,Undead
+Runeswarm,15,,10,150,,,150,5,15,,310,,Tome of Beasts 2,,Construct
+Sap Demon,13,,4,67,,,67,-2,8,,335,,Tome of Beasts,,Ooze
+Cave Ogre,12,,2,119,,,119,-1,9,,347,,A5e Monstrous Menagerie,,Giant
+Adult Brass Dragon,18,,13,172,,,172,0,10,Legendary,105,,5e SRD,,Dragon
+"Alliumite, Rapscallion",15,,2,38,,,38,4,14,,17,,Tome of Beasts 3,,Plant
+Heavy Cavalry,19,,2,75,,,75,1,11,,0,,Creature Codex,,Humanoid
+Kitsune,12,,2,49,,,49,2,12,,236,,Creature Codex,,Fey
+Mule,10,,0.125,11,,,11,0,10,,333,,5e SRD,,Beast
+Shabti,17,,8,102,,,102,5,15,,343,,Tome of Beasts,,Construct
+Zmey Headling,16,,5,105,,,105,0,10,,417,,Tome of Beasts,,Dragon
+Moppet,10,,1,17,,,17,0,10,,277,,Tome of Beasts 3,,Construct
+"Ooze, Snow",6,,7,171,,,171,-4,6,,311,,Tome of Beasts 3,,Ooze
+Stone Creeper,12,,1,30,,,30,2,12,,339,,Tome of Beasts 2,,Plant
+Wynasia,,,,0,,,,,6,,,,,,Character
+Boloti,15,,1,63,,,63,5,15,,38,,Tome of Beasts,,Fey
+Barbed Devil,15,,5,102,,,102,3,13,,78,,A5e Monstrous Menagerie,,Fiend
+"Golem, Origami",15,,7,114,,,114,2,12,,216,,Tome of Beasts 3,,Construct
+Cavefish Zombie,10,,0.5,37,,,37,0,10,,384,,Tome of Beasts 2,,Undead
+Bereginyas,15,,4,70,,,70,5,15,,36,,Tome of Beasts,,Fey
+Bone Colossus,16,,13,181,,,181,0,10,,267,,Tome of Beasts 2,,Undead
+Adult Flame Dragon,19,,16,212,,,212,2,12,Legendary,129,,Tome of Beasts,,Dragon
+Locksmith,18,,8,102,,,102,4,14,,240,,Tome of Beasts 2,,Construct
+Greater Lunarchidna,16,,4,58,,,58,3,13,,242,,Tome of Beasts 2,,Aberration
+"Beetle, Clacker Swarm",14,,3,36,,,36,1,11,,54,,Tome of Beasts 3,,Beast
+Shadow Elf High Priest,18,,6,82,,,82,0,10,,489,,A5e Monstrous Menagerie,,Humanoid
+Luck Leech,17,,10,150,,,150,5,15,,241,,Tome of Beasts 2,,Fey
+Iron Sphere,16,,5,60,,,60,1,11,,228,,Creature Codex,,Construct
+Ichor Ooze,8,,2,39,,,39,-2,8,,279,,Tome of Beasts 2,,Ooze
+Deathsworn Elf,16,,6,82,,,82,4,14,,142,,Creature Codex,,Humanoid
+Fear Liath,12,,2,33,,,33,2,12,,152,,Creature Codex,,Undead
+Salamander Noble,15,,8,136,,,136,2,12,,379,,A5e Monstrous Menagerie,,Elemental
+Asanbosam,14,,5,102,,,102,1,11,,27,,Tome of Beasts,,Aberration
+Skeletal Warhorse,11,,0.5,30,,,30,1,11,,394,,A5e Monstrous Menagerie,,Undead
+"Devil, Devilflame Juggler",18,,13,178,,,178,5,15,,119,,Tome of Beasts 3,,Fiend
+Vile Barber,15,,2,28,,,28,4,14,,401,,Tome of Beasts,,Fey
+Relentless Hound,12,,4,52,,,52,2,12,,331,,Tome of Beasts 3,,Undead
+Swarm of Poisonous Snakes,14,,2,45,,,45,4,14,,461,,A5e Monstrous Menagerie,,Beast
+Pyrite Pile,18,,6,136,,,136,0,10,,323,,Tome of Beasts 3,,Elemental
+Shadow Boxer,13,,3,55,,,55,3,13,,322,,Tome of Beasts 2,,Fey
+Tzepharion,16,,8,110,,,110,2,12,,106,,Tome of Beasts 2,,Fiend
+Vent Linnorm,19,,16,247,,,247,2,12,,239,,Tome of Beasts 2,,Dragon
+Young Imperial Dragon,18,,11,210,,,210,1,11,,117,,Tome of Beasts 2,,Dragon
+Vine Lord's Tendril Puppet,13,,2,34,,,34,1,11,,403,,Tome of Beasts,,Plant
+Fire-Infused Water Elemental,14,,7,138,,,138,2,12,,216,,Tome of Beasts 2,,Elemental
+Diminution Drake,15,,5,71,,,71,4,14,,121,,Tome of Beasts 2,,Dragon
+Grolar Bear Alpha,16,,8,152,,,152,0,10,,222,,Tome of Beasts 3,,Monstrosity
+Ancient Amethyst Dragon,20,,23,313,,,313,7,17,Legendary,140,,A5e Monstrous Menagerie,,Dragon
+Kelp Drake,15,,3,60,,,60,2,12,,227,,Tome of Beasts 2,,Dragon
+Medusa,15,,6,127,,,127,2,12,,214,,5e SRD,,Monstrosity
+Manggus,14,,5,127,,,127,2,12,,256,,Tome of Beasts 2,,Giant
+Veteran,17,,3,58,,,58,1,11,,350,,5e SRD,,Humanoid
+Fey Knight,16,,4,58,,,58,4,14,,201,,A5e Monstrous Menagerie,,Fey
+Corpse Worm,14,,3,76,,,76,1,11,,71,,Tome of Beasts 2,,Monstrosity
+Avestruzii,14,,0.5,22,,,22,0,10,,48,,Tome of Beasts 3,,Humanoid
+Sand Silhouette,15,,6,105,,,105,1,11,,332,,Tome of Beasts,,Undead
+"Giant, Thursir Armorer",19,,6,138,,,138,-1,9,,206,,Tome of Beasts 3,,Giant
+Kuunganisha,13,,2,17,,,17,3,13,,245,,Creature Codex,,Fiend
+Living Star,19,,19,207,,,207,6,16,,256,,Creature Codex,,Celestial
+"Ghoul, Darakhul EOTG",16,,3,78,,,78,3,13,,216,,Tome of Beasts,,Undead
+Brownie Beastrider,15,,3,54,,,54,5,15,,69,,Tome of Beasts 3,,Fey
+Destroyer,15,,3,60,,,60,1,11,,315,,Tome of Beasts 2,,Humanoid
+Boreal Dragon Wyrmling,17,,2,39,,,39,0,10,,113,,Tome of Beasts 2,,Dragon
+Suppurating Ooze,8,,1,30,,,30,-2,8,,288,,Creature Codex,,Ooze
+Amethyst Dragon Wyrmling,16,,2,45,,,45,2,12,,142,,A5e Monstrous Menagerie,,Dragon
+Valkyrie,16,,11,112,,,112,4,14,Legendary,396,,Tome of Beasts,,Celestial
+Rotsam,13,,2,45,,,45,3,13,,309,,Tome of Beasts 2,,Ooze
+Balloon Spider,13,,1,36,,,36,3,13,,387,,Tome of Beasts 2,,Beast
+Cackling Skeleton,9,,0.5,26,,,26,-1,9,,79,,Tome of Beasts 2,,Undead
+Spymaster,16,,7,97,,,97,3,13,,468,,A5e Monstrous Menagerie,,Humanoid
+Wereshark,11,,5,90,,,90,1,11,,266,,Tome of Beasts 2,,Humanoid
+Rust Monster,14,,0.5,27,,,27,1,11,,262,,5e SRD,,Monstrosity
+Preta,13,,3,75,,,75,2,12,,411,,Creature Codex,,Undead
+Minstrel,15,,2,32,,,32,3,13,,484,,A5e Monstrous Menagerie,,Humanoid
+"Giant, Firestorm",14,,7,149,,,149,2,12,,202,,Tome of Beasts 3,,Giant
+Deathcap Myconid,15,,4,90,,,90,0,10,,0,,Tome of Beasts,,Plant
+Drowned Maiden,15,,5,90,,,90,3,13,,159,,Tome of Beasts,,Undead
+Crypt Spider,15,,2,38,,,38,3,13,,133,,Creature Codex,,Beast
+Befouled Weird,14,,5,75,,,75,2,12,,41,,Tome of Beasts 2,,Elemental
+"Ogre, Void Blessed",15,,6,133,,,133,-1,9,,303,,Tome of Beasts 3,,Giant
+Uraeus,14,,2,40,,,40,2,12,,392,,Tome of Beasts,,Celestial
+Mud Golem,10,,1,27,,,27,0,10,,201,,Creature Codex,,Construct
+Wight,14,,3,45,,,45,2,12,,300,,5e SRD,,Undead
+Azer,17,,2,39,,,39,1,11,,22,,5e SRD,,Elemental
+Shadow Fey Enchantress,16,,7,123,,,123,2,12,,172,,Tome of Beasts,,Humanoid
+Shadow,12,,0.5,16,,,16,2,12,,269,,5e SRD,,Undead
+Jackal,12,,0,3,,,3,2,12,,331,,5e SRD,,Beast
+Wolf Spirit Swarm,16,,6,97,,,97,3,13,,377,,Tome of Beasts,,Undead
+"Angel, Psychopomp",14,,4,68,,,68,2,12,,28,,Tome of Beasts 3,,Celestial
+Barong,20,,17,225,,,225,5,15,Legendary,49,,Creature Codex,,Celestial
+Hoard Golem,18,,12,161,,,161,2,12,,234,,Tome of Beasts,,Construct
+Glacial Crawler,17,,11,207,,,207,3,13,,209,,Tome of Beasts 3,,Aberration
+Raptor,13,,1,32,,,32,2,12,,91,,A5e Monstrous Menagerie,,Beast
+Voidling,16,,11,110,,,110,6,16,,404,,Tome of Beasts,,Aberration
+Giant Hyena,12,,1,45,,,45,2,12,,326,,5e SRD,,Beast
+Akhlut,14,,6,120,,,120,2,12,,0,,Tome of Beasts 2,,Beast
+Orobas Devil,19,,14,261,,,261,2,12,,111,,Tome of Beasts,,Fiend
+Drudge Pitcher,16,,10,168,,,168,-1,9,,161,,Tome of Beasts 3,,Plant
+Harvest Horse,13,,0.5,37,,,37,-3,7,,230,,Tome of Beasts 3,,Construct
+Shadow River Lord,16,,9,135,,,135,4,14,,327,,Creature Codex,,Undead
+Emerald Order Cult Leader,14,,8,117,,,117,0,10,,421,,Tome of Beasts,,Humanoid
+Archaeopteryx,12,,0.25,7,,,7,1,11,,25,,Creature Codex,,Beast
+High Priest,18,,6,82,,,82,0,10,,489,,A5e Monstrous Menagerie,,Humanoid
+Ruby Ooze,9,,6,93,,,93,-1,9,,286,,Creature Codex,,Ooze
+Crystallite,15,,4,90,,,90,-1,9,,100,,Tome of Beasts 3,,Giant
+Tricenatorus,15,,13,184,,,184,0,10,,109,,Tome of Beasts 2,,Monstrosity
+Giant Mongoose,13,,0.25,13,,,13,3,13,,393,,Tome of Beasts 2,,Beast
+Cloaker,14,,8,78,,,78,2,12,,41,,5e SRD,,Aberration
+Caretaker Weevil,13,,1,51,,,51,1,11,,73,,Tome of Beasts 3,,Beast
+Hill Giant,13,,5,105,,,105,-1,9,,155,,5e SRD,,Giant
+Pseudodragon Familiar,13,,0.25,7,,,7,2,12,,363,,A5e Monstrous Menagerie,,Dragon
+Blood Hawk,12,,0.125,7,,,7,2,12,,319,,5e SRD,,Beast
+Black Sun Priestess,13,,3,67,,,67,1,11,,290,,Creature Codex,,Humanoid
+Shadhavar,14,,2,97,,,97,2,12,,344,,Tome of Beasts,,Monstrosity
+Kikimora,15,,5,65,,,65,4,14,,260,,Tome of Beasts,,Fey
+Bronze Dragon Wyrmling,17,,2,32,,,32,0,10,,109,,5e SRD,,Dragon
+Fext,17,,6,60,,,60,3,13,,183,,Tome of Beasts,,Undead
+Storm Maiden,15,,4,78,,,78,3,13,,340,,Tome of Beasts 2,,Elemental
+"Wraith, Oathrot",13,,4,52,,,52,3,13,,396,,Tome of Beasts 3,,Undead
+Sahuagin,12,,0.5,22,,,22,0,10,,263,,5e SRD,,Humanoid
+Stormboar,15,,6,95,,,95,1,11,,341,,Tome of Beasts 2,,Monstrosity
+Mountain Giant,20,,21,313,,,313,0,10,Legendary,185,,Creature Codex,,Giant
+Boggard Bravo,12,,0.5,27,,,27,2,12,,36,,A5e Monstrous Menagerie,,Humanoid
+Manastorm Golem,14,,8,90,,,90,2,12,,203,,Creature Codex,,Construct
+Swampgas Shade,13,,2,39,,,39,3,13,,359,,Tome of Beasts 3,,Undead
+Pishacha,13,,3,55,,,55,2,12,,88,,Creature Codex,,Fiend
+Giant Octopus,11,,1,52,,,52,1,11,,326,,5e SRD,,Beast
+Ice Mephit,11,,0.5,21,,,21,1,11,,215,,5e SRD,,Elemental
+Pteranodon,13,,0.5,30,,,30,2,12,,90,,A5e Monstrous Menagerie,,Beast
+Young Light Dragon,15,,7,142,,,142,0,10,,170,,Creature Codex,,Dragon
+Primordial Matriarch,20,,21,313,,,313,10,20,Legendary,318,,Tome of Beasts 3,,Elemental
+Dragonleaf Tree,16,,8,152,,,152,0,10,,147,,Tome of Beasts,,Plant
+Primal Oozer,14,,6,112,,,112,1,11,,297,,Tome of Beasts 2,,Aberration
+Ancient Blue Dragon (+),22,,25,407,,,407,0,10,Legendary,106,,A5e Monstrous Menagerie,,Dragon
+Laestrigonian Giant,13,,4,95,,,95,2,12,,184,,Creature Codex,,Giant
+Mammon,20,,25,378,,,378,1,11,Legendary,335,,Tome of Beasts,,Fiend
+Ancient Shadow Dragon,21,,24,296,,,296,3,13,Legendary,134,,A5e Monstrous Menagerie,,Dragon
+Walking Statue,16,,3,66,,,66,-1,9,,24,,A5e Monstrous Menagerie,,Construct
+"Kobold, Empyrean",18,,10,150,,,150,4,14,,253,,Tome of Beasts 3,,Celestial
+Erina Scrounger,12,,0.25,22,,,22,1,11,,178,,Tome of Beasts,,Humanoid
+Fomorian,15,,8,138,,,138,0,10,,406,,A5e Monstrous Menagerie,,Fey
+Spirit Naga,15,,8,75,,,75,3,13,,234,,5e SRD,,Monstrosity
+Wild Sirocco,13,,6,105,,,105,3,13,,391,,Tome of Beasts 3,,Elemental
+Dire Wildebeest,14,,7,150,,,150,3,13,,134,,Tome of Beasts 3,,Beast
+Great Gray Owl,13,,0.25,10,,,10,3,13,,284,,Tome of Beasts 2,,Beast
+Faerie Noble,16,,12,165,,,165,5,15,,200,,A5e Monstrous Menagerie,,Fey
+Purple Worm,18,,15,247,,,247,-2,8,,255,,5e SRD,,Monstrosity
+Vampire Warrior,18,,12,142,,,142,4,14,Legendary,421,,A5e Monstrous Menagerie,,Undead
+Carbuncle,12,,1,36,,,36,2,12,,57,,Creature Codex,,Monstrosity
+Shiftshroom,5,,0.25,18,,,18,-5,5,,159,,Tome of Beasts 2,,Plant
+Anubian,13,,2,44,,,44,3,13,,24,,Tome of Beasts,,Elemental
+Shoreline Scrapper,16,,4,93,,,93,1,11,,43,,Creature Codex,,Beast
+Bear King,18,,12,133,,,133,0,10,Legendary,186,,Tome of Beasts,,Fey
+Altar Flame Golem,16,,10,152,,,152,-1,9,,193,,Creature Codex,,Construct
+Felid Dragon,18,,19,275,,,275,8,18,,143,,Tome of Beasts 2,,Dragon
+Arborcyte,16,,8,127,,,127,1,11,,40,,Creature Codex,,Plant
+Hair Golem,13,,0.25,13,,,13,3,13,,200,,Creature Codex,,Construct
+Knight of the Road,16,,5,117,,,117,4,14,,58,,Creature Codex,,Humanoid
+Otyugh,14,,6,110,,,110,0,10,,354,,A5e Monstrous Menagerie,,Aberration
+Warhordling Orc Warrior,13,,0.25,11,,,11,1,11,,499,,A5e Monstrous Menagerie,,Humanoid
+Faerie Eater Troll,15,,6,84,,,84,1,11,,413,,A5e Monstrous Menagerie,,Giant
+Orc,13,,0.5,15,,,15,1,11,,246,,5e SRD,,Humanoid
+Will-o'-Wisp,19,,2,22,,,22,9,19,,301,,5e SRD,,Undead
+Flame Dragon Wyrmling,17,,3,52,,,52,2,12,,129,,Tome of Beasts,,Dragon
+Vanara,13,,2,55,,,55,3,13,,235,,Creature Codex,,Humanoid
+Desert Troll,15,,6,105,,,105,1,11,,356,,Creature Codex,,Giant
+Bull,11,,0.25,25,,,25,1,11,,169,,Tome of Beasts 2,,Beast
+Execrable Shrub,14,,0.5,40,,,40,2,12,,304,,Creature Codex,,Fiend
+Mountain Strider,12,,1,34,,,34,2,12,,261,,Tome of Beasts 2,,Monstrosity
+Nightmare,13,,3,68,,,68,2,12,,235,,5e SRD,,Fiend
+Sigilian,14,,2,65,,,65,4,14,,335,,Creature Codex,,Construct
+Young Earth Dragon,18,,10,161,,,161,1,11,,128,,A5e Monstrous Menagerie,,Dragon
+Myrmex,15,,5,90,,,90,1,11,,283,,Tome of Beasts 3,,Elemental
+Medusa Queen,14,,11,153,,,153,4,14,Legendary,323,,A5e Monstrous Menagerie,,Monstrosity
+Green Hag,17,,3,82,,,82,1,11,,177,,5e SRD,,Fey
+"Zombie, Voidclaw",14,,7,143,,,143,4,14,,401,,Tome of Beasts 3,,Undead
+Ape,12,,0.5,19,,,19,2,12,,317,,5e SRD,,Beast
+Jinnborn Air Pirate,14,,0.5,26,,,26,2,12,,246,,Tome of Beasts 3,,Humanoid
+Corrupted Unicorn,14,,5,85,,,85,4,14,,416,,A5e Monstrous Menagerie,,Celestial
+Leshy,14,,1,84,,,84,1,11,,272,,Tome of Beasts,,Monstrosity
+"Alabroza, Bloodfiend",14,,4,72,,,72,2,12,,13,,Tome of Beasts 3,,Fiend
+Greater Ghast of Leng,17,,8,153,,,153,4,14,,52,,Tome of Beasts 2,,Aberration
+Giant Honey Bee,12,,0.25,9,,,9,2,12,,392,,Tome of Beasts 2,,Beast
+Diomedian Horse,14,,3,57,,,57,2,12,,130,,Tome of Beasts 3,,Beast
+Truant Devourer,16,,9,156,,,156,3,13,,378,,Tome of Beasts 3,,Undead
+Young Spinosaurus,14,,5,105,,,105,0,10,,116,,Tome of Beasts,,Beast
+"Drake, Cactus",14,,4,75,,,75,3,13,,152,,Tome of Beasts 3,,Dragon
+Ghast,13,,2,36,,,36,3,13,,148,,5e SRD,,Undead
+Corpse Thief,13,,0.5,30,,,30,3,13,,66,,Creature Codex,,Humanoid
+Moonless Hunter,14,,4,75,,,75,4,14,,275,,Tome of Beasts 3,,Fey
+Dhampir,15,,1,32,,,32,2,12,,106,,Creature Codex,,Humanoid
+Mimic,12,,2,58,,,58,1,11,,220,,5e SRD,,Monstrosity
+Necromancer,12,,6,67,,,67,2,12,,483,,A5e Monstrous Menagerie,,Humanoid
+"Swarm, Gryllus",15,,6,110,,,110,4,14,,361,,Tome of Beasts 3,,Construct
+Shoggoth,18,,19,387,,,387,2,12,,347,,Tome of Beasts,,Aberration
+Alchemical Apprentice,11,,1,63,,,63,-2,8,,281,,Creature Codex,,Ooze
+Chimera,14,,6,114,,,114,0,10,,39,,5e SRD,,Monstrosity
+Ogre Zombie,8,,2,85,,,85,-2,8,,316,,5e SRD,,Undead
+Jackalope,14,,3,55,,,55,4,14,,453,,A5e Monstrous Menagerie,,Beast
+Swarm of Esteron,13,,2,54,,,54,3,13,,400,,Tome of Beasts 2,,Beast
+Bruno,,,,0,,,,,8,,,,,,Character
+Fallen Solar,21,,21,319,,,319,6,16,Legendary,19,,A5e Monstrous Menagerie,,Celestial
+Sinstar,17,,17,275,,,275,2,12,Legendary,345,,Tome of Beasts 3,,Plant
+Giant Ape,12,,7,157,,,157,2,12,,323,,5e SRD,,Beast
+Skull Drake,15,,3,75,,,75,3,13,,343,,Creature Codex,,Dragon
+Imperial Dragon Wyrmling,17,,3,60,,,60,1,11,,117,,Tome of Beasts 2,,Dragon
+Offal Walker,12,,1,37,,,37,0,10,,296,,Tome of Beasts 3,,Undead
+Cueyatl Moon Priest,13,,5,81,,,81,1,11,,68,,Creature Codex,,Humanoid
+Foxfire Ooze,9,,10,126,,,126,-1,9,,283,,Creature Codex,,Ooze
+Dhampir Commander,17,,7,97,,,97,3,13,,107,,Creature Codex,,Humanoid
+Mortifera,16,,6,135,,,135,3,13,,278,,Tome of Beasts 3,,Aberration
+Ancient Gold Dragon,22,,24,546,,,546,2,12,Legendary,113,,5e SRD,,Dragon
+"Baba Yaga's Horsemen, Bright Day",20,,11,171,,,171,0,10,,29,,Tome of Beasts,,Fey
+Clay Guardian,14,,9,133,,,133,0,10,,261,,A5e Monstrous Menagerie,,Construct
+Adult Mithral Dragon,18,,14,184,,,184,4,14,Legendary,133,,Tome of Beasts,,Dragon
+Troglodyte,11,,0.5,19,,,19,1,11,,410,,A5e Monstrous Menagerie,,Humanoid
+Trollkin Raider,14,,1,32,,,32,1,11,,353,,Tome of Beasts 2,,Humanoid
+Clockwork Leech,13,,1,45,,,45,1,11,,66,,Tome of Beasts 2,,Construct
+Titanic Kraken,20,,25,888,,,888,0,10,Legendary,301,,A5e Monstrous Menagerie,,Monstrosity
+Belu,16,,10,184,,,184,1,11,,55,,Tome of Beasts 3,,Giant
+"Giant, Shire",14,,8,138,,,138,-1,9,,205,,Tome of Beasts 3,,Giant
+Salamander Nymph,14,,1,27,,,27,2,12,,379,,A5e Monstrous Menagerie,,Elemental
+Crocodile,12,,0.5,19,,,19,0,10,,320,,5e SRD,,Beast
+Drainpipe Gargoyle,15,,2,45,,,45,0,10,,215,,A5e Monstrous Menagerie,,Elemental
+Wereboar,10,,4,78,,,78,0,10,,209,,5e SRD,,Humanoid
+Phoenixborn,13,,0.5,33,,,33,3,13,,316,,Tome of Beasts 3,,Humanoid
+Kinnara,14,,3,65,,,65,2,12,,17,,Creature Codex,,Celestial
+Steam Golem,18,,13,171,,,171,1,11,,237,,Tome of Beasts,,Construct
+Hound Of The Night,16,,5,112,,,112,3,13,,251,,Tome of Beasts,,Monstrosity
+Armory Golem,15,,7,136,,,136,2,12,,40,,Creature Codex,,Construct
+Witchlight,14,,0.25,10,,,10,4,14,,409,,Tome of Beasts,,Construct
+Merrow Mage,13,,4,45,,,45,0,10,,331,,A5e Monstrous Menagerie,,Monstrosity
+Overshadow,14,,4,90,,,90,4,14,,289,,Tome of Beasts 2,,Undead
+Black Bear,11,,0.5,19,,,19,0,10,,318,,5e SRD,,Beast
+Shetani,18,,14,190,,,190,4,14,,343,,Tome of Beasts 3,,Fiend
+Troll,15,,5,84,,,84,1,11,,291,,5e SRD,,Giant
+Musk Deer,13,,0.25,17,,,17,3,13,,282,,Tome of Beasts 3,,Beast
+Cobbleswarm,15,,2,36,,,36,0,10,,68,,Tome of Beasts,,Monstrosity
+Marilith,18,,16,189,,,189,5,15,,61,,5e SRD,,Fiend
+Tophet,16,,8,184,,,184,0,10,,383,,Tome of Beasts,,Construct
+Wizard Kobold,12,,5,58,,,58,2,12,,376,,Creature Codex,,Humanoid
+Zoog,13,,0,3,,,3,3,13,,396,,Creature Codex,,Aberration
+Giant Sloth,15,,7,168,,,168,0,10,,178,,Creature Codex,,Beast
+Hound Guardian,15,,1,32,,,32,0,10,,262,,A5e Monstrous Menagerie,,Construct
+Nachzehrer,15,,8,136,,,136,1,11,,272,,Creature Codex,,Undead
+Naizu-Ha,17,,6,117,,,117,2,12,,223,,Tome of Beasts 2,,Fey
+Spellhound,14,,4,102,,,102,2,12,,336,,Tome of Beasts 2,,Monstrosity
+Void Giant,14,,11,210,,,210,0,10,,187,,Creature Codex,,Giant
+Vesiculosa,15,,11,203,,,203,0,10,,399,,Tome of Beasts,,Plant
+Cacus Giant,16,,6,138,,,138,0,10,,181,,Creature Codex,,Giant
+Chill Haunt,13,,3,39,,,39,3,13,,62,,Tome of Beasts 2,,Undead
+Duergar,16,,1,26,,,26,0,10,,122,,5e SRD,,Humanoid
+Zouyu,17,,6,114,,,114,7,17,,386,,Tome of Beasts 2,,Monstrosity
+Ettercap,13,,2,44,,,44,2,12,,131,,5e SRD,,Monstrosity
+Rum Gremlin,13,,0.5,22,,,22,3,13,,239,,Tome of Beasts,,Fey
+Deep Gnome (Svirfneblin),15,,0.5,16,,,16,2,12,,164,,5e SRD,,Humanoid
+Wolpertinger,13,,0.25,9,,,9,3,13,,382,,Creature Codex,,Monstrosity
+Tembril,15,,6,114,,,114,2,12,,344,,Tome of Beasts 2,,Monstrosity
+Clockwork Conductor,13,,0.5,28,,,28,1,11,,87,,Tome of Beasts 3,,Construct
+Warhorse,11,,0.5,19,,,19,1,11,,340,,5e SRD,,Beast
+Ancient Mandriano,14,,8,102,,,102,-1,9,,261,,Creature Codex,,Plant
+"Swarm, Vampire Blossom",14,,3,82,,,82,4,14,,264,,Tome of Beasts 3,,Plant
+Flayed Wraith,12,,5,67,,,67,2,12,,151,,Tome of Beasts 2,,Undead
+"Dragon, Prismatic Adult",18,,16,212,,,212,0,10,Legendary,142,,Tome of Beasts 3,,Dragon
+Map Mimic,14,,0.25,32,,,32,2,12,,289,,Tome of Beasts,,Aberration
+Empyrean,21,,22,328,,,328,7,17,Legendary,405,,A5e Monstrous Menagerie,,Celestial
+Soldier,16,,0.5,19,,,19,1,11,,493,,A5e Monstrous Menagerie,,Humanoid
+Specter,12,,1,22,,,22,2,12,,279,,5e SRD,,Undead
+Crimson Mist,15,,6,68,,,68,2,12,,67,,Creature Codex,,Undead
+Juniper Sheriff,13,,0.5,31,,,31,3,13,,248,,Tome of Beasts 3,,Fey
+Giant Wasp,12,,0.5,13,,,13,2,12,,329,,5e SRD,,Beast
+Swarm of Quippers,13,,1,28,,,28,3,13,,461,,A5e Monstrous Menagerie,,Beast
+Child Of The Briar,13,,1,50,,,50,3,13,,56,,Tome of Beasts,,Plant
+Chaos-Spawn Goblin,13,,0.5,22,,,22,2,12,,190,,Creature Codex,,Humanoid
+Aklea,21,,22,656,,,656,7,17,Legendary,405,,A5e Monstrous Menagerie,,Celestial
+Thursir Giant,13,,3,114,,,114,0,10,,227,,Tome of Beasts,,Giant
+"Golem, Chain",16,,8,119,,,119,1,11,,214,,Tome of Beasts 3,,Construct
+Succubus/Incubus,15,,4,66,,,66,3,13,,285,,5e SRD,,Fiend
+Plaresh,15,,3,30,,,30,3,13,,89,,Creature Codex,,Fiend
+Ghost Dragon,14,,11,126,,,126,4,14,,170,,Creature Codex,,Undead
+Keg Golem,11,,3,45,,,45,0,10,,201,,Creature Codex,,Construct
+Vampire Mage,16,,13,142,,,142,4,14,Legendary,420,,A5e Monstrous Menagerie,,Undead
+Werehyena,13,,3,58,,,58,3,13,,259,,Creature Codex,,Humanoid
+Divi,18,,11,172,,,172,1,11,,217,,A5e Monstrous Menagerie,,Elemental
+Death Worm,13,,1,44,,,44,2,12,,106,,Tome of Beasts 3,,Monstrosity
+Tosculi Drone,13,,0.5,22,,,22,3,13,,386,,Tome of Beasts,,Monstrosity
+Vaettir,15,,4,120,,,120,2,12,,395,,Tome of Beasts,,Undead
+Scarsupial,13,,2,39,,,39,1,11,,339,,Tome of Beasts 3,,Beast
+Deep Drake,17,,9,150,,,150,4,14,,152,,Tome of Beasts,,Dragon
+Werebat,13,,3,66,,,66,3,13,,258,,Creature Codex,,Humanoid
+Eye of the Gods,14,,1,36,,,36,4,14,,16,,Creature Codex,,Celestial
+Weretiger,12,,4,120,,,120,2,12,,210,,5e SRD,,Humanoid
+Imy-Ut Ushabti,15,,3,97,,,97,2,12,,256,,Tome of Beasts,,Monstrosity
+Ancient Black Dragon (+),22,,23,367,,,367,2,12,Legendary,100,,A5e Monstrous Menagerie,,Dragon
+Warhordling Orc Eye,14,,2,32,,,32,0,10,,488,,A5e Monstrous Menagerie,,Humanoid
+Loxoda,13,,6,147,,,147,1,11,,280,,Tome of Beasts,,Monstrosity
+Grimlock Technical,12,,0.5,13,,,13,2,12,,258,,A5e Monstrous Menagerie,,Humanoid
+"Archon, Word",13,,1,28,,,28,2,12,,44,,Tome of Beasts 3,,Celestial
+Pech Lithlord,17,,7,104,,,104,0,10,,295,,Creature Codex,,Elemental
+Mold Zombie,13,,3,75,,,75,-1,9,,394,,Creature Codex,,Undead
+Bolt-Thrower,14,,2,44,,,44,3,13,,52,,A5e Monstrous Menagerie,,Construct
+Mummy Lord,17,,15,97,,,97,0,10,Legendary,229,,5e SRD,,Undead
+Naiad,15,,1,22,,,22,1,11,,189,,A5e Monstrous Menagerie,,Fey
+Ancient Green Dragon (+),21,,24,420,,,420,1,11,Legendary,111,,A5e Monstrous Menagerie,,Dragon
+Hodag,13,,3,52,,,52,1,11,,200,,Tome of Beasts 2,,Beast
+Colláis,16,,10,150,,,150,2,12,,69,,Tome of Beasts 2,,Monstrosity
+Witch Queen,15,,5,77,,,77,3,13,,97,,Creature Codex,,Humanoid
+Gerridae,14,,1,77,,,77,2,12,,212,,Tome of Beasts,,Fey
+Bone Devil,19,,9,142,,,142,3,13,,80,,A5e Monstrous Menagerie,,Fiend
+Roggenwolf,13,,2,60,,,60,3,13,,320,,Creature Codex,,Monstrosity
+Phantom,11,,1,22,,,22,1,11,,296,,Creature Codex,,Undead
+Goliath Longlegs,16,,7,162,,,162,2,12,,206,,Creature Codex,,Monstrosity
+Cyclops Myrmidon,17,,10,126,,,126,0,10,,58,,A5e Monstrous Menagerie,,Giant
+Npc: Infested Duelist,18,,9,144,,,144,5,15,,409,,Tome of Beasts 3,,Humanoid
+Moonchild Naga,15,,6,75,,,75,4,14,,273,,Creature Codex,,Monstrosity
+Incandescent One,16,,9,144,,,144,4,14,,244,,Tome of Beasts 3,,Celestial
+"Golem, Ice",16,,8,114,,,114,0,10,,215,,Tome of Beasts 3,,Construct
+Vorthropod,15,,5,127,,,127,0,10,,387,,Tome of Beasts 3,,Monstrosity
+Shadow Beast,14,,7,135,,,135,4,14,,345,,Tome of Beasts,,Fey
+Gorgon,19,,5,114,,,114,0,10,,171,,5e SRD,,Monstrosity
+Panther,12,,0.25,13,,,13,2,12,,333,,5e SRD,,Beast
+Erina Defender,15,,1,44,,,44,2,12,,178,,Tome of Beasts,,Humanoid
+Mountain Dwarf Lord,20,,14,171,,,171,1,11,,477,,A5e Monstrous Menagerie,,Humanoid
+Coral Drake,16,,7,127,,,127,-5,5,,150,,Tome of Beasts,,Dragon
+Water Elemental,14,,5,114,,,114,2,12,,125,,5e SRD,,Elemental
+"Baba Yaga's Horsemen, Red Sun",20,,11,171,,,171,0,10,,29,,Tome of Beasts,,Fey
+Shadow Elf Spellcaster Drider,17,,6,114,,,114,3,13,,187,,A5e Monstrous Menagerie,,Monstrosity
+Npc: Cultist Psychophant,15,,9,149,,,149,1,11,,405,,Tome of Beasts 3,,Humanoid
+Shurale,14,,7,105,,,105,4,14,,327,,Tome of Beasts 2,,Fey
+Blink Dog,13,,0.25,22,,,22,3,13,,318,,5e SRD,,Fey
+Wyrmling Wind Dragon,14,,1,45,,,45,4,14,,131,,Tome of Beasts,,Dragon
+Ankylosaurus,16,,3,63,,,63,0,10,,90,,A5e Monstrous Menagerie,,Beast
+Asp Vine,13,,4,55,,,55,1,11,,45,,Tome of Beasts 3,,Plant
+Young Cave Dragon,17,,8,157,,,157,1,11,,127,,Tome of Beasts,,Dragon
+Wolf,13,,0.25,11,,,11,2,12,,341,,5e SRD,,Beast
+Tetomatli,16,,8,152,,,152,0,10,,345,,Tome of Beasts 2,,Construct
+Peluda Drake,15,,3,68,,,68,2,12,,130,,Creature Codex,,Dragon
+Pixie’s Umbrella,7,,0.125,10,,,10,-3,7,,158,,Tome of Beasts 2,,Plant
+Great Wyrm Green Dragon,21,,24,840,,,840,1,11,Legendary,111,,A5e Monstrous Menagerie,,Dragon
+"Demon, Balbazu",13,,2,36,,,36,3,13,,107,,Tome of Beasts 3,,Fiend
+Vengeful Ghost,11,,8,58,,,58,1,11,,227,,A5e Monstrous Menagerie,,Undead
+Two-Headed Eagle,15,,7,142,,,142,5,15,,360,,Creature Codex,,Monstrosity
+Vampire Priestess,16,,8,105,,,105,1,11,,367,,Creature Codex,,Undead
+Moonkite,15,,5,93,,,93,4,14,,260,,Tome of Beasts 2,,Celestial
+Basilisk,12,,3,52,,,52,-1,9,,24,,5e SRD,,Monstrosity
+Ancient Gold Dragon (+),22,,26,487,,,487,2,12,Legendary,170,,A5e Monstrous Menagerie,,Dragon
+Grick,14,,2,27,,,27,2,12,,173,,5e SRD,,Monstrosity
+Spider Drake,18,,9,136,,,136,1,11,,348,,Creature Codex,,Dragon
+Sand Spider,15,,7,105,,,105,3,13,,364,,Tome of Beasts,,Beast
+Great Mandrake,11,,1,44,,,44,-1,9,,260,,Creature Codex,,Plant
+Elk,10,,0.25,13,,,13,0,10,,322,,5e SRD,,Beast
+Hebi-Doku,15,,8,123,,,123,5,15,,222,,Tome of Beasts 2,,Fey
+Herd Skulker,15,,1,45,,,45,3,13,,231,,Tome of Beasts 3,,Monstrosity
+Al-Aeshma Genie,17,,9,172,,,172,2,12,,211,,Tome of Beasts,,Elemental
+Alke,14,,5,114,,,114,2,12,,16,,Tome of Beasts 3,,Monstrosity
+Snow Terror,16,,8,127,,,127,6,16,,334,,Tome of Beasts 2,,Fiend
+Aviere,12,,0.5,17,,,17,2,12,,36,,Tome of Beasts 2,,Celestial
+Adult Cave Dragon,18,,16,243,,,243,1,11,Legendary,125,,Tome of Beasts,,Dragon
+Necrotech Bonecage Constrictor,16,,9,175,,,175,3,13,,287,,Tome of Beasts 3,,Undead
+Shroud,13,,0.125,9,,,9,1,11,,348,,Tome of Beasts,,Undead
+Shimmer Seal,12,,5,105,,,105,2,12,,324,,Tome of Beasts 2,,Beast
+Deep One Archimandrite,15,,8,153,,,153,2,12,,74,,Tome of Beasts,,Humanoid
+Merfolk,11,,0.125,11,,,11,1,11,,329,,A5e Monstrous Menagerie,,Humanoid
+Death Barque,17,,12,198,,,198,4,14,,268,,Tome of Beasts 2,,Undead
+Strider,16,,5,90,,,90,4,14,,491,,A5e Monstrous Menagerie,,Humanoid
+Ratatosk Warlord,16,,5,77,,,77,4,14,,314,,Creature Codex,,Celestial
+Talus Flow,13,,3,102,,,102,0,10,,365,,Tome of Beasts 3,,Elemental
+Ancient Wind Dragon,20,,22,425,,,425,4,14,Legendary,142,,Tome of Beasts,,Dragon
+Vampire Patrician,16,,10,119,,,119,4,14,,365,,Creature Codex,,Undead
+Goat,10,,0,4,,,4,0,10,,330,,5e SRD,,Beast
+Stone Guardian,17,,10,178,,,178,0,10,,265,,A5e Monstrous Menagerie,,Construct
+Avestruzii Champion,15,,2,45,,,45,1,11,,48,,Tome of Beasts 3,,Humanoid
+Water Leaper,14,,4,97,,,97,2,12,,406,,Tome of Beasts,,Monstrosity
+Moss Lurker,15,,1,45,,,45,2,12,,298,,Tome of Beasts,,Humanoid
+Ramag,13,,0.25,27,,,27,2,12,,317,,Tome of Beasts,,Humanoid
+Skein Witch,20,,12,162,,,162,1,11,,349,,Tome of Beasts,,Celestial
+Broodiken,13,,1,55,,,55,2,12,,45,,Tome of Beasts,,Construct
+Mage,12,,6,40,,,40,2,12,,347,,5e SRD,,Humanoid
+King Kobold,15,,6,112,,,112,5,15,,162,,Creature Codex,,Humanoid
+Goat-Man,14,,3,65,,,65,2,12,,231,,Tome of Beasts,,Monstrosity
+Abbanith Giant,13,,3,76,,,76,-1,9,,170,,Tome of Beasts 2,,Giant
+Ophidiotaur,16,,5,95,,,95,1,11,,282,,Tome of Beasts 2,,Monstrosity
+Starving Specter,13,,5,90,,,90,3,13,,356,,Tome of Beasts 3,,Undead
+Ved Pinion,,,,0,,,,,19,,,,,,Character
+Koralk (Harvester Devil),15,,11,136,,,136,1,11,,108,,Tome of Beasts,,Fiend
+Lantern Dragonette,13,,0.5,28,,,28,1,11,,270,,Tome of Beasts,,Dragon
+Compsognathus,12,,0.125,10,,,10,2,12,,108,,Tome of Beasts 2,,Beast
+Sea Dragon Wyrmling,17,,2,52,,,52,0,10,,136,,Tome of Beasts,,Dragon
+Haugbui,18,,13,136,,,136,3,13,,247,,Tome of Beasts,,Undead
+Ice Willow,15,,6,142,,,142,-1,9,,240,,Tome of Beasts 3,,Plant
+Brown Bear,11,,1,34,,,34,0,10,,319,,5e SRD,,Beast
+Web Zombie,8,,1,22,,,22,-2,8,,209,,Tome of Beasts 2,,Undead
+Remorhaz Spawn,14,,5,95,,,95,2,12,,369,,A5e Monstrous Menagerie,,Monstrosity
+Scarlet Ibis,14,,5,135,,,135,2,12,,318,,Tome of Beasts 2,,Monstrosity
+Rimewing,12,,0.25,22,,,22,2,12,,178,,Creature Codex,,Beast
+Adult Sea Dragon,19,,16,225,,,225,0,10,Legendary,135,,Tome of Beasts,,Dragon
+Giant Boar,12,,2,42,,,42,0,10,,323,,5e SRD,,Beast
+Flithidir,13,,1,27,,,27,3,13,,154,,Tome of Beasts 2,,Fey
+Snow Cat,12,,0.25,13,,,13,2,12,,346,,Creature Codex,,Beast
+Giant Snow Beetle,12,,1,45,,,45,0,10,,392,,Tome of Beasts 2,,Beast
+Zanskaran Viper,14,,1,38,,,38,0,10,,354,,Tome of Beasts,,Beast
+Hantu Penanggal,14,,8,123,,,123,3,13,,192,,Tome of Beasts 2,,Fiend
+Giant Spider,14,,1,26,,,26,3,13,,328,,5e SRD,,Beast
+Folk Of Leng,14,,2,68,,,68,2,12,,204,,Tome of Beasts,,Humanoid
+Swarm of Compsognathus,12,,1,44,,,44,2,12,,108,,Tome of Beasts 2,,Beast
+Owlbear,13,,3,59,,,59,1,11,,249,,5e SRD,,Monstrosity
+Warlock's Trumpetbloom,15,,7,152,,,152,0,10,,372,,Creature Codex,,Plant
+Sinstar Thrall,13,,2,58,,,58,0,10,,346,,Tome of Beasts 3,,Plant
+Darakhul High Priestess EOTG,17,,9,112,,,112,2,12,,172,,Creature Codex,,Undead
+Gullkin,14,,0.5,27,,,27,3,13,,223,,Tome of Beasts 3,,Humanoid
+Ancient Flame Dragon,22,,24,481,,,481,2,12,Legendary,128,,Tome of Beasts,,Dragon
+Skull Lantern,13,,0.25,14,,,14,3,13,,343,,Creature Codex,,Undead
+Holy Knight,18,,6,93,,,93,1,11,,476,,A5e Monstrous Menagerie,,Humanoid
+Domovoi,15,,4,93,,,93,1,11,,122,,Tome of Beasts,,Fey
+Pale Screamer,14,,3,52,,,52,2,12,,290,,Tome of Beasts 2,,Aberration
+Noble,15,,0.125,9,,,9,1,11,,348,,5e SRD,,Humanoid
+Far Wanderer,14,,3,88,,,88,4,14,,151,,Creature Codex,,Aberration
+Hunter Shark,12,,2,45,,,45,1,11,,330,,5e SRD,,Beast
+Ancient Brass Dragon,20,,20,297,,,297,0,10,Legendary,104,,5e SRD,,Dragon
+"Angel, Pelagic Deva",17,,11,142,,,142,4,14,,27,,Tome of Beasts 3,,Celestial
+Giant Walking Stick,14,,4,76,,,76,2,12,,201,,Tome of Beasts 3,,Beast
+Iron Guardian,20,,14,210,,,210,1,11,,263,,A5e Monstrous Menagerie,,Construct
+Bookkeeper,12,,0.125,5,,,5,2,12,,55,,Creature Codex,,Construct
+Alpha Yek,16,,9,129,,,129,3,13,,14,,Creature Codex,,Fiend
+Spark,16,,7,84,,,84,5,15,,357,,Tome of Beasts,,Elemental
+Giant Fire Beetle,13,,0,4,,,4,0,10,,325,,5e SRD,,Beast
+Haleshi,17,,7,123,,,123,3,13,,191,,Tome of Beasts 2,,Fey
+Tribal Warrior,12,,0.125,11,,,11,0,10,,350,,5e SRD,,Humanoid
+Kobold Alchemist,15,,2,44,,,44,3,13,,261,,Tome of Beasts,,Humanoid
+Manticore,14,,3,68,,,68,3,13,,213,,5e SRD,,Monstrosity
+Lemure,7,,0,13,,,13,-3,7,,76,,5e SRD,,Fiend
+Bugbear,16,,1,27,,,27,2,12,,33,,5e SRD,,Humanoid
+Ashen Custodian,15,,6,99,,,99,5,15,,29,,Tome of Beasts 2,,Fey
+Flumph,12,,0.125,7,,,7,2,12,,207,,A5e Monstrous Menagerie,,Aberration
+Bat,12,,0,1,,,1,2,12,,318,,5e SRD,,Beast
+Sulsha,16,,4,90,,,90,2,12,,136,,Tome of Beasts 2,,Humanoid
+Spawn of Alquam,16,,6,114,,,114,3,13,,95,,Tome of Beasts 2,,Fiend
+Forgotten Regent,17,,10,187,,,187,0,10,Legendary,187,,Tome of Beasts 3,,Undead
+Porcellina,13,,0.5,28,,,28,3,13,,317,,Tome of Beasts 3,,Beast
+Three-Headed Cobra,16,,5,127,,,127,4,14,,354,,Creature Codex,,Monstrosity
+Horde Demon,13,,3,52,,,52,1,11,,70,,A5e Monstrous Menagerie,,Fiend
+Keyhole Dragonette,14,,0.5,27,,,27,2,12,,180,,Tome of Beasts 2,,Dragon
+"Crab, Razorback",17,,2,58,,,58,0,10,,98,,Tome of Beasts 3,,Beast
+Barometz,15,,6,95,,,95,0,10,,38,,Tome of Beasts 2,,Plant
+Arcane Scavenger,17,,9,127,,,127,4,14,,41,,Tome of Beasts 3,,Construct
+Wolf Reaver Dwarf,16,,3,76,,,76,1,11,,426,,Tome of Beasts,,Humanoid
+Gaunt One,14,,3,75,,,75,2,12,,163,,Tome of Beasts 2,,Aberration
+"Giant, Thursir Hearth Priestess",14,,4,85,,,85,2,12,,207,,Tome of Beasts 3,,Giant
+Dire Tyrannosaurus Rex,13,,8,253,,,253,0,10,,92,,A5e Monstrous Menagerie,,Beast
+Young Silver Dragon,18,,9,168,,,168,0,10,,118,,5e SRD,,Dragon
+Ion Slime,13,,5,112,,,112,3,13,,245,,Tome of Beasts 3,,Ooze
+Mirager,13,,3,78,,,78,3,13,,291,,Tome of Beasts,,Fey
+Akanka,12,,2,45,,,45,2,12,,10,,Tome of Beasts 3,,Fey
+Ghul,15,,5,105,,,105,2,12,,169,,Tome of Beasts 2,,Undead
+Huecambra,17,,8,136,,,136,1,11,,203,,Tome of Beasts 2,,Monstrosity
+Pal-Rai-Yuk,16,,8,133,,,133,0,10,,291,,Tome of Beasts 2,,Monstrosity
+Alpine Creeper,5,,3,95,,,95,-5,5,,19,,Tome of Beasts 3,,Plant
+Snake with a Hundred Mage Hands,14,,3,67,,,67,4,14,,333,,Tome of Beasts 2,,Monstrosity
+Gelatinous Wall,6,,7,136,,,136,-4,6,,351,,A5e Monstrous Menagerie,,Ooze
+Pescavitus,13,,1,44,,,44,3,13,,315,,Tome of Beasts 3,,Celestial
+Dream Squire,15,,2,71,,,71,2,12,,134,,Creature Codex,,Fey
+Glacier Behemoth,18,,12,172,,,172,-4,6,,177,,Tome of Beasts 2,,Beast
+Giant Frilled Lizard,16,,5,105,,,105,4,14,,392,,Tome of Beasts 2,,Beast
+Ancient Red Dragon (+),22,,26,448,,,448,0,10,Legendary,116,,A5e Monstrous Menagerie,,Dragon
+Firebird,16,,4,99,,,99,4,14,,201,,Tome of Beasts,,Celestial
+Horned Tauric,13,,2,45,,,45,3,13,,44,,A5e Monstrous Menagerie,,Fey
+Fragrant One,11,,3,45,,,45,1,11,,156,,Tome of Beasts 2,,Fey
+Giant Frog,11,,0.25,18,,,18,1,11,,325,,5e SRD,,Beast
+Sphinx,20,,11,142,,,142,2,12,,398,,A5e Monstrous Menagerie,,Monstrosity
+Catonoctrix,18,,10,168,,,168,1,11,,75,,Tome of Beasts 3,,Aberration
+Remorhaz,17,,11,195,,,195,1,11,,258,,5e SRD,,Monstrosity
+Axe Beak,11,,0.25,19,,,19,1,11,,317,,5e SRD,,Beast
+"Ghoul, Imperial",16,,4,93,,,93,2,12,,220,,Tome of Beasts,,Undead
+Pech Stonemaster,16,,4,65,,,65,0,10,,295,,Creature Codex,,Elemental
+Ancient Imperial Dragon,22,,26,546,,,546,1,11,Legendary,117,,Tome of Beasts 2,,Dragon
+Cosmic Symphony,18,,15,200,,,200,8,18,Legendary,96,,Tome of Beasts 3,,Celestial
+Hezrou,16,,8,136,,,136,3,13,,60,,5e SRD,,Fiend
+Herald Of Darkness,15,,7,105,,,105,2,12,,249,,Tome of Beasts,,Fiend
+Arbeyach,17,,21,275,,,275,5,15,Legendary,95,,Tome of Beasts,,Fiend
+"Giant, Lantern",16,,12,225,,,225,1,11,,204,,Tome of Beasts 3,,Giant
+The Barbed,13,,1,44,,,44,3,13,,406,,Creature Codex,,Humanoid
+Rum Lord,15,,4,78,,,78,2,12,,185,,Tome of Beasts 2,,Fey
+Stone Colossus,17,,16,263,,,263,0,10,Legendary,266,,A5e Monstrous Menagerie,,Construct
+Ancient Copper Dragon,21,,21,350,,,350,1,11,Legendary,110,,5e SRD,,Dragon
+Ancient Blue Dragon,22,,23,481,,,481,0,10,Legendary,90,,5e SRD,,Dragon
+Megapede,15,,3,75,,,75,2,12,,266,,Creature Codex,,Monstrosity
+Cosmopolitan Alchemist,14,,6,91,,,91,3,13,,467,,A5e Monstrous Menagerie,,Humanoid
+Kachlian,16,,8,157,,,157,0,10,,219,,Tome of Beasts 2,,Aberration
+"Lycanthrope, Werecrocodile",12,,3,58,,,58,1,11,,265,,Tome of Beasts 3,,Humanoid
+Aziza,15,,0.5,21,,,21,4,14,,49,,Tome of Beasts 3,,Fey
+Dipsa,15,,0.25,27,,,27,3,13,,118,,Tome of Beasts,,Ooze
+Bearing Golem,16,,6,75,,,75,4,14,,181,,Tome of Beasts 2,,Construct
+Muraenid,14,,2,45,,,45,2,12,,281,,Tome of Beasts 3,,Monstrosity
+Dark Father,18,,4,65,,,65,2,12,,71,,Creature Codex,,Undead
+Frog,11,,0,1,,,1,1,11,,322,,5e SRD,,Beast
+Riding Horse,10,,0.25,13,,,13,0,10,,336,,5e SRD,,Beast
+Wanyudo,16,,8,115,,,115,2,12,,364,,Tome of Beasts 2,,Fiend
+Horned Serpent,18,,12,210,,,210,3,13,,220,,Creature Codex,,Monstrosity
+Shadow Goblin,13,,0.5,13,,,13,3,13,,326,,Creature Codex,,Humanoid
+Black Patch,7,,6,153,,,153,-3,7,,58,,Tome of Beasts 3,,Ooze
+Tosculi Jeweled Drone,15,,4,90,,,90,4,14,,355,,Creature Codex,,Humanoid
+Mangrove Treant,15,,7,136,,,136,-2,8,,350,,Tome of Beasts 2,,Plant
+Cloud Giant Noble,14,,12,187,,,187,0,10,,233,,A5e Monstrous Menagerie,,Giant
+Berserker,13,,2,67,,,67,1,11,,344,,5e SRD,,Humanoid
+Garroter Crab,13,,0.25,18,,,18,2,12,,208,,Tome of Beasts,,Beast
+Ogre Mage,16,,7,102,,,102,0,10,,348,,A5e Monstrous Menagerie,,Giant
+Hierophant Lich,14,,9,91,,,91,1,11,Legendary,252,,Creature Codex,,Undead
+"Troll, Rattleback",16,,7,126,,,126,4,14,,374,,Tome of Beasts 3,,Giant
+Scheznyki,16,,6,153,,,153,2,12,,339,,Tome of Beasts,,Fey
+Ghost Boar,13,,3,68,,,68,0,10,,169,,Creature Codex,,Monstrosity
+"Ghoul, Darakhul EOTG",16,,3,78,,,78,3,13,,216,,Tome of Beasts,,Undead
+Haunted Giant,20,,6,126,,,126,-1,9,,183,,Creature Codex,,Giant
+Efreeti Noble,17,,11,344,,,344,4,14,,221,,A5e Monstrous Menagerie,,Elemental
+Crime Boss,15,,6,127,,,127,2,12,,496,,A5e Monstrous Menagerie,,Humanoid
+Thornheart Guardian,18,,9,133,,,133,0,10,,346,,Tome of Beasts 2,,Construct
+Quiet Soul,15,,6,90,,,90,0,10,,309,,Creature Codex,,Undead
+Yowler,12,,0.5,22,,,22,2,12,,380,,Tome of Beasts 2,,Undead
+Temple Dog,15,,5,97,,,97,2,12,,378,,Tome of Beasts,,Celestial
+Flying Snake,14,,0.125,5,,,5,4,14,,322,,5e SRD,,Beast
+Dwarven Ringmage,16,,7,82,,,82,2,12,,420,,Tome of Beasts,,Humanoid
+Khamaseen,13,,1,27,,,27,2,12,,250,,Tome of Beasts 3,,Elemental
+Wraith Bear,13,,9,133,,,133,3,13,,375,,Tome of Beasts 2,,Undead
+Young Wasteland Dragon,18,,9,178,,,178,0,10,,118,,Creature Codex,,Dragon
+Liosalfar,17,,8,110,,,110,7,17,,277,,Tome of Beasts,,Elemental
+Hill Giant Chief,13,,8,126,,,126,-1,9,,238,,A5e Monstrous Menagerie,,Giant
+Gaki,14,,8,75,,,75,4,14,,390,,Creature Codex,,Undead
+Thin Giant,16,,9,168,,,168,3,13,,175,,Tome of Beasts 2,,Giant
+Boar,11,,0.25,11,,,11,0,10,,319,,5e SRD,,Beast
+Ratfolk Rogue,15,,1,18,,,18,3,13,,320,,Tome of Beasts,,Humanoid
+Library Automaton,13,,0.5,7,,,7,1,11,,273,,Tome of Beasts,,Construct
+Pirate,12,,0.125,9,,,9,0,10,,470,,A5e Monstrous Menagerie,,Humanoid
+Solar,21,,21,243,,,243,6,16,Legendary,18,,5e SRD,,Celestial
+Ancient Void Dragon,22,,24,448,,,448,0,10,Legendary,138,,Tome of Beasts,,Dragon
+Fire Dancer Swarm,15,,7,90,,,90,5,15,,373,,Tome of Beasts,,Elemental
+Hirudine Stalker,13,,2,52,,,52,3,13,,235,,Tome of Beasts 3,,Monstrosity
+Erina Tussler,14,,3,66,,,66,3,13,,172,,Tome of Beasts 3,,Humanoid
+Mallqui,14,,8,120,,,120,-1,9,,282,,Tome of Beasts,,Undead
+Veritigibbet,14,,4,63,,,63,4,14,,384,,Tome of Beasts 3,,Fey
+Emperor’s Hyena,14,,4,91,,,91,2,12,,135,,Tome of Beasts 2,,Undead
+Fleshspurned,14,,4,75,,,75,4,14,,153,,Tome of Beasts 2,,Undead
+Lorelei,15,,5,76,,,76,5,15,,279,,Tome of Beasts,,Fey
+Ice Maiden,16,,6,84,,,84,3,13,,254,,Tome of Beasts,,Fey
+Sentinel in Darkness,13,,7,127,,,127,-1,9,,323,,Creature Codex,,Construct
+Ancient Earth Dragon,22,,24,425,,,425,2,12,Legendary,126,,A5e Monstrous Menagerie,,Dragon
+Drakon,16,,5,105,,,105,4,14,,157,,Tome of Beasts,,Beast
+"Devil, Infernal Tutor, Lesser",15,,7,110,,,110,3,13,,120,,Tome of Beasts 3,,Fiend
+Rotsam Swarm,9,,6,142,,,142,-1,9,,309,,Tome of Beasts 2,,Ooze
+Ikuchi,16,,8,116,,,116,1,11,,210,,Tome of Beasts 2,,Elemental
+Ratfolk,14,,0.25,7,,,7,2,12,,320,,Tome of Beasts,,Humanoid
+Imp Familiar,13,,0.5,14,,,14,3,13,,85,,A5e Monstrous Menagerie,,Fiend
+"Swarm, Swamp Slirghs",10,,3,66,,,66,0,10,,363,,Tome of Beasts 3,,Elemental
+Vapor Lynx,14,,5,127,,,127,4,14,,398,,Tome of Beasts,,Monstrosity
+Bone Crab,13,,0.5,33,,,33,2,12,,40,,Tome of Beasts,,Beast
+Zombie Knight,16,,3,52,,,52,-2,8,,437,,A5e Monstrous Menagerie,,Undead
+Dream Eater,15,,5,75,,,75,4,14,,158,,Tome of Beasts,,Fiend
+Azza Gremlin,14,,0.25,7,,,7,4,14,,28,,Tome of Beasts,,Fey
+Vrock,15,,6,104,,,104,2,12,,64,,5e SRD,,Fiend
+Gnoll Slaver,15,,3,71,,,71,2,12,,189,,Creature Codex,,Humanoid
+Mirage Monster,12,,4,76,,,76,2,12,Legendary,333,,A5e Monstrous Menagerie,,Monstrosity
+"Ooze, Manure",7,,1,45,,,45,-3,7,,306,,Tome of Beasts 3,,Ooze
+Ettin,12,,4,85,,,85,-1,9,,132,,5e SRD,,Giant
+Soul Eater,16,,7,104,,,104,6,16,,356,,Tome of Beasts,,Fiend
+Chameleon Hydra,15,,10,184,,,184,3,13,,207,,Tome of Beasts 2,,Monstrosity
+Caldera Kite,17,,7,119,,,119,4,14,,71,,Tome of Beasts 3,,Monstrosity
+Npc: Warlock Of The Genie Lord,15,,5,78,,,78,3,13,,411,,Tome of Beasts 3,,Humanoid
+Rattok,14,,4,66,,,66,3,13,,90,,Creature Codex,,Fiend
+Alliumite,14,,0.25,18,,,18,4,14,,13,,Creature Codex,,Plant
+Gynosphinx,17,,11,136,,,136,2,12,Legendary,282,,5e SRD,,Monstrosity
+Speaker to the Darkness,16,,5,135,,,135,3,13,,96,,Creature Codex,,Humanoid
+Umbral Shambler,13,,2,39,,,39,3,13,,380,,Tome of Beasts 3,,Aberration
+Wrackwraith,13,,3,45,,,45,3,13,,395,,Tome of Beasts 3,,Undead
+Abaasy,18,,8,126,,,126,0,10,,8,,Tome of Beasts 3,,Giant
+Ur-Otyugh,14,,10,144,,,144,0,10,Legendary,354,,A5e Monstrous Menagerie,,Aberration
+Grivid,17,,11,180,,,180,3,13,,221,,Tome of Beasts 3,,Aberration
+Clockwork Tactician,16,,11,150,,,150,2,12,,90,,Tome of Beasts 3,,Construct
+Vine Lord,16,,7,105,,,105,5,15,,402,,Tome of Beasts,,Plant
+Timingila,18,,15,232,,,232,-3,7,,349,,Tome of Beasts 2,,Monstrosity
+Death Vulture,12,,4,76,,,76,0,10,,81,,Tome of Beasts 2,,Monstrosity
+Chupacabra,13,,0.5,36,,,36,2,12,,63,,Creature Codex,,Monstrosity
+Wind Weasel,13,,2,52,,,52,3,13,,381,,Creature Codex,,Fey
+Stygian Fat-Tailed Scorpion,14,,3,10,,,10,3,13,,340,,Tome of Beasts,,Beast
+Darakhul Shadowmancer,12,,4,52,,,52,3,13,,173,,Creature Codex,,Undead
+Ghoul,12,Evil,1,22,,"Abandoned, Dungeons, Underdark",22,2,12,,148,Medium,5e SRD,30,Undead
+Shadow Fey Guardian,15,,4,110,,,110,2,12,,171,,Tome of Beasts,,Humanoid
+Abominable Snowman,12,,4,136,,,136,1,11,,433,,A5e Monstrous Menagerie,,Monstrosity
+Dust Goblin Chieftain,16,,3,44,,,44,4,14,,136,,Creature Codex,,Humanoid
+Vulture,10,,0,5,,,5,0,10,,339,,5e SRD,,Beast
+Lava Keeper,18,,18,276,,,276,0,10,,235,,Tome of Beasts 2,,Elemental
+Fear Smith,17,,10,123,,,123,3,13,,181,,Tome of Beasts,,Fey
+Diseased Giant Rat,12,,0.125,7,,,7,2,12,,449,,A5e Monstrous Menagerie,,Beast
+Chemosit,15,,5,119,,,119,3,13,,82,,Tome of Beasts 3,,Fiend
+Aurora Horribilis,15,,9,119,,,119,5,15,,34,,Tome of Beasts 2,,Aberration
+Kryt,15,,5,120,,,120,0,10,,243,,Creature Codex,,Humanoid
+Fang of the Great Wolf,14,,3,65,,,65,1,11,,384,,Creature Codex,,Monstrosity
+Graveyard Dragon,16,,7,127,,,127,0,10,,183,,Tome of Beasts 2,,Undead
+Malcubus,14,,4,78,,,78,3,13,,319,,A5e Monstrous Menagerie,,Fiend
+Adult Red Dragon,19,,17,256,,,256,0,10,Legendary,98,,5e SRD,,Dragon
+Raven,12,,0,1,,,1,2,12,,335,,5e SRD,,Beast
+Gnarljak,16,,6,63,,,63,6,16,,229,,Tome of Beasts,,Construct
+Albino Death Weasel,13,,1,45,,,45,2,12,,374,,Creature Codex,,Beast
+Righteous Sentinel,15,,9,104,,,104,0,10,,307,,Tome of Beasts 2,,Construct
+Mandriano,13,,5,60,,,60,-2,8,,261,,Creature Codex,,Plant
+Emerald Eye,14,,1,54,,,54,2,12,,175,,Tome of Beasts,,Construct
+Ichneumon,16,,11,123,,,123,4,14,,224,,Creature Codex,,Monstrosity
+Flame-Scourged Scion,16,,9,125,,,125,3,13,,159,,Creature Codex,,Aberration
+Necrophage Ghast,13,,4,65,,,65,3,13,,175,,Creature Codex,,Undead
+Fulminar,15,,9,112,,,112,5,15,,165,,Creature Codex,,Elemental
+Prismatic Beetle Swarm,13,,3,38,,,38,3,13,,375,,Tome of Beasts,,Beast
+Gypsosphinx,17,,14,171,,,171,2,12,Legendary,359,,Tome of Beasts,,Monstrosity
+Torch Mimic,12,,0.5,21,,,21,2,12,,370,,Tome of Beasts 3,,Monstrosity
+"Devil, Maelstrom",17,,12,195,,,195,3,13,,122,,Tome of Beasts 3,,Fiend
+Nichny,17,,6,112,,,112,4,14,,303,,Tome of Beasts,,Fey
+Forgotten God,17,,10,161,,,161,4,14,,209,,A5e Monstrous Menagerie,,Celestial
+Koschei,18,,17,135,,,135,1,11,Legendary,266,,Tome of Beasts,,Fiend
+Harbinger of Wrath,21,,20,297,,,297,-1,9,,193,,Tome of Beasts 2,,Construct
+Gloomflower,12,,3,44,,,44,-2,8,,188,,Creature Codex,,Plant
+Serpopard,15,,4,85,,,85,3,13,,342,,Tome of Beasts,,Beast
+Hraesvelgr The Corpse Swallower,19,,19,241,,,241,0,10,Legendary,224,,Tome of Beasts,,Giant
+Swolbold,14,,3,65,,,65,0,10,,240,,Creature Codex,,Humanoid
+"Angel, Shrouded",18,,13,161,,,161,5,15,,29,,Tome of Beasts 3,,Celestial
+Rubezahl,15,,10,110,,,110,2,12,,80,,Tome of Beasts,,Fiend
+Bearmit Crab,14,,2,59,,,59,1,11,,52,,Creature Codex,,Monstrosity
+"Aboleth, Nihilith",17,,12,135,,,135,-1,9,Legendary,8,,Tome of Beasts,,Undead
+"Dinosaur, Jeholopterus",14,,0.25,12,,,12,3,13,,126,,Tome of Beasts 3,,Beast
+Green Knight of the Woods,20,,6,78,,,78,0,10,,209,,Creature Codex,,Fey
+Bathhouse Drake,16,,3,75,,,75,2,12,,130,,Creature Codex,,Dragon
+Fellforged,15,,5,135,,,135,1,11,,182,,Tome of Beasts,,Construct
+Ice Elemental,15,,5,114,,,114,-1,9,,133,,Tome of Beasts 2,,Elemental
+Chronomatic Enhancer,16,,12,152,,,152,0,10,,64,,Tome of Beasts 2,,Construct
+Black Pudding,7,,4,85,,,85,-3,7,,241,,5e SRD,,Ooze
+Clockwork Beetle Swarm,14,,3,52,,,52,3,13,,61,,Tome of Beasts,,Construct
+Accursed Guardian Naga,18,,12,136,,,136,4,14,,343,,A5e Monstrous Menagerie,,Monstrosity
+Intellect Devourer,14,,3,36,,,36,3,13,,287,,A5e Monstrous Menagerie,,Aberration
+Devilbound Gnomish Prince,12,,9,104,,,104,2,12,,0,,Tome of Beasts,,Humanoid
+Grave Behemoth,9,,10,210,,,210,-1,9,,208,,Creature Codex,,Undead
+Ammut,17,,9,172,,,172,1,11,,15,,Creature Codex,,Celestial
+Avulzor,17,,8,135,,,135,3,13,,37,,Tome of Beasts 2,,Aberration
+Bone Collective,17,,8,120,,,120,5,15,,39,,Tome of Beasts,,Undead
+"Hag, Wood",16,,9,170,,,170,2,12,,228,,Tome of Beasts 3,,Fey
+Tripwire Patch,14,,4,95,,,95,0,10,,371,,Tome of Beasts 3,,Plant
+Shambling Mound,15,,5,136,,,136,-1,9,,270,,5e SRD,,Plant
+Cutthroat,12,,1,27,,,27,2,12,,468,,A5e Monstrous Menagerie,,Humanoid
+Giant Earth Elemental,17,,9,157,,,157,0,10,,194,,A5e Monstrous Menagerie,,Elemental
+Swarm of Rats,10,,0.25,24,,,24,0,10,,339,,5e SRD,,Beast
+"Dragon, Sand Adult",20,,18,270,,,270,1,11,Legendary,146,,Tome of Beasts 3,,Dragon
+Swarm of Poisonous Snakes,14,,2,36,,,36,4,14,,338,,5e SRD,,Beast
+Ogre Zombie,11,,2,59,,,59,-2,8,,436,,A5e Monstrous Menagerie,,Undead
+Shadow Fey Duelist,17,,6,117,,,117,5,15,,171,,Tome of Beasts,,Humanoid
+Cockatrice,11,,0.5,27,,,27,1,11,,42,,5e SRD,,Monstrosity
+Xanka,15,,0.25,18,,,18,2,12,,411,,Tome of Beasts,,Construct
+Mngwa,16,,4,91,,,91,3,13,,293,,Tome of Beasts,,Aberration
+Kirikari,16,,9,142,,,142,3,13,,230,,Tome of Beasts 2,,Monstrosity
+Minotaur Skeleton,12,,2,67,,,67,0,10,,273,,5e SRD,,Undead
+Warrior,13,,0.125,11,,,11,1,11,,498,,A5e Monstrous Menagerie,,Humanoid
+Coven Sea Hag,14,,4,75,,,75,1,11,,271,,A5e Monstrous Menagerie,,Fey
+Archfey,16,,12,330,,,330,5,15,,200,,A5e Monstrous Menagerie,,Fey
+Weeping Treant,17,,6,105,,,105,-1,9,,388,,Tome of Beasts,,Plant
+Forest Drake,15,,2,60,,,60,-1,9,,130,,Creature Codex,,Dragon
+Algorith,18,,10,136,,,136,2,12,,14,,Tome of Beasts,,Construct
+Wintergrim,13,,0.5,26,,,26,1,11,,372,,Tome of Beasts 2,,Fey
+Adult Green Dragon (+),18,,18,287,,,287,1,11,Legendary,113,,A5e Monstrous Menagerie,,Dragon
+Winter Hag,17,,7,120,,,120,3,13,,272,,A5e Monstrous Menagerie,,Fey
+Grimlock,11,,0.25,11,,,11,1,11,,175,,5e SRD,,Humanoid
+Vampire,16,,13,144,,,144,4,14,Legendary,297,,5e SRD,,Undead
+Adult White Dragon,18,,16,250,,,250,1,11,Legendary,122,,A5e Monstrous Menagerie,,Dragon
+Sooze,12,,0.5,49,,,49,0,10,,287,,Creature Codex,,Aberration
+Infernal Swarm,16,,12,150,,,150,3,13,,215,,Tome of Beasts 2,,Fiend
+Niya-Atha Raja,17,,7,117,,,117,5,15,,291,,Tome of Beasts 3,,Fey
+Jiangshi,15,,6,117,,,117,0,10,,230,,Creature Codex,,Undead
+Derro Shadowseeker,17,,6,112,,,112,5,15,,98,,Tome of Beasts 2,,Humanoid
+Ulnorya,14,,7,119,,,119,4,14,,354,,Tome of Beasts 2,,Aberration
+Cave Sovereign,18,,16,253,,,253,-1,9,Legendary,78,,Tome of Beasts 3,,Aberration
+Ancient Wasteland Dragon,22,,23,333,,,333,0,10,Legendary,118,,Creature Codex,,Dragon
+Allosaurus,15,,3,57,,,57,4,14,,89,,A5e Monstrous Menagerie,,Beast
+Cave Goat,11,,0.25,22,,,22,1,11,,389,,Tome of Beasts 2,,Beast
+"Ogre Chieftain, Corrupted",17,,6,127,,,127,-1,9,,423,,Tome of Beasts,,Giant
+Kishi Demon,18,,8,119,,,119,5,15,,77,,Tome of Beasts,,Fiend
+"Troll, Breakwater",15,,7,105,,,105,2,12,,372,,Tome of Beasts 3,,Giant
+Snow Hag,17,,3,82,,,82,1,11,,346,,Creature Codex,,Fey
+Shambling Mound,15,,6,123,,,123,0,10,,391,,A5e Monstrous Menagerie,,Plant
+Plesiosaurus,13,,2,68,,,68,2,12,,80,,5e SRD,,Beast
+Swarm of Centipedes,12,,0.5,22,,,22,1,11,,339,,5e SRD,,Beast
+Trollking Grunt,14,,2,45,,,45,1,11,,357,,Creature Codex,,Humanoid
+Cueyatl Warchief,16,,7,117,,,117,2,12,,101,,Tome of Beasts 3,,Humanoid
+Vine Troll Skeleton,16,,9,119,,,119,1,11,,351,,Tome of Beasts,,Plant
+Whisperer in Darkness,17,,15,142,,,142,4,14,,378,,Creature Codex,,Aberration
+Commoner,10,,0,4,,,4,0,10,,345,,5e SRD,,Humanoid
+Animated Instrument,12,,0.25,17,,,17,1,11,,34,,Tome of Beasts 3,,Construct
+Woodwose,13,,0.5,27,,,27,1,11,,383,,Creature Codex,,Humanoid
+Pixie,15,,1,2,,,2,5,15,,202,,A5e Monstrous Menagerie,,Fey
+Greed Swarm,13,,0.5,22,,,22,3,13,,184,,Tome of Beasts 2,,Construct
+Doppelrat,13,,2,22,,,22,3,13,,123,,Tome of Beasts,,Monstrosity
+Willowhaunt,14,,5,90,,,90,0,10,,369,,Tome of Beasts 2,,Undead
+Urushi Constrictor,14,,6,133,,,133,2,12,,382,,Tome of Beasts 3,,Monstrosity
+Mordant Snare,18,,15,264,,,264,3,13,,296,,Tome of Beasts,,Aberration
+Giant Flea,14,,0.25,27,,,27,2,12,,197,,Tome of Beasts 3,,Beast
+Hallowed Reed,13,,0.5,22,,,22,0,10,,305,,Creature Codex,,Celestial
+Zoryas,14,,8,104,,,104,0,10,,21,,Creature Codex,,Celestial
+Hoarfrost Drake,14,,2,52,,,52,2,12,,123,,Tome of Beasts 2,,Dragon
+Ramag Portal Master,12,,5,71,,,71,2,12,,313,,Creature Codex,,Humanoid
+Animated Bearskin Rug,13,,4,65,,,65,1,11,,24,,Tome of Beasts 2,,Construct
+Resinous Frog,12,,0.25,19,,,19,-1,9,,397,,Tome of Beasts 2,,Beast
+Goreling,12,,0.25,11,,,11,2,12,,207,,Creature Codex,,Undead
+Boggard Sovereign,13,,3,67,,,67,1,11,,36,,A5e Monstrous Menagerie,,Humanoid
+Shard Swarm,13,,0.5,22,,,22,1,11,,329,,Creature Codex,,Construct
+Woe Siphon,14,,3,45,,,45,3,13,,373,,Tome of Beasts 2,,Fey
+Bleakheart,12,,3,66,,,66,2,12,,43,,Tome of Beasts 2,,Undead
+Magma Octopus,16,,8,147,,,147,3,13,,251,,Tome of Beasts 2,,Elemental
+Radiant Spark Swarm,16,,3,38,,,38,3,13,,305,,Tome of Beasts 2,,Elemental
+Gnoll Havoc Runner,15,,3,58,,,58,2,12,,230,,Tome of Beasts,,Humanoid
+Eye Golem,20,,11,157,,,157,-1,9,,233,,Tome of Beasts,,Construct
+Adult Bronze Dragon (+),18,,18,287,,,287,0,10,Legendary,161,,A5e Monstrous Menagerie,,Dragon
+Ghillie Dubh,13,,1,52,,,52,1,11,,165,,Tome of Beasts 2,,Celestial
+Wraith Lord,15,,13,171,,,171,5,15,,428,,A5e Monstrous Menagerie,,Undead
+Young Brass Dragon,17,,6,110,,,110,0,10,,,,5e SRD,,Dragon
+Earth Elemental,17,,5,126,,,126,-1,9,,124,,5e SRD,,Elemental
+Dragon Eel,18,,12,230,,,230,1,11,,146,,Tome of Beasts,,Dragon
+Catscratch,13,,3,76,,,76,2,12,,58,,Tome of Beasts 2,,Aberration
+Frost Giant Jarl,15,,12,184,,,184,-1,9,,237,,A5e Monstrous Menagerie,,Giant
+Young Blue Dragon Zombie,18,,10,152,,,152,-2,8,,180,,Tome of Beasts 2,,Undead
+Fane Spirit,13,,3,52,,,52,3,13,,141,,Tome of Beasts 2,,Undead
+Dogmole Juggernaut,15,,5,126,,,126,2,12,,121,,Tome of Beasts,,Monstrosity
+Nautiloid,18,,13,216,,,216,2,12,,286,,Tome of Beasts 3,,Elemental
+Chroma Lizard,15,,4,90,,,90,3,13,,84,,Tome of Beasts 3,,Beast
+Mindrot Thrall,15,,3,82,,,82,2,12,,290,,Tome of Beasts,,Plant
+Baboon,12,,0,3,,,3,2,12,,318,,5e SRD,,Beast
+Ancient Bronze Dragon (+),21,,24,425,,,425,0,10,Legendary,160,,A5e Monstrous Menagerie,,Dragon
+Cyonaxin,16,,8,117,,,117,6,16,,102,,Tome of Beasts 3,,Celestial
+Avatar Of Boreas,20,,17,168,,,168,6,16,Legendary,42,,Tome of Beasts,,Elemental
+"Dinosaur, Razorfeather Raptor",16,,2,39,,,39,3,13,,127,,Tome of Beasts 3,,Monstrosity
+Drop Bear,12,,3,42,,,42,0,10,,456,,A5e Monstrous Menagerie,,Beast
+Wyvern Knight,20,,5,102,,,102,0,10,,385,,Creature Codex,,Humanoid
+"Gremlin, Bilge",13,,0.5,36,,,36,3,13,,219,,Tome of Beasts 3,,Fey
+Niya-Atha Sorcerer,13,,4,66,,,66,3,13,,290,,Tome of Beasts 3,,Fey
+Unicorn,12,,5,67,,,67,2,12,Legendary,294,,5e SRD,,Celestial
+Gbahali (Postosuchus),15,,6,126,,,126,2,12,,209,,Tome of Beasts,,Beast
+Brachyura Shambler,14,,4,71,,,71,1,11,,49,,Tome of Beasts 2,,Monstrosity
+Tosculi Warrior,15,,2,58,,,58,5,15,,386,,Tome of Beasts,,Monstrosity
+Wood Ward,13,,1,19,,,19,1,11,,374,,Tome of Beasts 2,,Construct
+Serpentine Lamia,13,,1,36,,,36,2,12,,249,,Creature Codex,,Monstrosity
+"Baba Yaga's Horsemen, Black Night",20,,11,171,,,171,0,10,,29,,Tome of Beasts,,Fey
+Wyvern,13,,6,110,,,110,0,10,,303,,5e SRD,,Dragon
+Karakura,15,,5,76,,,76,4,14,,235,,Creature Codex,,Fiend
+Ancient Black Dragon,22,,21,367,,,367,2,12,Legendary,87,,5e SRD,,Dragon
+Ancient Brass Dragon (+),20,,22,367,,,367,0,10,Legendary,154,,A5e Monstrous Menagerie,,Dragon
+Khalkos,16,,9,130,,,130,3,13,,294,,A5e Monstrous Menagerie,,Aberration
+Hill Dwarf Wrestler,14,,4,75,,,75,2,12,,495,,A5e Monstrous Menagerie,,Humanoid
+Clockwork Scorpion,16,,9,95,,,95,1,11,,89,,Tome of Beasts 3,,Construct
+Capybear,13,,1,60,,,60,2,12,,72,,Tome of Beasts 3,,Monstrosity
+Fallen Planetar,19,,16,250,,,250,6,16,,19,,A5e Monstrous Menagerie,,Celestial
+Stargazer,17,,9,168,,,168,0,10,,354,,Tome of Beasts 3,,Monstrosity
+Great Wyrm Red Dragon,22,,26,897,,,897,0,10,Legendary,116,,A5e Monstrous Menagerie,,Dragon
+Broodmother of Leng,17,,11,161,,,161,2,12,,52,,Tome of Beasts 2,,Aberration
+Sandman,14,,5,82,,,82,4,14,,333,,Tome of Beasts,,Celestial
+Giant Vampire Bat,13,,2,60,,,60,3,13,,50,,Creature Codex,,Beast
+Giant Elk,15,,2,42,,,42,3,13,,325,,5e SRD,,Beast
+Moderate Malleable,12,,5,136,,,136,-1,9,,254,,Tome of Beasts 2,,Aberration
+Ice Urchin,14,,1,45,,,45,1,11,,239,,Tome of Beasts 3,,Monstrosity
+Bearfolk Chieftain,17,,6,130,,,130,2,12,,51,,Creature Codex,,Humanoid
+Kappa,16,,2,49,,,49,2,12,,234,,Creature Codex,,Fey
+Young Boreal Dragon,18,,8,142,,,142,0,10,,112,,Tome of Beasts 2,,Dragon
+Desert Giant,17,,9,175,,,175,0,10,,222,,Tome of Beasts,,Giant
+Shrieker,5,,0,13,,,13,-5,5,,138,,5e SRD,,Plant
+Yali,15,,2,51,,,51,2,12,,398,,Tome of Beasts 3,,Construct
+Enchanter,12,,7,58,,,58,2,12,,143,,Creature Codex,,Humanoid
+Salamander,15,,5,90,,,90,2,12,,266,,5e SRD,,Elemental
+Light Eater,14,,0.5,26,,,26,2,12,,262,,Tome of Beasts 3,,Aberration
+Dread Troll,15,,7,105,,,105,1,11,,413,,A5e Monstrous Menagerie,,Giant
+Fire Giant,18,,9,162,,,162,-1,9,,154,,5e SRD,,Giant
+Animated Armor,18,,1,33,,,33,0,10,,19,,5e SRD,,Construct
+Dust Grazer,12,,4,105,,,105,-2,8,,163,,Tome of Beasts 3,,Aberration
+Ziphius,16,,8,135,,,135,1,11,,392,,Creature Codex,,Aberration
+Stellar Rorqual,14,,12,165,,,165,-1,9,,338,,Tome of Beasts 2,,Aberration
+Necrotech Reaver,15,,6,126,,,126,-2,8,,288,,Tome of Beasts 3,,Undead
+Skeleton Horde,13,,4,65,,,65,2,12,,394,,A5e Monstrous Menagerie,,Undead
+Scout,13,,0.5,16,,,16,2,12,,349,,5e SRD,,Humanoid
+Basilisk,15,,3,52,,,52,-1,9,,32,,A5e Monstrous Menagerie,,Monstrosity
+Urochar (Strangling Watcher),19,,17,256,,,256,2,12,Legendary,393,,Tome of Beasts,,Aberration
+"Hag, Brine",16,,9,150,,,150,1,11,,225,,Tome of Beasts 3,,Fey
+Sea Serpent,17,,16,247,,,247,0,10,,386,,A5e Monstrous Menagerie,,Monstrosity
+River Dragon Wyrmling,16,,2,44,,,44,2,12,,133,,A5e Monstrous Menagerie,,Dragon
+Treacle,13,,0.25,22,,,22,-2,8,,387,,Tome of Beasts,,Ooze
+Fraughashar,15,,0.5,18,,,18,2,12,,206,,Tome of Beasts,,Fey
+Oasis Keeper,15,,9,123,,,123,2,12,,273,,Tome of Beasts 2,,Monstrosity
+Strobing Fungus,13,,4,76,,,76,0,10,,160,,Tome of Beasts 2,,Plant
+Morko,12,,0.25,17,,,17,2,12,,270,,Creature Codex,,Fey
+Diving Gel,13,,0.25,17,,,17,3,13,,136,,Tome of Beasts 3,,Ooze
+Sea Hag,14,,2,52,,,52,1,11,,179,,5e SRD,,Fey
+Flying Lion,12,,3,57,,,57,2,12,,256,,A5e Monstrous Menagerie,,Monstrosity
+Gargoyle,15,,2,52,,,52,0,10,,140,,5e SRD,,Elemental
+Trollkin Fire Shaman,14,,2,45,,,45,2,12,,376,,Tome of Beasts 3,,Humanoid
+Amphiptere,15,,3,60,,,60,4,14,,16,,Tome of Beasts,,Beast
+Chaos Creeper,16,,9,150,,,150,4,14,,80,,Tome of Beasts 3,,Plant
+Rhinoceros,11,,2,45,,,45,-1,9,,336,,5e SRD,,Beast
+Caltrop Golem,16,,6,75,,,75,4,14,,390,,Tome of Beasts 2,,Construct
+"Mummy, Peat",12,,5,93,,,93,-1,9,,280,,Tome of Beasts 3,,Undead
+Ochre Jelly,8,,2,45,,,45,-2,8,,243,,5e SRD,,Ooze
+"Dwarf, Pike Guard Captain",18,,5,93,,,93,-1,9,,166,,Tome of Beasts 3,,Humanoid
+Clockwork Mantis,15,,6,68,,,68,4,14,,67,,Tome of Beasts 2,,Construct
+"Drake, Reef",18,,9,152,,,152,2,12,,154,,Tome of Beasts 3,,Dragon
+Lost Minotaur,16,,8,114,,,114,0,10,,169,,Creature Codex,,Undead
+Elophar,8,,4,126,,,126,-2,8,,149,,Creature Codex,,Undead
+Moon Nymph,13,,8,110,,,110,3,13,,269,,Creature Codex,,Aberration
+Dead Mans Fingers,15,,10,190,,,190,0,10,,211,,A5e Monstrous Menagerie,,Plant
+Vila,15,,5,77,,,77,5,15,,400,,Tome of Beasts,,Fey
+Drider,19,,6,123,,,123,3,13,,120,,5e SRD,,Monstrosity
+"Swarm, Ice Borers",12,,2,40,,,40,2,12,,362,,Tome of Beasts 3,,Elemental
+Oth,15,,5,119,,,119,0,10,,292,,Creature Codex,,Aberration
+Yavalnoi,16,,6,126,,,126,2,12,,379,,Tome of Beasts 2,,Aberration
+Pillar of the Lost Magocracy,14,,4,90,,,90,-5,5,,299,,Creature Codex,,Construct
+"Imperator, Penguin Swarm",13,,5,114,,,114,0,10,,242,,Tome of Beasts 3,,Beast
+Npc: Atavist,16,,4,75,,,75,2,12,,404,,Tome of Beasts 3,,Humanoid
+Giant Crab,15,,0.125,13,,,13,2,12,,324,,5e SRD,,Beast
+Hinderling,13,,0.25,13,,,13,3,13,,232,,Tome of Beasts 3,,Fey
+"Alliumite, Husker",15,,2,68,,,68,1,11,,17,,Tome of Beasts 3,,Plant
+Dawnfly,21,,19,261,,,261,5,15,Legendary,104,,Tome of Beasts 3,,Beast
+Liminal Drake,17,,14,204,,,204,7,17,,107,,Tome of Beasts 2,,Dragon
+Ancient Sea Dragon,22,,22,481,,,481,0,10,Legendary,135,,Tome of Beasts,,Dragon
+Minotaur Champion,19,,16,262,,,262,0,10,,335,,A5e Monstrous Menagerie,,Monstrosity
+"Demon, Vetala",15,,8,114,,,114,5,15,,112,,Tome of Beasts 3,,Fiend
+Bloated Ghoul,14,,6,142,,,142,0,10,,166,,Tome of Beasts 2,,Undead
+Dracotaur,17,,6,110,,,110,3,13,,110,,Creature Codex,,Dragon
+Ancient White Dragon,20,,20,333,,,333,0,10,Legendary,100,,5e SRD,,Dragon
+Jotun Giant,20,,22,407,,,407,-1,9,Legendary,222,,Tome of Beasts,,Giant
+Adult Gold Dragon,19,,17,256,,,256,2,12,Legendary,114,,5e SRD,,Dragon
+Alseid Grovekeeper,15,,3,71,,,71,3,13,,15,,Tome of Beasts,,Monstrosity
+Savior Lumen,15,,5,114,,,114,5,15,,335,,Tome of Beasts 3,,Celestial
+Gilded Devil,16,,7,112,,,112,2,12,,106,,Tome of Beasts,,Fiend
+Young Sea Dragon,18,,9,152,,,152,0,10,,136,,Tome of Beasts,,Dragon
+Külmking,14,,9,127,,,127,2,12,,244,,Creature Codex,,Undead
+Dire Centipede,13,,2,45,,,45,0,10,,443,,A5e Monstrous Menagerie,,Beast
+Bearfolk,14,,3,45,,,45,2,12,,33,,Tome of Beasts,,Humanoid
+Deva,17,,10,136,,,136,4,14,,16,,5e SRD,,Celestial
+Dark Voice,16,,5,91,,,91,0,10,,73,,Creature Codex,,Humanoid
+Great Wyrm Gold Dragon,22,,26,975,,,975,2,12,Legendary,170,,A5e Monstrous Menagerie,,Dragon
+Kongamato,16,,5,112,,,112,4,14,,265,,Tome of Beasts,,Beast
+Elite Kobold,14,,1,26,,,26,3,13,,239,,Creature Codex,,Humanoid
+Rohalin,,,,0,,,,,12,,,,,,Character
+Fey Revenant,19,,7,161,,,161,4,14,,150,,Tome of Beasts 2,,Fey
+Titanic Dragon Turtle,21,,24,396,,,396,0,10,Legendary,182,,A5e Monstrous Menagerie,,Dragon
+Incinis,17,,10,171,,,171,5,15,,226,,Creature Codex,,Elemental
+Astral Devourer,16,,8,90,,,90,3,13,,30,,Tome of Beasts 2,,Aberration
+Kot Bayun,15,,2,44,,,44,3,13,,268,,Tome of Beasts,,Monstrosity
+Stained-Glass Moth,12,,1,45,,,45,2,12,,353,,Tome of Beasts 3,,Construct
+Ghostwalk Spider,15,,9,119,,,119,5,15,,361,,Tome of Beasts,,Monstrosity
+Deep One,13,,2,91,,,91,1,11,,73,,Tome of Beasts,,Humanoid
+Wakwak,13,,2,45,,,45,1,11,,388,,Tome of Beasts 3,,Beast
+"Crab, Samurai",16,,6,105,,,105,0,10,,99,,Tome of Beasts 3,,Beast
+Sasquatch,14,,5,119,,,119,2,12,,58,,Tome of Beasts 2,,Beast
+Duelist,16,,5,90,,,90,4,14,,497,,A5e Monstrous Menagerie,,Humanoid
+Cadaver Sprite,14,,0.5,20,,,20,4,14,,55,,Tome of Beasts 2,,Undead
+Deathspeaker,14,,4,97,,,97,3,13,,82,,Tome of Beasts 2,,Undead
+Brass Dragon Wyrmling,16,,1,16,,,16,0,10,,106,,5e SRD,,Dragon
+Horde Demon Band,13,,13,260,,,260,1,11,,71,,A5e Monstrous Menagerie,,Fiend
+Quickserpent,15,,4,102,,,102,1,11,,303,,Tome of Beasts 2,,Beast
+Somberweave,14,,5,78,,,78,4,14,,335,,Tome of Beasts 2,,Fey
+Kezai,16,,4,67,,,67,4,14,,228,,Tome of Beasts 2,,Monstrosity
+Chuul,16,,4,93,,,93,0,10,,40,,5e SRD,,Aberration
+Selang,15,,4,76,,,76,2,12,,341,,Tome of Beasts,,Fey
+Malmbjorn,18,,15,218,,,218,0,10,,267,,Tome of Beasts 3,,Monstrosity
+Rug of Smothering,12,,2,33,,,33,2,12,,20,,5e SRD,,Construct
+Karkadann,15,,7,157,,,157,0,10,,249,,Tome of Beasts 3,,Monstrosity
+"Animated Instrument, Quartet",14,,4,102,,,102,3,13,,35,,Tome of Beasts 3,,Construct
+Lake Troll,15,,7,126,,,126,1,11,,389,,Tome of Beasts,,Giant
+Ascetic Grandmaster,20,,14,172,,,172,5,15,,465,,A5e Monstrous Menagerie,,Humanoid
+Brownie,15,,1,28,,,28,5,15,,68,,Tome of Beasts 3,,Fey
+Ancient River Dragon,20,,23,372,,,372,7,17,Legendary,131,,A5e Monstrous Menagerie,,Dragon
+Aatxe,14,,5,105,,,105,1,11,Legendary,7,,Creature Codex,,Celestial
+Sathaq Worm,16,,10,172,,,172,-2,8,,337,,Tome of Beasts,,Elemental
+Droth,16,,12,230,,,230,-1,9,,333,,Creature Codex,,Aberration
+Coven Night Hag,17,,7,120,,,120,2,12,,270,,A5e Monstrous Menagerie,,Fey
+Angelic Enforcer,18,,12,152,,,152,4,14,,17,,Tome of Beasts 2,,Celestial
+Dvarapala,14,,5,136,,,136,-1,9,,137,,Creature Codex,,Giant
+Sharkjaw Skeleton,13,,1,45,,,45,0,10,,350,,Tome of Beasts,,Undead
+Ring Servant,15,,8,114,,,114,0,10,,318,,Creature Codex,,Construct
+Ophanim,19,,16,200,,,200,6,16,,18,,Creature Codex,,Celestial
+Mad Piper,12,,2,19,,,19,-1,9,,250,,Tome of Beasts 2,,Construct
+Exploding Toad,12,,0.25,2,,,2,1,11,,150,,Creature Codex,,Monstrosity
+"Hippopotamus, Sacred",16,,5,114,,,114,-2,8,,234,,Tome of Beasts 3,,Celestial
+Ash Drake,16,,4,117,,,117,2,12,,149,,Tome of Beasts,,Dragon
+"Demon, Maha",15,,12,178,,,178,5,15,,111,,Tome of Beasts 3,,Fiend
+Chaos Raptor,18,,13,248,,,248,0,10,,81,,Tome of Beasts 3,,Monstrosity
+Junk Shaman,12,,2,42,,,42,2,12,,238,,Creature Codex,,Humanoid
+Cipactli,15,,5,78,,,78,2,12,,83,,Creature Codex,,Fiend
+"Ogre, Black Sun",17,,8,152,,,152,1,11,,298,,Tome of Beasts 3,,Giant
+Giant Eagle,13,,1,26,,,26,3,13,,324,,5e SRD,,Beast
+Wind's Harp,12,,4,63,,,63,1,11,,105,,Creature Codex,,Fiend
+Fire Imp,13,,0.5,14,,,14,2,12,,103,,Creature Codex,,Fiend
+"Gremlin, Rum Story Keeper",13,,2,38,,,38,3,13,,220,,Tome of Beasts 3,,Fey
+Ancient Boreal Dragon,22,,24,407,,,407,0,10,Legendary,143,,Tome of Beasts 2,,Dragon
+Nharyth,17,,9,168,,,168,2,12,,269,,Tome of Beasts 2,,Aberration
+"Golem, Barnyard",9,,3,75,,,75,-1,9,,213,,Tome of Beasts 3,,Construct
+Khalkos Spawn,16,,2,27,,,27,3,13,,294,,A5e Monstrous Menagerie,,Aberration
+Pegasus,12,,2,59,,,59,2,12,,250,,5e SRD,,Celestial
+Obeleric,15,,3,75,,,75,2,12,,294,,Tome of Beasts 3,,Aberration
+Heggarna,16,,1,40,,,40,3,13,,196,,Tome of Beasts 2,,Aberration
+Black Dragon Wyrmling,17,,2,33,,,33,2,12,,88,,5e SRD,,Dragon
+Astral Snapper,12,,3,78,,,78,2,12,,43,,Creature Codex,,Aberration
+Dragonbound Warrior,13,,0.25,11,,,11,1,11,,498,,A5e Monstrous Menagerie,,Humanoid
+Aural Hunter,15,,5,127,,,127,2,12,,47,,Tome of Beasts 3,,Aberration
+Stone Giant,17,,7,126,,,126,2,12,,156,,5e SRD,,Giant
+Thripper,15,,6,104,,,104,4,14,,368,,Tome of Beasts 3,,Humanoid
+Shadow of Death,18,,21,250,,,250,8,18,,323,,Tome of Beasts 2,,Celestial
+Imperator,16,,11,216,,,216,0,10,,242,,Tome of Beasts 3,,Monstrosity
+Deep Gnome Scout,15,,0.5,19,,,19,3,13,,491,,A5e Monstrous Menagerie,,Humanoid
+Mari Lwyd,15,,4,66,,,66,1,11,,257,,Tome of Beasts 2,,Undead
+Alchemist Archer,17,,10,135,,,135,5,15,,141,,Creature Codex,,Humanoid
+"Troll, Tumor",13,,6,125,,,125,-2,8,,375,,Tome of Beasts 3,,Giant
+Frostveil,16,,4,67,,,67,5,15,,207,,Tome of Beasts,,Plant
+Giant Air Elemental,14,,9,127,,,127,4,14,,194,,A5e Monstrous Menagerie,,Elemental
+Lizardfolk Chosen One,15,,4,75,,,75,1,11,,310,,A5e Monstrous Menagerie,,Humanoid
+Mask Wight,19,,13,207,,,207,4,14,,285,,Tome of Beasts,,Undead
+"Kobold, Leviathan Hunter",17,,10,190,,,190,2,12,,255,,Tome of Beasts 3,,Humanoid
+Giant Grick,17,,2,90,,,90,2,12,,255,,A5e Monstrous Menagerie,,Monstrosity
+Star Spawn Of Cthulhu,17,,15,187,,,187,2,12,,368,,Tome of Beasts,,Fiend
+Sodwose,15,,6,127,,,127,5,15,,350,,Tome of Beasts 3,,Plant
+Shadow Fey,15,,0.25,31,,,31,2,12,,171,,Tome of Beasts,,Humanoid
+Spider,12,,0,1,,,1,2,12,,337,,5e SRD,,Beast
+Goblin Skulker,13,,1,10,,,10,1,11,,250,,A5e Monstrous Menagerie,,Humanoid
+"Demon, Kogukhpak",17,,18,262,,,262,0,10,,109,,Tome of Beasts 3,,Fiend
+Npc: Apostle,15,,6,117,,,117,1,11,,403,,Tome of Beasts 3,,Humanoid
+Kamaitachi,14,,5,84,,,84,4,14,,220,,Tome of Beasts 2,,Monstrosity
+Hverhuldra,15,,6,120,,,120,3,13,,206,,Tome of Beasts 2,,Fey
+Astri,15,,8,112,,,112,5,15,,31,,Tome of Beasts 2,,Celestial
+Monolith Footman,14,,3,60,,,60,1,11,,295,,Tome of Beasts,,Construct
+Baliri Demon,17,,14,190,,,190,3,13,,140,,Tome of Beasts 2,,Fiend
+Shukankor,17,,9,115,,,115,1,11,,326,,Tome of Beasts 2,,Aberration
+Soldier Squad,16,,5,97,,,97,1,11,,494,,A5e Monstrous Menagerie,,Humanoid
+Giant Lanternfish,13,,4,85,,,85,3,13,,303,,A5e Monstrous Menagerie,,Monstrosity
+Lesser Lunarchidna,15,,2,39,,,39,2,12,,242,,Tome of Beasts 2,,Aberration
+Zaratan,25,,26,507,,,507,-4,6,Legendary,414,,Tome of Beasts,,Monstrosity
+"Dwarf, Angler",15,,4,65,,,65,0,10,,164,,Tome of Beasts 3,,Humanoid
+Young Black Dragon,18,,7,127,,,127,2,12,,88,,5e SRD,,Dragon
+Champion Warrior,16,,5,90,,,90,4,14,,497,,A5e Monstrous Menagerie,,Humanoid
+Spawn of Hriggala,16,,10,138,,,138,-2,8,,89,,Tome of Beasts 2,,Fiend
+Androsphinx,17,,17,199,,,199,0,10,Legendary,281,,5e SRD,,Monstrosity
+Sapphire Jelly,9,,6,144,,,144,-1,9,,312,,Tome of Beasts 2,,Ooze
+Snow Giant,11,,5,138,,,138,1,11,,174,,Tome of Beasts 2,,Giant
+Lamassu,17,,10,147,,,147,2,12,Legendary,247,,Creature Codex,,Celestial
+Guard,16,,0.125,11,,,11,1,11,,347,,5e SRD,,Humanoid
+Sleipnir,15,,5,105,,,105,1,11,,344,,Creature Codex,,Monstrosity
+Old Salt,15,,5,117,,,117,3,13,,304,,Tome of Beasts 3,,Undead
+Horned Devil,18,,11,178,,,178,3,13,,74,,5e SRD,,Fiend
+Soil Snake,14,,4,115,,,115,0,10,,351,,Tome of Beasts 3,,Construct
+Empty Cloak,13,,0.5,45,,,45,2,12,,176,,Tome of Beasts,,Construct
+Shriekbat,15,,9,178,,,178,1,11,,325,,Tome of Beasts 2,,Monstrosity
+Druid,11,,2,27,,,27,1,11,,346,,5e SRD,,Humanoid
+Boomer,7,,0.5,22,,,22,-5,5,,157,,Tome of Beasts 2,,Plant
+Giant Bombardier Beetle,14,,0.25,13,,,13,2,12,,39,,Tome of Beasts 2,,Beast
+Kalke,14,,0.25,9,,,9,3,13,,259,,Tome of Beasts,,Fiend
+Oozasis,7,,9,217,,,217,-3,7,,310,,Tome of Beasts,,Ooze
+Sanddrift Drake,16,,6,102,,,102,4,14,,127,,Tome of Beasts 2,,Dragon
+Hvalfiskr,16,,15,275,,,275,3,13,,237,,Tome of Beasts 3,,Giant
+Swarm of Wasps,12,,0.5,22,,,22,1,11,,337,,5e SRD,,Beast
+Thuellai,17,,10,149,,,149,7,17,,379,,Tome of Beasts,,Elemental
+"Animated Instrument, Symphony",15,,15,201,,,201,4,14,Legendary,37,,Tome of Beasts 3,,Construct
+Mountain Dwarf Soldier,16,,0.5,19,,,19,1,11,,493,,A5e Monstrous Menagerie,,Humanoid
+Mineral Ooze,9,,3,76,,,76,-1,9,,280,,Tome of Beasts 2,,Ooze
+Wharfling Swarm,14,,4,63,,,63,3,13,,407,,Tome of Beasts,,Beast
+Griffon,12,,2,59,,"Desert, Mountains",59,2,12,,174,Large,5e SRD,30,Monstrosity
+Pombero,15,,3,90,,,90,3,13,,313,,Tome of Beasts,,Fey
+Spider Thief,13,,2,54,,,54,1,11,,366,,Tome of Beasts,,Construct
+Incarnate Gloom,16,,13,184,,,184,4,14,,213,,Tome of Beasts 2,,Undead
+Risen Reaver,15,,7,168,,,168,3,13,,328,,Tome of Beasts,,Undead
+War Wyvern,15,,7,119,,,119,1,11,,386,,Creature Codex,,Dragon
+Giant Toad,11,,1,39,,,39,1,11,,329,,5e SRD,,Beast
+Monolith Champion,17,,8,102,,,102,1,11,,294,,Tome of Beasts,,Construct
+Ala,17,,8,127,,,127,3,13,,13,,Tome of Beasts,,Fey
+August Rooster,14,,4,75,,,75,3,13,,33,,Tome of Beasts 2,,Monstrosity
+"Golem, Tar",14,,7,119,,,119,-1,9,,218,,Tome of Beasts 3,,Construct
+Monkey’s Bane Vine,13,,4,119,,,119,0,10,,273,,Tome of Beasts 3,,Plant
+Scrofin,13,,2,68,,,68,1,11,,319,,Tome of Beasts 2,,Fey
+Roachling Lord,15,,2,63,,,63,3,13,,329,,Tome of Beasts,,Humanoid
+Catamount,12,,4,117,,,117,2,12,,74,,Tome of Beasts 3,,Monstrosity
+Ahu-Nixta,14,,3,67,,,67,2,12,,11,,Creature Codex,,Aberration
+Vine Golem,14,,3,67,,,67,4,14,,181,,Tome of Beasts 2,,Construct
+Giant Crocodile,14,,5,85,,,85,-1,9,,324,,5e SRD,,Beast
+Feyward Tree,17,,8,94,,,94,0,10,,200,,Tome of Beasts,,Construct
+Dream Wraith,14,,5,60,,,60,4,14,,135,,Creature Codex,,Undead
+Jaculus,18,,3,65,,,65,4,14,,258,,Tome of Beasts,,Dragon
+Sahuagin Champion,16,,5,90,,,90,4,14,,377,,A5e Monstrous Menagerie,,Humanoid
+Adult Brass Dragon (+),18,,16,161,,,161,0,10,Legendary,156,,A5e Monstrous Menagerie,,Dragon
+"Angel, Zirnitran",19,,20,325,,,325,2,12,Legendary,30,,Tome of Beasts 3,,Celestial
+Winter Wolf,13,,3,75,,,75,1,11,,340,,5e SRD,,Monstrosity
+Lesser Scrag,13,,2,45,,,45,0,10,,200,,Creature Codex,,Monstrosity
+Howler Baboon,12,,0.25,13,,,13,2,12,,380,,Tome of Beasts 2,,Beast
+Tarrasque,25,,30,676,,,676,0,10,Legendary,286,,5e SRD,,Monstrosity
+Dullahan,17,,11,178,,,178,4,14,,161,,Tome of Beasts,,Fey
+Forest Marauder,15,,4,114,,,114,0,10,,205,,Tome of Beasts,,Giant
+Giant Constrictor Snake,12,,2,60,,,60,2,12,,324,,5e SRD,,Beast
+Wandering Haze,16,,10,170,,,170,3,13,,389,,Tome of Beasts 3,,Ooze
+Vampire Assassin,16,,12,142,,,142,4,14,Legendary,420,,A5e Monstrous Menagerie,,Undead
+Jackalwere Pack Leader,12,,2,36,,,36,2,12,,291,,A5e Monstrous Menagerie,,Fiend
+Vampire Warlock - Variant,16,,13,144,,,144,4,14,Legendary,425,,Tome of Beasts,,Undead
+Burrowling,13,,0.5,27,,,27,3,13,,49,,Tome of Beasts,,Humanoid
+Forest Gnome Illusionist,12,,6,67,,,67,2,12,,482,,A5e Monstrous Menagerie,,Humanoid
+Splinter Matron,16,,7,136,,,136,4,14,,352,,Tome of Beasts 3,,Fey
+Mirror Hag,16,,6,168,,,168,3,13,,243,,Tome of Beasts,,Fey
+Zombie Horde,8,,4,75,,,75,-2,8,,437,,A5e Monstrous Menagerie,,Undead
+Erinyes,18,,12,153,,,153,3,13,,73,,5e SRD,,Fiend
+Clockwork Sentinel,18,,4,60,,,60,1,11,,52,,A5e Monstrous Menagerie,,Construct
+Razorleaf,14,,5,112,,,112,1,11,,317,,Creature Codex,,Plant
+Scarecrow,12,,1,31,,,31,2,12,,382,,A5e Monstrous Menagerie,,Construct
+Mydnari,13,,0.5,22,,,22,3,13,,264,,Tome of Beasts 2,,Humanoid
+Waterkledde,14,,5,123,,,123,2,12,,390,,Tome of Beasts 3,,Fiend
+Spurred Water Skate,13,,1,60,,,60,3,13,,399,,Tome of Beasts 2,,Beast
+Gargoctopus,13,,5,104,,,104,1,11,,167,,Creature Codex,,Monstrosity
+Ankheg Queen,14,,3,59,,,59,0,10,Legendary,26,,A5e Monstrous Menagerie,,Monstrosity
+Bonespitter,17,,13,217,,,217,-2,8,,47,,Tome of Beasts 2,,Monstrosity
+Scorpionfolk,15,,3,52,,,52,1,11,,385,,A5e Monstrous Menagerie,,Monstrosity
+Chronalmental,17,,8,152,,,152,5,15,,57,,Tome of Beasts,,Elemental
+Song Angel,15,,6,76,,,76,3,13,,320,,Creature Codex,,Celestial
+Khodumodumo,18,,14,186,,,186,5,15,,229,,Tome of Beasts 2,,Monstrosity
+Sporous Crab,14,,1,33,,,33,-1,9,,398,,Tome of Beasts 2,,Beast
+Durrim,,,,0,,,,,14,,,,,,Character
+Hoard Drake,16,,8,147,,,147,-2,8,,258,,Tome of Beasts 2,,Dragon
+Ratfolk Mercenary,15,,2,45,,,45,4,14,,315,,Creature Codex,,Humanoid
+Quasit,13,,1,7,,,7,3,13,,63,,5e SRD,,Fiend
+Ogre,11,,2,59,,,59,-1,9,,237,,5e SRD,,Giant
+Anophiloi,12,,1,33,,,33,2,12,,39,,Creature Codex,,Monstrosity
+Jinmenju,14,,9,126,,,126,-5,5,Legendary,232,,Creature Codex,,Plant
+Ahuizotl,14,,2,71,,,71,2,12,,10,,Creature Codex,,Monstrosity
+Wharfling,13,,0.125,6,,,6,3,13,,407,,Tome of Beasts,,Beast
+Priest,13,,2,27,,,27,0,10,,348,,5e SRD,,Humanoid
+Balor,19,,19,262,,,262,2,12,,55,,5e SRD,,Fiend
+Young Void Dragon,18,,9,157,,,157,0,10,,140,,Tome of Beasts,,Dragon
+Faerie Dragon,15,,1,14,,,14,5,15,,205,,A5e Monstrous Menagerie,,Dragon
+Aboleth Thrall,12,,2,45,,,45,2,12,,17,,A5e Monstrous Menagerie,,Humanoid
+Blood Imp,13,,0.5,14,,,14,2,12,,103,,Tome of Beasts 2,,Fiend
+Graknork,20,,14,201,,,201,4,14,,182,,Tome of Beasts 2,,Monstrosity
+Nalusa Falaya,13,,0.5,33,,,33,2,12,,274,,Creature Codex,,Aberration
+Rat,10,,0,1,,,1,0,10,,335,,5e SRD,,Beast
+Merclops,13,,7,126,,,126,0,10,,58,,A5e Monstrous Menagerie,,Giant
+Ouroban,18,,11,209,,,209,0,10,,293,,Creature Codex,,Humanoid
+Xorn,19,,5,73,,,73,0,10,,304,,5e SRD,,Elemental
+Chimeric Phantom,11,,2,36,,,36,1,11,,62,,Tome of Beasts 2,,Undead
+Herald Of Blood,15,,12,115,,,115,1,11,Legendary,248,,Tome of Beasts,,Fiend
+Deep Dwarf Soldier,16,,0.5,19,,,19,1,11,,493,,A5e Monstrous Menagerie,,Humanoid
+"Dragon, Prismatic Young",17,,8,142,,,142,0,10,,143,,Tome of Beasts 3,,Dragon
+Nullicorn,12,,5,105,,,105,2,12,,292,,Tome of Beasts 3,,Aberration
+Acid Ant,13,,0.25,13,,,13,1,11,,8,,Creature Codex,,Monstrosity
+Nkosi,15,,0.5,11,,,11,3,13,,306,,Tome of Beasts,,Humanoid
+Quagga,16,,4,84,,,84,4,14,,325,,Tome of Beasts 3,,Monstrosity
+Sluagh Swarm,13,,3,54,,,54,3,13,,376,,Tome of Beasts,,Fey
+Kobold Chieftain,17,,4,82,,,82,3,13,,263,,Tome of Beasts,,Humanoid
+Derro Shadow Antipaladin,18,,5,82,,,82,4,14,,93,,Tome of Beasts,,Humanoid
+Ancient White Dragon (+),20,,22,370,,,370,1,11,Legendary,121,,A5e Monstrous Menagerie,,Dragon
+Demilich,20,,18,159,,,159,7,17,Legendary,62,,A5e Monstrous Menagerie,,Undead
+Doom Golem,17,,10,153,,,153,1,11,,201,,Creature Codex,,Construct
+"Ooze, Leavesrot",8,,4,105,,,105,-2,8,,305,,Tome of Beasts 3,,Ooze
+Chain Devil (+),16,,11,85,,,85,2,12,,72,,5e SRD,,Fiend
+Spark Mephit,12,,0.5,17,,,17,2,12,,327,,A5e Monstrous Menagerie,,Elemental
+Piasa,15,,6,144,,,144,0,10,,298,,Creature Codex,,Dragon
+Planetar,19,,16,200,,,200,5,15,,17,,5e SRD,,Celestial
+Chain Devil,17,,9,127,,,127,2,12,,80,,A5e Monstrous Menagerie,,Fiend
+Yeti,12,,4,68,,,68,1,11,,433,,A5e Monstrous Menagerie,,Monstrosity
+Gug,17,,12,270,,,270,0,10,Legendary,241,,Tome of Beasts,,Giant
+"Dragon, Prismatic Ancient",20,,21,407,,,407,0,10,Legendary,140,,Tome of Beasts 3,,Dragon
+Adult Green Dragon,19,,15,207,,,207,1,11,Legendary,94,,5e SRD,,Dragon
+Steam Mephit,10,,0.25,21,,,21,0,10,,217,,5e SRD,,Elemental
+Son Of Fenris,17,,12,175,,,175,3,13,,355,,Tome of Beasts,,Monstrosity
+Young Wind Dragon,17,,6,150,,,150,4,14,,144,,Tome of Beasts,,Dragon
+Ahu-Nixta Cataphract,17,,8,135,,,135,-1,9,,9,,Tome of Beasts 2,,Aberration
+Bucca,14,,0.5,27,,,27,3,13,,46,,Tome of Beasts,,Fey
+Fate Eater,16,,6,182,,,182,1,11,,180,,Tome of Beasts,,Aberration
+Wardu,16,,6,105,,,105,4,14,,365,,Tome of Beasts 2,,Aberration
+Goblin Alchemist,13,,1,10,,,10,1,11,,250,,A5e Monstrous Menagerie,,Humanoid
+Dogmole,14,,1,71,,,71,3,13,,120,,Tome of Beasts,,Beast
+"Dwarf, Firecracker",14,,3,68,,,68,0,10,,165,,Tome of Beasts 3,,Humanoid
+"Hag, Floe",15,,5,135,,,135,2,12,,226,,Tome of Beasts 3,,Fey
+Rock Salamander,13,,0.5,27,,,27,3,13,,333,,Tome of Beasts 3,,Elemental
+Giant Bat,13,,0.25,22,,,22,3,13,,323,,5e SRD,,Beast
+Shroud Ray,13,,8,97,,,97,3,13,,50,,A5e Monstrous Menagerie,,Aberration
+Lunar Devil,16,,8,94,,,94,5,15,,110,,Tome of Beasts,,Fiend
+Dread Examiner,19,,21,322,,,322,3,13,Legendary,159,,Tome of Beasts 3,,Aberration
+Coastline Reaper,16,,9,144,,,144,4,14,,92,,Tome of Beasts 3,,Monstrosity
+Moonweb,16,,6,97,,,97,4,14,,276,,Tome of Beasts 3,,Aberration
+Animated Offal,8,,9,207,,,207,-2,8,,38,,Tome of Beasts 3,,Ooze
+Seahorse,11,,0,1,,,1,1,11,,459,,A5e Monstrous Menagerie,,Beast
+Greater Sphinx,20,,17,220,,,220,2,12,,399,,A5e Monstrous Menagerie,,Monstrosity
+Demilich Mastermind,20,,18,319,,,319,7,17,Legendary,63,,A5e Monstrous Menagerie,,Undead
+Rochade,14,,0.5,27,,,27,4,14,,332,,Tome of Beasts 3,,Fey
+Ancient Green Dragon,21,,22,385,,,385,1,11,Legendary,93,,5e SRD,,Dragon
+Dune Mimic,13,,8,168,,,168,-1,9,,162,,Tome of Beasts,,Monstrosity
+"Ooze, Scintillating",15,,12,165,,,165,0,10,Legendary,307,,Tome of Beasts 3,,Ooze
+Ngobou,15,,5,85,,,85,-1,9,,115,,Tome of Beasts,,Beast
+"Dragon, Sand Young",19,,11,189,,,189,1,11,,147,,Tome of Beasts 3,,Dragon
+Mummy,11,,3,58,,,58,-1,9,,228,,5e SRD,,Undead
+Ankou Soul Seeker,15,,8,171,,,171,0,10,,38,,Creature Codex,,Dragon
+Fidele Angel,16,,5,104,,,104,4,14,,21,,Tome of Beasts,,Celestial
+Poisonous Snake,13,,0.125,2,,,2,3,13,,334,,5e SRD,,Beast
+Goblin Dreadnought,17,,1,10,,,10,1,11,,250,,A5e Monstrous Menagerie,,Humanoid
+Three-Headed Clockwork Dragon,18,,14,275,,,275,0,10,,111,,Creature Codex,,Construct
+Rakshasa,16,,13,110,,,110,3,13,,257,,5e SRD,,Fiend
+Grindylow,13,,1,27,,,27,2,12,,210,,Creature Codex,,Aberration
+Tar Ghoul,13,,4,66,,,66,3,13,,176,,Creature Codex,,Undead
+Worg,13,,0.5,26,,,26,1,11,,341,,5e SRD,,Monstrosity
+Npc: Merchant Captain,15,,6,104,,,104,3,13,,410,,Tome of Beasts 3,,Humanoid
+Dimensional Shambler,16,,9,102,,,102,5,15,,107,,Tome of Beasts 2,,Aberration
+Flying Polyp,17,,11,171,,,171,1,11,,162,,Creature Codex,,Aberration
+Shadow Blight,13,,1,65,,,65,2,12,,326,,Creature Codex,,Plant
+White Stag,13,,2,45,,,45,2,12,,379,,Creature Codex,,Celestial
+Transcendent Lunarchida,16,,6,91,,,91,3,13,,346,,Tome of Beasts 2,,Aberration
+Marid,17,,11,172,,,172,3,13,,224,,A5e Monstrous Menagerie,,Elemental
+Sammael,16,,7,104,,,104,0,10,,19,,Creature Codex,,Celestial
+Kraken,18,,23,472,,,472,0,10,Legendary,197,,5e SRD,,Monstrosity
+Adult Black Dragon (+),19,,17,253,,,253,2,12,Legendary,102,,A5e Monstrous Menagerie,,Dragon
+"Ghoul, Darakhul EOTG",16,,3,78,,,78,3,13,,216,,Tome of Beasts,,Undead
+Snallygaster,16,,15,207,,,207,0,10,,348,,Tome of Beasts 3,,Aberration
+Goblin Musketeer,13,,1,10,,,10,1,11,,250,,A5e Monstrous Menagerie,,Humanoid
+Bone Lord,20,,19,285,,,285,2,12,Legendary,65,,Tome of Beasts 3,,Undead
+Black Sun Orc,14,,2,65,,,65,2,12,,289,,Creature Codex,,Humanoid
+Qiqirn,14,,2,38,,,38,4,14,,301,,Tome of Beasts 2,,Monstrosity
+Tar Ooze,9,,6,120,,,120,-1,9,,280,,Tome of Beasts 2,,Ooze
+Backup Holler Spider,12,,0.25,14,,,14,2,12,,395,,Tome of Beasts 2,,Beast
+Fulad-Zereh,18,,9,115,,,115,0,10,,85,,Creature Codex,,Fiend
+Alchemist,14,,6,91,,,91,3,13,,466,,A5e Monstrous Menagerie,,Humanoid
+Ink Devil,14,,2,54,,,54,4,14,,107,,Tome of Beasts,,Fiend
+Copper Dragon Wyrmling,16,,1,22,,,22,1,11,,112,,5e SRD,,Dragon
+Otyugh,14,,5,114,,,114,0,10,,248,,5e SRD,,Aberration
+"Fungi, Void Fungus",14,,3,65,,,65,2,12,,193,,Tome of Beasts 3,,Plant
+Boot Grabber,11,,0.5,22,,,22,1,11,,56,,Creature Codex,,Aberration
+Bar Brawl,12,,3,67,,,67,1,11,,48,,Creature Codex,,Humanoid
+Pelagic Blush Worm,17,,9,188,,,188,2,12,,313,,Tome of Beasts 3,,Monstrosity
+Titanoboa,14,,12,232,,,232,0,10,,382,,Tome of Beasts,,Beast
+Cauldronborn,13,,2,13,,,13,-2,8,,59,,Creature Codex,,Construct
+Kobold,12,,0.125,5,,,5,2,12,,195,,5e SRD,,Humanoid
+Otterfolk,14,,0.25,18,,,18,3,13,,288,,Tome of Beasts 2,,Humanoid
+Cloud Giant,14,,9,200,,,200,0,10,,154,,5e SRD,,Giant
+Flab Giant,14,,4,110,,,110,-2,8,,223,,Tome of Beasts,,Giant
+Glass Golem,12,,2,45,,,45,2,12,,200,,Creature Codex,,Construct
+Stryx,13,,0.125,10,,,10,3,13,,369,,Tome of Beasts,,Monstrosity
+Water Horse,12,,4,77,,,77,2,12,,373,,Creature Codex,,Fey
+Wampus Cat,14,,1,58,,,58,4,14,,405,,Tome of Beasts,,Monstrosity
+Piercer,17,,0.5,9,,,9,0,10,,373,,A5e Monstrous Menagerie,,Monstrosity
+Winterghast,13,,4,78,,,78,3,13,,371,,Tome of Beasts 2,,Undead
+Korrigan,14,,3,66,,,66,3,13,,242,,Creature Codex,,Fey
+Ancient Silver Dragon,22,,23,487,,,487,0,10,Legendary,116,,5e SRD,,Dragon
+Giant Badger,10,,0.25,13,,,13,0,10,,323,,5e SRD,,Beast
+Bulette,17,,5,94,,,94,0,10,,34,,5e SRD,,Monstrosity
+Shantak,16,,5,123,,,123,1,11,,328,,Creature Codex,,Monstrosity
+Vampire Spawn,15,,4,76,,,76,3,13,,421,,A5e Monstrous Menagerie,,Undead
+Azeban,16,,4,78,,,78,3,13,,44,,Creature Codex,,Fey
+Green Abyss Orc,13,,0.5,15,,,15,3,13,,291,,Creature Codex,,Humanoid
+Adult Wasteland Dragon,18,,17,225,,,225,0,10,Legendary,118,,Creature Codex,,Dragon
+Rift Swine,15,,5,110,,,110,0,10,,326,,Tome of Beasts,,Aberration
+Ursa Polaris,15,,7,133,,,133,1,11,,364,,Creature Codex,,Monstrosity
+Blood Flurry,17,,10,144,,,144,5,15,,63,,Tome of Beasts 3,,Aberration
+Adult Light Dragon,17,,16,212,,,212,0,10,Legendary,170,,Creature Codex,,Dragon
+Cat,12,,0,2,,,2,2,12,,320,,5e SRD,,Beast
+Kapi,14,,0.5,13,,,13,4,14,,234,,Creature Codex,,Humanoid
+Tusked Crimson Ogre,14,,5,93,,,93,-1,9,,279,,Creature Codex,,Giant
+Ghast of Leng,14,,3,127,,,127,3,13,,168,,Creature Codex,,Aberration
+Mudmutt,15,,5,105,,,105,5,15,,279,,Tome of Beasts 3,,Monstrosity
+Aniwye,15,,5,102,,,102,2,12,,25,,Tome of Beasts 2,,Monstrosity
+Werewolf,11,,3,58,,,58,1,11,,211,,5e SRD,,Humanoid
+Orthrus,13,,3,60,,,60,3,13,,292,,Creature Codex,,Monstrosity
+Initiate of the Elder Elementals,12,,2,33,,,33,2,12,,216,,Tome of Beasts 2,,Humanoid
+Kech,12,,1,30,,,30,2,12,,38,,A5e Monstrous Menagerie,,Humanoid
+Dark Servant,12,,1,55,,,55,1,11,,72,,Creature Codex,,Humanoid
+Hongaek,15,,8,105,,,105,5,15,,201,,Tome of Beasts 2,,Elemental
+Nodosaurus,13,,1,45,,,45,0,10,,109,,Creature Codex,,Beast
+Elder Vampire,16,,11,285,,,285,4,14,Legendary,420,,A5e Monstrous Menagerie,,Undead
+Ghost Dwarf,14,,6,81,,,81,2,12,,171,,Creature Codex,,Undead
+Herald of the Void,17,,11,123,,,123,5,15,Legendary,199,,Tome of Beasts 2,,Fiend
+Grim Jester,18,,11,136,,,136,6,16,,240,,Tome of Beasts,,Undead
+Venom Maw Hydra,15,,12,231,,,231,3,13,Legendary,370,,Creature Codex,,Monstrosity
+Xiphus,15,,5,55,,,55,5,15,,388,,Creature Codex,,Fey
+Coven Green Hag,14,,5,97,,,97,2,12,,269,,A5e Monstrous Menagerie,,Fey
+Slithy Tove,15,,4,91,,,91,5,15,,347,,Tome of Beasts 3,,Monstrosity
+Amber Ooze,7,,4,76,,,76,-3,7,,277,,Tome of Beasts 2,,Ooze
+Adult Black Dragon,19,,14,195,,,195,2,12,Legendary,88,,5e SRD,,Dragon
+"Dragon, Prismatic Wyrmling",16,,2,39,,,39,0,10,,143,,Tome of Beasts 3,,Dragon
+Gumienniki,13,,1,22,,,22,3,13,,213,,Creature Codex,,Fiend
+Shadow Elf Warrior,13,,0.25,11,,,11,1,11,,498,,A5e Monstrous Menagerie,,Humanoid
+Niya-Atha Warrior,16,,2,49,,,49,2,12,,290,,Tome of Beasts 3,,Fey
+Veteran Swordbreaker Skeleton,14,,3,78,,,78,1,11,,332,,Tome of Beasts 2,,Undead
+Crimson Drake,14,,1,54,,,54,2,12,,151,,Tome of Beasts,,Dragon
+Eldritch Ooze,8,,5,153,,,153,-2,8,,278,,Tome of Beasts 2,,Ooze
+"Drake, Ethereal",16,,7,133,,,133,2,12,,153,,Tome of Beasts 3,,Dragon
+Moon Drake,15,,5,76,,,76,5,15,,260,,Creature Codex,,Dragon
+Light Dragon Wyrmling,13,,2,39,,,39,0,10,,113,,Creature Codex,,Dragon
+Far Darrig,14,,3,104,,,104,3,13,,179,,Tome of Beasts,,Fey
+Ancient Mithral Dragon,20,,18,297,,,297,3,13,Legendary,132,,Tome of Beasts,,Dragon
+Spawn of Chernobog,14,,4,95,,,95,1,11,,347,,Creature Codex,,Fiend
+Invisible Stalker,14,,6,104,,,104,4,14,,192,,5e SRD,,Elemental
+Night Hag,17,,5,112,,,112,2,12,,178,,5e SRD,,Fiend
+Master Assassin,18,,17,143,,,143,5,15,,469,,A5e Monstrous Menagerie,,Humanoid
+Dryad,11,,1,22,,,22,1,11,,121,,5e SRD,,Fey
+Iron Golem,20,,16,210,,,210,-1,9,,170,,5e SRD,,Construct
+Suturefly,14,,0.25,7,,,7,4,14,,372,,Tome of Beasts,,Beast
+Half-Red Dragon Veteran,18,,5,65,,,65,1,11,,180,,5e SRD,,Humanoid
+Spell-warped Chuul,16,,7,127,,,127,0,10,,48,,A5e Monstrous Menagerie,,Aberration
+Pseudodragon,13,,0.25,7,,,7,2,12,,254,,5e SRD,,Dragon
+Putrescent Slime,8,,1,45,,,45,-1,9,,300,,Tome of Beasts 2,,Ooze
+Mi-Go,17,,5,76,,,76,4,14,,287,,Tome of Beasts,,Plant
+Idolic Deity,17,,8,90,,,90,5,15,,255,,Tome of Beasts,,Construct
+Glass Gator,15,,1,45,,,45,2,12,,228,,Tome of Beasts,,Beast
+Giant Centipede,13,,0.25,4,,,4,2,12,,323,,5e SRD,,Beast
+Voidpool,8,,5,112,,,112,-2,8,,362,,Tome of Beasts 2,,Ooze
+Living Soot,15,,7,142,,,142,5,15,,263,,Tome of Beasts 3,,Elemental
+Alkonost,12,,0.5,17,,,17,2,12,,12,,Creature Codex,,Monstrosity
+Trollkin Ironmonger,19,,5,105,,,105,1,11,,376,,Tome of Beasts 3,,Humanoid
+Sazakan,16,,8,142,,,142,2,12,,336,,Tome of Beasts 3,,Elemental
+Bunyip,14,,8,150,,,150,2,12,,441,,A5e Monstrous Menagerie,,Beast
+Polar Bear,12,,2,42,,,42,0,10,,334,,5e SRD,,Beast
+Young Copper Dragon,17,,7,119,,,119,1,11,,111,,5e SRD,,Dragon
+Ravenfolk Warrior,15,,3,78,,,78,3,13,,323,,Tome of Beasts,,Humanoid
+Bastet Temple Cat,14,,1,40,,,40,4,14,,32,,Tome of Beasts,,Monstrosity
+Rafflesian,17,,7,136,,,136,-1,9,,327,,Tome of Beasts 3,,Plant
+Silenal,14,,7,117,,,117,4,14,,328,,Tome of Beasts 2,,Fey
+Saber-Toothed Tiger,12,,2,52,,,52,2,12,,336,,5e SRD,,Beast
+Nephirron Devil,19,,16,225,,,225,2,12,,104,,Tome of Beasts 2,,Fiend
+Mbielu,15,,3,95,,,95,2,12,,114,,Tome of Beasts,,Beast
+Gorao-Ka,13,,0.125,17,,,17,0,10,,221,,Tome of Beasts 2,,Fey
+Fleshdreg,15,,5,115,,,115,-2,8,,152,,Tome of Beasts 2,,Plant
+Gray Ooze,8,,0.5,22,,,22,-2,8,,243,,5e SRD,,Ooze
+Jack of Strings,14,,5,90,,,90,4,14,,218,,Tome of Beasts 2,,Fey
+Kobold Trapsmith,14,,1,36,,,36,3,13,,264,,Tome of Beasts,,Humanoid
+Wicked Skull,13,,0.125,7,,,7,3,13,,368,,Tome of Beasts 2,,Monstrosity
+Edjet Initiate,12,,0.25,19,,,19,1,11,,131,,Tome of Beasts 2,,Humanoid
+Swarm of Bats,12,,0.25,22,,,22,2,12,,337,,5e SRD,,Beast
+Nyctli,14,,0.25,7,,,7,4,14,,271,,Tome of Beasts 2,,Fey
+Murgrik,18,,9,152,,,152,0,10,,263,,Tome of Beasts 2,,Aberration
+Giant Sea Horse,13,,0.5,16,,,16,2,12,,328,,5e SRD,,Beast
+Ancient Titan,15,,12,198,,,198,1,11,,380,,Tome of Beasts,,Celestial
+Alabroza,12,,1,45,,,45,2,12,,13,,Tome of Beasts 3,,Monstrosity
+Hell Hound,15,,3,45,,,45,1,11,,182,,5e SRD,,Fiend
+Faux-Garou,12,,5,93,,,93,0,10,,174,,Tome of Beasts 3,,Construct
+"Rakshasa, Servitor",13,,0.5,32,,,32,3,13,,329,,Tome of Beasts 3,,Fiend
+Brownie Mystic,15,,5,82,,,82,5,15,,69,,Tome of Beasts 3,,Fey
+Butatsch,17,,14,248,,,248,2,12,,54,,Tome of Beasts 2,,Aberration
+Divi Noble,18,,11,345,,,345,1,11,,218,,A5e Monstrous Menagerie,,Elemental
+Cueyatl Sea Priest,12,,1,45,,,45,1,11,,69,,Creature Codex,,Humanoid
+Beggar Ghoul,12,,0.5,13,,,13,2,12,,221,,Tome of Beasts,,Undead
+Phoenixborn Sorcerer,13,,3,60,,,60,3,13,,316,,Tome of Beasts 3,,Humanoid
+Adult Copper Dragon (+),18,,17,253,,,253,1,11,Legendary,166,,A5e Monstrous Menagerie,,Dragon
+Npc: Breathstealer,15,,7,99,,,99,4,14,,404,,Tome of Beasts 3,,Humanoid
+Apau Perape,16,,6,95,,,95,4,14,,75,,Tome of Beasts,,Fiend
+Dire Lionfish,15,,6,136,,,136,2,12,,131,,Tome of Beasts 3,,Beast
+"Ogre, Cunning Artisan",14,,5,119,,,119,0,10,,299,,Tome of Beasts 3,,Giant
+Murmuring Worm,16,,12,195,,,195,1,11,,245,,A5e Monstrous Menagerie,,Aberration
+Bouda,15,,5,93,,,93,2,12,,44,,Tome of Beasts,,Fiend
+Spawn Of Akyishigal,15,,5,119,,,119,1,11,,83,,Tome of Beasts,,Fiend
+Ancient Light Dragon,22,,22,407,,,407,0,10,Legendary,170,,Creature Codex,,Dragon
+Devouring Angel,15,,12,220,,,220,2,12,,125,,Tome of Beasts 3,,Aberration
+Sarsaok,17,,7,136,,,136,1,11,,313,,Tome of Beasts 2,,Monstrosity
+Badger,10,,0,3,,,3,0,10,,318,,5e SRD,,Beast
+Dissimortuum,15,,7,112,,,112,0,10,,119,,Tome of Beasts,,Undead
+Djinni,17,,11,161,,,161,2,12,,144,,5e SRD,,Elemental
+Clockwork Hound,12,,2,71,,,71,2,12,,62,,Tome of Beasts,,Construct
+Howler Of The Hill,18,,14,178,,,178,6,16,,236,,Tome of Beasts 3,,Aberration
+Magnetic Elemental,16,,6,95,,,95,1,11,,133,,Tome of Beasts 2,,Elemental
+Fire Giant War Priest,18,,12,162,,,162,0,10,,235,,A5e Monstrous Menagerie,,Giant
+Minor Malleable,11,,1,32,,,32,-1,9,,254,,Tome of Beasts 2,,Aberration
+Mindshard,16,,4,81,,,81,3,13,,271,,Tome of Beasts 3,,Aberration
+Cult Fanatic,13,,2,22,,,22,2,12,,345,,5e SRD,,Humanoid
+"Demon, Inciter",13,,1,27,,,27,2,12,,108,,Tome of Beasts 3,,Fiend
+"Kobold, Sapper",15,,3,66,,,66,3,13,,257,,Tome of Beasts 3,,Humanoid
+Dubius,14,,2,36,,,36,2,12,,162,,Tome of Beasts 3,,Fiend
+Cueyatl,11,,0.5,21,,,21,1,11,,68,,Creature Codex,,Humanoid
+Alchemical Golem,15,,9,147,,,147,-2,8,,192,,Creature Codex,,Construct
+"Archon, Siege",18,,13,187,,,187,2,12,,42,,Tome of Beasts 3,,Celestial
+Fallen Deva,17,,10,153,,,153,4,14,,19,,A5e Monstrous Menagerie,,Celestial
+Gugalanna,18,,21,253,,,253,3,13,Legendary,212,,Creature Codex,,Celestial
+Pattern Dancer,13,,2,33,,,33,3,13,,130,,Creature Codex,,Humanoid
+Adult Blue Dragon (+),19,,19,275,,,275,0,10,Legendary,107,,A5e Monstrous Menagerie,,Dragon
+Yek,16,,4,77,,,77,3,13,,0,,Creature Codex,,Fiend
+Paper Golem Swarm,13,,3,55,,,55,3,13,,204,,Creature Codex,,Construct
+Awakened Tree,13,,2,59,,,59,-2,8,,317,,5e SRD,,Plant
+Adult Shadow Dragon,18,,19,212,,,212,2,12,Legendary,136,,A5e Monstrous Menagerie,,Dragon
+"Derro, Hellforged",16,,6,112,,,112,2,12,,114,,Tome of Beasts 3,,Humanoid
+Oliphaunt,14,,8,148,,,148,-1,9,,280,,Creature Codex,,Beast
+Alseid,14,,0.5,49,,,49,3,13,,15,,Tome of Beasts,,Monstrosity
+Darakhul Captain,16,,9,165,,,165,3,13,,166,,Tome of Beasts 2,,Undead
+Cloudhoof Assassin,13,,1,45,,,45,3,13,,91,,Tome of Beasts 3,,Beast
+Clockwork Abomination,16,,5,76,,,76,1,11,,59,,Tome of Beasts,,Construct
+Lystrosaurus,14,,2,45,,,45,0,10,,108,,Creature Codex,,Beast
+Keelbreaker Crab,16,,9,157,,,157,0,10,,226,,Tome of Beasts 2,,Monstrosity
+Storm Spirit,14,,0.5,22,,,22,2,12,,350,,Creature Codex,,Elemental
+Adult Copper Dragon,18,,14,184,,,184,1,11,Legendary,111,,5e SRD,,Dragon
+Goblin Boss,16,,1,24,,,24,2,12,,250,,A5e Monstrous Menagerie,,Humanoid
+Blaspheming Hand,14,,3,68,,,68,0,10,,60,,Tome of Beasts 3,,Fiend
+Neophron,16,,8,114,,,114,3,13,,87,,Creature Codex,,Fiend
+One-Horned Ogre,14,,5,93,,,93,0,10,,274,,Tome of Beasts 2,,Giant
+Thread-Bound Constrictor Snake,12,,3,60,,,60,2,12,,353,,Creature Codex,,Construct
+Giant Flea Swarm,14,,2,58,,,58,2,12,,197,,Tome of Beasts 3,,Beast
+Harefolk,13,,0.25,18,,,18,2,12,,194,,Tome of Beasts 2,,Humanoid
+Giant Ant,14,,2,52,,,52,1,11,,23,,Tome of Beasts,,Beast
+Lacedon,12,,1,22,,,22,2,12,,230,,A5e Monstrous Menagerie,,Undead
+Peri,15,,2,60,,,60,3,13,,314,,Tome of Beasts 3,,Elemental
+Anzu,16,,9,152,,,152,2,12,,26,,Tome of Beasts 2,,Monstrosity
+Eleinomae,18,,5,112,,,112,4,14,,168,,Tome of Beasts,,Fey
+Constrictor Snake,12,,0.25,13,,,13,2,12,,320,,5e SRD,,Beast
+Astralsupial,14,,4,82,,,82,3,13,,46,,Tome of Beasts 3,,Beast
+Clockwork Watchman,14,,0.5,55,,,55,1,11,,65,,Tome of Beasts,,Construct
+Tyrannosaurus Rex,13,,8,136,,,136,0,10,,80,,5e SRD,,Beast
+Swamp Lily,15,,7,136,,,136,-1,9,,342,,Tome of Beasts 2,,Plant
+Cactid,14,,3,76,,,76,-1,9,,50,,Tome of Beasts,,Plant
+Venom Elemental,14,,4,93,,,93,2,12,,138,,Creature Codex,,Elemental
+Arcamag,13,,2,22,,,22,0,10,,41,,Creature Codex,,Monstrosity
+Boggard,12,,0.25,13,,,13,2,12,,36,,A5e Monstrous Menagerie,,Humanoid
+Coralfish,12,,0.5,27,,,27,2,12,,55,,A5e Monstrous Menagerie,,Monstrosity
+Silent Crier,15,,6,105,,,105,0,10,,344,,Tome of Beasts 3,,Fiend
+Giant Rat,12,,0.125,7,,,7,2,12,,327,,5e SRD,,Beast
+Weirding Scroll,10,,0.5,27,,,27,0,10,,376,,Creature Codex,,Construct
+Pustulent Shambler,10,,13,232,,,232,-3,7,,299,,Tome of Beasts 2,,Ooze
+Gnoll,15,,0.5,22,,,22,1,11,,163,,5e SRD,,Humanoid
+Ostinato,15,,4,39,,,39,5,15,,312,,Tome of Beasts,,Aberration
+Crystalline Devil,15,,6,102,,,102,1,11,,105,,Tome of Beasts,,Fiend
+Brain Coral,14,,5,119,,,119,-2,8,,67,,Tome of Beasts 3,,Aberration
+Scrag,15,,5,84,,,84,1,11,,413,,A5e Monstrous Menagerie,,Giant
+Nightgarm,15,,6,114,,,114,2,12,,304,,Tome of Beasts,,Monstrosity
+Carnivorous Ship,17,,13,186,,,186,-2,8,,56,,Tome of Beasts 2,,Monstrosity
+Servant of the Unsated God,17,,4,82,,,82,1,11,,321,,Tome of Beasts 2,,Undead
+Ancient Copper Dragon (+),21,,23,367,,,367,1,11,Legendary,164,,A5e Monstrous Menagerie,,Dragon
+Catterball,13,,1,44,,,44,3,13,,76,,Tome of Beasts 3,,Fey
+"Drake, Venom",16,,8,142,,,142,3,13,,158,,Tome of Beasts 3,,Dragon
+Mamura,16,,6,97,,,97,4,14,,284,,Tome of Beasts,,Aberration
+Walled Horror,17,,7,114,,,114,-5,5,,363,,Tome of Beasts 2,,Undead
+Salt Golem,17,,10,110,,,110,-1,9,,235,,Tome of Beasts,,Construct
+Revenant,13,,5,110,,,110,3,13,,371,,A5e Monstrous Menagerie,,Undead
+Bloodstone Sentinel,15,,8,114,,,114,-2,8,,45,,Tome of Beasts 2,,Construct
+"Elemental, Permafrost",16,,6,133,,,133,-1,9,,167,,Tome of Beasts 3,,Elemental
+Blood Barnacle,13,,0.25,25,,,25,2,12,,62,,Tome of Beasts 3,,Beast
+Goblin,15,,0.25,7,,,7,2,12,,166,,5e SRD,,Humanoid
+Greater Death Butterfly Swarm,15,,6,84,,,84,3,13,,71,,Tome of Beasts,,Beast
+Djinni Noble,16,,11,344,,,344,6,16,,220,,A5e Monstrous Menagerie,,Elemental
+Ijiraq,14,,7,127,,,127,1,11,,225,,Creature Codex,,Fey
+Lizardfolk,15,,0.5,22,,,22,0,10,,204,,5e SRD,,Humanoid
+Mystic,14,,3,75,,,75,2,12,,316,,Tome of Beasts 2,,Humanoid
+Commoner Mob,10,,0,45,,,45,0,10,,471,,A5e Monstrous Menagerie,,Humanoid
+Eel Hound,14,,2,77,,,77,3,13,,166,,Tome of Beasts,,Fey
+Giant Mole Lizard,14,,3,75,,,75,-3,7,,199,,Tome of Beasts 3,,Beast
+Ankheg,14,,2,39,,,39,0,10,,21,,5e SRD,,Monstrosity
+Half-Shadow Dragon Assassin,16,,7,97,,,97,3,13,,274,,A5e Monstrous Menagerie,,Humanoid
+Star-Nosed Diopsid,16,,9,153,,,153,2,12,,355,,Tome of Beasts 3,,Aberration
+Parzz’val,14,,8,115,,,115,3,13,,292,,Tome of Beasts 2,,Aberration
+Vallowex,14,,7,123,,,123,0,10,,356,,Tome of Beasts 2,,Aberration
+Stout Halfling Guard,15,,0.125,11,,,11,1,11,,492,,A5e Monstrous Menagerie,,Humanoid
+Knight,18,,3,52,,,52,0,10,,347,,5e SRD,,Humanoid
+Arboreal Grappler,14,,3,90,,,90,3,13,,25,,Tome of Beasts,,Aberration
+Shockwing,12,,1,27,,,27,2,12,,179,,Creature Codex,,Beast
+Herald of Slaughter,15,,11,133,,,133,0,10,,198,,Tome of Beasts 2,,Fiend
+Bone Devil (+),19,,12,142,,,142,3,13,,71,,5e SRD,,Fiend
+Arcanaphage,14,,4,60,,,60,4,14,,42,,Creature Codex,,Monstrosity
+Serpentfolk of Yig,12,,1,40,,,40,2,12,,324,,Creature Codex,,Humanoid
+"Scarab, Suncatcher",19,,10,145,,,145,2,12,,338,,Tome of Beasts 3,,Beast
+Lambent Witchfyre,15,,7,110,,,110,3,13,,234,,Tome of Beasts 2,,Aberration
+Warhorse Skeleton,13,,0.5,22,,,22,1,11,,273,,5e SRD,,Undead
+Behtu,14,,2,52,,,52,3,13,,34,,Tome of Beasts,,Humanoid
+Dokkaebi,12,,2,78,,,78,2,12,,137,,Tome of Beasts 3,,Fey
+Clockwork Pugilist,15,,1,32,,,32,1,11,,88,,Tome of Beasts 3,,Construct
+Shadow Skeleton,13,,2,52,,,52,3,13,,326,,Creature Codex,,Undead
+Clay Golem,14,,9,133,,,133,-1,9,,168,,5e SRD,,Construct
+Unhatched,14,,4,71,,,71,2,12,,363,,Creature Codex,,Undead
+"Drake, Vapor",15,,6,119,,,119,4,14,,157,,Tome of Beasts 3,,Dragon
+Roc,15,,11,248,,,248,0,10,,260,,5e SRD,,Monstrosity
+Cave Mimic,13,,7,174,,,174,-1,9,,77,,Tome of Beasts 3,,Monstrosity
+Phase Spider,13,,3,32,,,32,2,12,,334,,5e SRD,,Monstrosity
+"Demon, Leech",17,,11,147,,,147,3,13,,110,,Tome of Beasts 3,,Fiend
+Ningyo,15,,7,77,,,77,5,15,,278,,Creature Codex,,Aberration
+Swarm of Quippers,13,,1,28,,,28,3,13,,338,,5e SRD,,Beast
+Eala,15,,2,40,,,40,3,13,,163,,Tome of Beasts,,Monstrosity
+Lindwurm,15,,5,136,,,136,5,15,,276,,Tome of Beasts,,Dragon
+Flesh Guardian,9,,5,93,,,93,-1,9,,262,,A5e Monstrous Menagerie,,Construct
+Forest Falcon,13,,0.25,13,,,13,3,13,,390,,Tome of Beasts 2,,Beast
+Pugilist,14,,4,75,,,75,2,12,,495,,A5e Monstrous Menagerie,,Humanoid
+Ice Bogie,12,,0.125,10,,,10,2,12,,209,,Tome of Beasts 2,,Fey
+Blood Hag,16,,11,178,,,178,3,13,,242,,Tome of Beasts,,Fey
+Pirate Captain,15,,3,65,,,65,3,13,,470,,A5e Monstrous Menagerie,,Humanoid
+Npc: Frost-Afflicted,13,,3,65,,,65,2,12,,408,,Tome of Beasts 3,,Humanoid
+Doppelganger,14,,3,52,,,52,4,14,,82,,5e SRD,,Monstrosity
+Moon Weaver,13,,0.5,36,,,36,3,13,,274,,Tome of Beasts 3,,Beast
+Child of Yggdrasil,14,,6,112,,,112,0,10,,61,,Creature Codex,,Aberration
+Lymarien,13,,0.125,5,,,5,3,13,,248,,Tome of Beasts 2,,Fey
+Tveirherjar,18,,7,102,,,102,1,11,,359,,Creature Codex,,Undead
+Peryton,13,,2,34,,,34,3,13,,359,,A5e Monstrous Menagerie,,Monstrosity
+Peat Mammoth,16,,10,172,,,172,-2,8,,293,,Tome of Beasts 2,,Plant
+Roachling Scout,14,,2,63,,,63,4,14,,319,,Creature Codex,,Humanoid
+Crocotta,14,,3,39,,,39,2,12,,75,,Tome of Beasts 2,,Monstrosity
+Viiret,13,,3,85,,,85,-2,8,,361,,Tome of Beasts 2,,Plant
+Hippopotamus,14,,3,76,,,76,-2,8,,233,,Tome of Beasts 3,,Beast
+Orniraptor,11,,0.25,16,,,16,1,11,,285,,Tome of Beasts 2,,Monstrosity
+Gullkin Hunter,14,,3,45,,,45,3,13,,223,,Tome of Beasts 3,,Humanoid
+Alehouse Drake,13,,0.5,65,,,65,3,13,,148,,Tome of Beasts,,Dragon
+Young Amethyst Dragon,17,,9,133,,,133,3,13,,142,,A5e Monstrous Menagerie,,Dragon
+Quoreq,15,,5,93,,,93,1,11,,304,,Tome of Beasts 2,,Aberration
+Adult Imperial Dragon,19,,20,297,,,297,1,11,Legendary,117,,Tome of Beasts 2,,Dragon
+"Dragonette, Shovel",12,,0.5,33,,,33,0,10,,150,,Tome of Beasts 3,,Dragon
+"Ooze, Shoal",9,,10,232,,,232,-1,9,,308,,Tome of Beasts 3,,Ooze
+Bonepowder Ghoul,18,,12,195,,,195,5,15,,221,,Tome of Beasts,,Undead
+Knight Ab-errant,14,,5,93,,,93,1,11,,231,,Tome of Beasts 2,,Humanoid
+Ork Urk,13,,2,45,,,45,0,10,,497,,A5e Monstrous Menagerie,,Humanoid
+Dau,13,,4,49,,,49,3,13,,70,,Tome of Beasts,,Fey
+Shellycoat,14,,2,75,,,75,2,12,,346,,Tome of Beasts,,Fey
+Gnoll Pack Leader,14,,2,45,,,45,1,11,,247,,A5e Monstrous Menagerie,,Humanoid
+Dire Wolf,14,,1,37,,,37,2,12,,321,,5e SRD,,Beast
+White Ape,14,,6,114,,,114,3,13,,408,,Tome of Beasts,,Monstrosity
+Sunflower Sprite,12,,0.5,14,,,14,2,12,,358,,Tome of Beasts 3,,Fey
+Sapphire Dragon Wyrmling,17,,3,58,,,58,3,13,,151,,A5e Monstrous Menagerie,,Dragon
+Noctiny,13,,2,52,,,52,1,11,,308,,Tome of Beasts,,Humanoid
+Dragonflesh Golem,18,,10,115,,,115,-2,8,,180,,Tome of Beasts 2,,Construct
+Shadow Ooze,8,,3,76,,,76,-2,8,,287,,Creature Codex,,Ooze
+Giant Water Elemental,14,,9,157,,,157,2,12,,194,,A5e Monstrous Menagerie,,Elemental
+Gearforged Templar,18,,6,71,,,71,-1,9,,210,,Tome of Beasts,,Humanoid
+Thug,11,,0.5,32,,,32,0,10,,350,,5e SRD,,Humanoid
+Pestilence Swarm,14,,1,22,,,22,3,13,,294,,Tome of Beasts 2,,Beast
+Devil Bough,14,,6,114,,,114,0,10,,302,,Creature Codex,,Fiend
+White Dragon Wyrmling,16,,2,32,,,32,0,10,,102,,5e SRD,,Dragon
+Carrion Beetle,15,,4,127,,,127,1,11,,52,,Tome of Beasts,,Beast
+Einherjar,18,,7,119,,,119,3,13,,167,,Tome of Beasts,,Humanoid
+Despair And Anger,16,,10,161,,,161,3,13,,116,,Tome of Beasts 3,,Celestial
+Great Wyrm Black Dragon,22,,23,735,,,735,2,12,Legendary,100,,A5e Monstrous Menagerie,,Dragon
+Paper Drake,13,,2,78,,,78,3,13,,154,,Tome of Beasts,,Dragon
+Storm Lord,17,,13,161,,,161,4,14,,139,,Creature Codex,,Elemental
+Witchalder,15,,6,102,,,102,-1,9,,394,,Tome of Beasts 3,,Plant
+Adult Amethyst Dragon,18,,17,220,,,220,5,15,Legendary,141,,A5e Monstrous Menagerie,,Dragon
+Angatra,17,,6,85,,,85,5,15,,19,,Tome of Beasts,,Undead
+Shadow Giant,17,,15,209,,,209,7,17,,173,,Tome of Beasts 2,,Giant
+Werynax,15,,6,114,,,114,3,13,,367,,Tome of Beasts 2,,Monstrosity
+Ssadar,16,,3,71,,,71,2,12,,337,,Tome of Beasts 2,,Humanoid
+Gibbering Mouther,9,,2,67,,,67,-1,9,,157,,5e SRD,,Aberration
+Dust Goblin,14,,0.25,5,,,5,3,13,,232,,Tome of Beasts,,Humanoid
+Storm Giant,16,,13,230,,,230,2,12,,156,,5e SRD,,Giant
+Sprite,15,,0.25,2,,,2,4,14,,283,,5e SRD,,Fey
+Ancient Aboleth,17,,11,342,,,342,1,11,Legendary,17,,A5e Monstrous Menagerie,,Aberration
+Shadow Lurker,16,,5,84,,,84,6,16,,342,,Tome of Beasts 3,,Fey
+Lady in White,12,,2,49,,,49,2,12,,246,,Creature Codex,,Undead
+Behir Magus,16,,12,168,,,168,2,12,,33,,A5e Monstrous Menagerie,,Monstrosity
+Void Knight,18,,10,153,,,153,-2,8,,386,,Tome of Beasts 3,,Construct
+Vampire Spawn,15,,5,82,,,82,3,13,,298,,5e SRD,,Undead
+Hyena,11,,0,5,,,5,1,11,,331,,5e SRD,,Beast
+Giant Vulture,10,,1,22,,,22,0,10,,329,,5e SRD,,Beast
+Thorned Sulfurlord,17,,11,171,,,171,2,12,,306,,Creature Codex,,Fiend
+Cave Drake,13,,3,95,,,95,2,12,,55,,Tome of Beasts 2,,Dragon
+Hippogriff,11,,1,19,,,19,1,11,,184,,5e SRD,,Monstrosity
+Smaragdine Golem,17,,14,231,,,231,0,10,,236,,Tome of Beasts,,Construct
+Eagle,12,,0,3,,,3,2,12,,322,,5e SRD,,Beast
+Hundun,18,,10,153,,,153,2,12,,253,,Tome of Beasts,,Celestial
+Tuberkith,13,,0.25,22,,,22,2,12,,379,,Tome of Beasts 3,,Plant
+Helashruu,18,,13,184,,,184,2,12,,197,,Tome of Beasts 2,,Aberration
+Dire Pangolin,16,,4,82,,,82,0,10,,133,,Tome of Beasts 3,,Beast
+Copperkill Slime,10,,8,142,,,142,0,10,,94,,Tome of Beasts 3,,Ooze
+Gearmass,15,,5,115,,,115,-3,7,,195,,Tome of Beasts 3,,Ooze
+"Ogre, Rainforest",12,,4,90,,,90,1,11,,301,,Tome of Beasts 3,,Giant
+J'ba Fofi Spider,18,,3,75,,,75,3,13,,362,,Tome of Beasts,,Beast
+Gear Spider,13,,0.5,28,,,28,2,12,,53,,A5e Monstrous Menagerie,,Construct
+Rotting Wind,15,,6,82,,,82,5,15,,330,,Tome of Beasts,,Undead
+Tiger,12,,1,37,,,37,2,12,,339,,5e SRD,,Beast
+Blue Dragon Wyrmling,17,,3,52,,,52,0,10,,91,,5e SRD,,Dragon
+"Chimera, Royal",17,,15,189,,,189,2,12,Legendary,83,,Tome of Beasts 3,,Monstrosity
+Scorpion Cultist,13,,0.5,19,,,19,2,12,,425,,Tome of Beasts,,Humanoid
+Mandrake,8,,0.5,22,,,22,-2,8,,260,,Creature Codex,,Plant
+Bearded Devil,13,,3,52,,,52,2,12,,70,,5e SRD,,Fiend
+Cave Giant Shaman,16,,14,207,,,207,0,10,,171,,Tome of Beasts 2,,Giant
+Spectral Guardian,14,,6,110,,,110,4,14,,358,,Tome of Beasts,,Undead
+Dark Eye,16,,3,71,,,71,2,12,,72,,Creature Codex,,Humanoid
+Tosculi Hive-Queen,17,,12,157,,,157,7,17,Legendary,385,,Tome of Beasts,,Monstrosity
+Giant Leech,13,,0.25,7,,,7,3,13,,393,,Tome of Beasts 2,,Beast
+Avalanche Screamer,15,,7,133,,,133,-1,9,,35,,Tome of Beasts 2,,Aberration
+Necrotic Tick,15,,0.25,3,,,3,2,12,,275,,Creature Codex,,Beast
+Triceratops,13,,5,95,,,95,-1,9,,80,,5e SRD,,Beast
+Orcish Wildling Minstrel,15,,2,32,,,32,3,13,,484,,A5e Monstrous Menagerie,,Humanoid
+Centaur,12,,2,45,,,45,2,12,,38,,5e SRD,,Monstrosity
+Siren,11,,1,38,,,38,1,11,,276,,A5e Monstrous Menagerie,,Monstrosity
+Elder Ghost Boar,15,,6,104,,,104,-1,9,,169,,Creature Codex,,Monstrosity
+Far Dorocha,14,,5,82,,,82,4,14,,142,,Tome of Beasts 2,,Fey
+Nian,13,,4,102,,,102,0,10,,276,,Creature Codex,,Monstrosity
+Giant Lizard,12,,0.25,19,,,19,1,11,,326,,5e SRD,,Beast
+Fire Elemental,13,Any,5,102,,,102,3,13,,125,Large,5e SRD,50,Elemental
+Shadow Elf Champion Warrior,16,,5,90,,,90,4,14,,497,,A5e Monstrous Menagerie,,Humanoid
+Agnibarra,12,,1,39,,,39,2,12,,9,,Creature Codex,,Monstrosity
+Assassin,15,,8,78,,,78,3,13,,343,,5e SRD,,Humanoid
+Wendigo,16,,11,150,,,150,4,14,,377,,Creature Codex,,Monstrosity
+Lich,17,,21,135,,,135,3,13,Legendary,202,,5e SRD,,Undead
+Living Shade,12,,0.25,18,,,18,2,12,,255,,Creature Codex,,Fey
+Werebear,10,,5,135,,,135,0,10,,208,,5e SRD,,Humanoid
+Warrior Band,13,,3,55,,,55,1,11,,499,,A5e Monstrous Menagerie,,Humanoid
+Tulpa,13,,4,39,,,39,3,13,,358,,Creature Codex,,Undead
+Oaken Sentinel,16,,10,189,,,189,-2,8,,293,,Tome of Beasts 3,,Plant
+Living Wick,13,,0.25,28,,,28,0,10,,278,,Tome of Beasts,,Construct
+Cultist,12,,0.125,9,,,9,1,11,,345,,5e SRD,,Humanoid
+Wallflower,14,,2,33,,,33,2,12,,254,,A5e Monstrous Menagerie,,Plant
+Greater Scrag,16,,7,127,,,127,0,10,,401,,Creature Codex,,Monstrosity
+Cherufe,19,,14,161,,,161,0,10,,61,,Tome of Beasts 2,,Elemental
+Oculo Swarm,15,,4,110,,,110,5,15,,209,,Tome of Beasts,,Aberration
+Morphoi,13,,0.5,33,,,33,3,13,,297,,Tome of Beasts,,Plant
+Magmin,14,,0.5,9,,,9,2,12,,212,,5e SRD,,Elemental
+Ravenala,15,,5,126,,,126,0,10,,321,,Tome of Beasts,,Plant
+Ahu-Nixta Drudge,13,,0.5,26,,,26,1,11,,10,,Tome of Beasts 2,,Aberration
+Ecstatic Bloom,15,,11,171,,,171,-1,9,,303,,Creature Codex,,Celestial
+Meerkat,11,,0,2,,,2,1,11,,268,,Tome of Beasts 3,,Beast
+Snake Lamia,13,,4,85,,,85,3,13,,303,,A5e Monstrous Menagerie,,Monstrosity
+Young Green Dragon,18,,8,136,,,136,1,11,,94,,5e SRD,,Dragon
+Phase Monster,13,,4,85,,,85,2,12,,361,,A5e Monstrous Menagerie,,Monstrosity
+"Myrmex, Young",13,,1,54,,,54,1,11,,284,,Tome of Beasts 3,,Elemental
+Yaga Goo,14,,5,85,,,85,4,14,,389,,Creature Codex,,Ooze
+Wasteland Dragon Wyrmling,17,,3,60,,,60,0,10,,118,,Creature Codex,,Dragon
+Young Bronze Dragon,18,,8,142,,,142,0,10,,108,,5e SRD,,Dragon
+Forest Gnome Scout,15,,0.5,19,,,19,3,13,,491,,A5e Monstrous Menagerie,,Humanoid
+Sootwing,11,,0.25,13,,,13,1,11,,179,,Creature Codex,,Beast
+Fragrite,14,,6,91,,,91,1,11,,164,,Creature Codex,,Elemental
+Bloody Bones,13,,3,55,,,55,1,11,,54,,Creature Codex,,Monstrosity
+Pact Drake,14,,1,45,,,45,2,12,,130,,Creature Codex,,Dragon
+Npc: Field Commander,19,,10,170,,,170,2,12,,406,,Tome of Beasts 3,,Humanoid
+Treant,16,,9,138,,,138,-1,9,,289,,5e SRD,,Plant
+Emerald Dragon Wyrmling,16,,2,45,,,45,2,12,,147,,A5e Monstrous Menagerie,,Dragon
+Ophio Fungus,14,,7,119,,,119,-2,8,,283,,Tome of Beasts 2,,Plant
+Elder Shadow Drake,16,,7,114,,,114,1,11,,153,,Tome of Beasts,,Dragon
+King Fomor,21,,22,656,,,656,7,17,Legendary,406,,A5e Monstrous Menagerie,,Celestial
+Daeodon,13,,3,76,,,76,-1,9,,103,,Tome of Beasts 3,,Beast
+Giant Fire Elemental,14,,9,127,,,127,4,14,,194,,A5e Monstrous Menagerie,,Elemental
+Megantereon,13,,2,52,,,52,3,13,,269,,Tome of Beasts 3,,Beast
+Clurichaun,14,,0.25,22,,,22,1,11,,67,,Tome of Beasts,,Fey
+Forest Emperor,18,,15,161,,,161,1,11,,155,,Tome of Beasts 2,,Aberration
+Bandit Captain,15,,2,65,,,65,3,13,,344,,5e SRD,,Humanoid
+Bandit Lord,16,,4,91,,,91,2,12,,418,,Tome of Beasts,,Humanoid
+Parrot (Pirate),13,Neutral,0.125,7,,"Coastal, Seafaring",7,2,,,,Tiny,Homebrew,40,Beast
+Kraken Tentacle (Medium),13,Any,2,26,,Seafaring,26,,,,,Large,Homebrew,30,Aberration
