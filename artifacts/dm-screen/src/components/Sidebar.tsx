@@ -33,9 +33,9 @@ export function Sidebar({
 
   const sidebarBg = isDark
     ? "linear-gradient(180deg, #0b0018 0%, #080012 100%)"
-    : "linear-gradient(180deg, #E2D9CC 0%, #D8CFBF 100%)";
+    : "#ffffff";
 
-  const toggleBg = isDark ? "#0f001e" : "#D8CFBF";
+  const toggleBg = isDark ? "#0f001e" : "#ffffff";
   const toggleBorder = isDark ? "rgba(126,34,206,0.6)" : "rgba(138,43,226,0.4)";
 
   return (
