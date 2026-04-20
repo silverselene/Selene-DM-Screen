@@ -6,13 +6,15 @@ export function DragonHeader() {
 
   const headerBg = isDark
     ? "linear-gradient(180deg, #0d0014 0%, #120020 100%)"
-    : "linear-gradient(180deg, #C4B496 0%, #B8A882 50%, #C0AF90 100%)";
+    : "#ffffff";
 
   const titleGradient = isDark
     ? "linear-gradient(135deg, #ffffff, #e0d0ff, #ffffff)"
-    : "linear-gradient(135deg, #1a0840, #4a1890, #1a0840)";
+    : "none";
 
-  const subtitleClass = isDark ? "text-purple-400" : "text-purple-900";
+  const titleColor = isDark ? "transparent" : "#2d0e6e";
+
+  const subtitleClass = isDark ? "text-purple-400" : "text-purple-800";
 
   return (
     <header className="relative h-16 flex items-center justify-center overflow-hidden shrink-0"
@@ -83,18 +85,15 @@ export function DragonHeader() {
           style={{
             fontFamily: "'Cinzel', 'Georgia', serif",
             background: titleGradient,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            WebkitBackgroundClip: isDark ? "text" : "unset",
+            WebkitTextFillColor: titleColor,
             filter: isDark
               ? "drop-shadow(0 0 10px rgba(255,255,255,0.25))"
-              : "drop-shadow(0 1px 2px rgba(30,8,80,0.20))",
+              : "none",
           }}
         >
           Selene's DM Screen
         </h1>
-        <div className={`text-xs tracking-[0.35em] uppercase opacity-90 mt-0.5 ${subtitleClass}`}>
-          D&amp;D 5.5e · 2024 Revision
-        </div>
       </div>
 
       {/* ── Theme toggle ── */}
