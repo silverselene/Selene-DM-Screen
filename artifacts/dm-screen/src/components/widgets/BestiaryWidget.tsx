@@ -317,7 +317,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
 
   // ── List view ────────────────────────────────────────────────────────────
   const isFiltered = query.trim() !== "" || crFilter !== "All";
-  const visibleList = isFiltered ? displayList : displayList.slice(0, 15);
+  const visibleList = isFiltered ? displayList : displayList.slice(0, 7);
 
   return (
     <div className="h-full min-h-0 flex flex-col gap-1.5">
@@ -372,9 +372,9 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
             </div>
           </button>
         ))}
-        {!isFiltered && displayList.length > 15 && (
+        {!isFiltered && displayList.length > 7 && (
           <div className="text-center py-2 text-[10px] text-gray-600">
-            Showing 15 of {displayList.length} — search to filter
+            Showing 7 of {displayList.length} — search to filter
           </div>
         )}
       </div>

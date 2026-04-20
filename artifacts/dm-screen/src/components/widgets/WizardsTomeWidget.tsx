@@ -94,7 +94,7 @@ export function WizardsTomeWidget() {
   if (selected) return <SpellDetail spell={selected} onBack={() => setSelected(null)} />;
 
   const isFiltered = query.trim() !== "" || filterLevel !== -1 || filterClass !== "All" || filterSchool !== "All";
-  const visibleSpells = isFiltered ? filtered : filtered.slice(0, 15);
+  const visibleSpells = isFiltered ? filtered : filtered.slice(0, 7);
 
   return (
     <div className="h-full min-h-0 flex flex-col gap-1.5">
@@ -179,9 +179,9 @@ export function WizardsTomeWidget() {
             </button>
           );
         })}
-        {!isFiltered && filtered.length > 15 && (
+        {!isFiltered && filtered.length > 7 && (
           <div className="text-center py-2 text-[10px] text-gray-600">
-            Showing 15 of {filtered.length} — search to filter
+            Showing 7 of {filtered.length} — search to filter
           </div>
         )}
       </div>

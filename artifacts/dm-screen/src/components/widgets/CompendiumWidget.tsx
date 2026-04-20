@@ -22,7 +22,7 @@ export function CompendiumWidget() {
 
   const entry = selectedEntry ? compendiumData.find((e) => e.id === selectedEntry) : null;
   const isFiltered = query.trim() !== "" || selectedCategory !== "All";
-  const visibleList = isFiltered ? filtered : filtered.slice(0, 15);
+  const visibleList = isFiltered ? filtered : filtered.slice(0, 7);
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -96,9 +96,9 @@ export function CompendiumWidget() {
               </div>
             </button>
           ))}
-          {!isFiltered && filtered.length > 15 && (
+          {!isFiltered && filtered.length > 7 && (
             <div className="text-center py-2 text-[10px] text-gray-600">
-              Showing 15 of {filtered.length} — search to filter
+              Showing 7 of {filtered.length} — search to filter
             </div>
           )}
         </div>
