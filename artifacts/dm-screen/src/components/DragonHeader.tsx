@@ -4,9 +4,19 @@ import { useTheme } from "@/contexts/ThemeContext";
 export function DragonHeader() {
   const { isDark, toggle } = useTheme();
 
+  const headerBg = isDark
+    ? "linear-gradient(180deg, #0d0014 0%, #120020 100%)"
+    : "linear-gradient(180deg, #C4B496 0%, #B8A882 50%, #C0AF90 100%)";
+
+  const titleGradient = isDark
+    ? "linear-gradient(135deg, #ffffff, #e0d0ff, #ffffff)"
+    : "linear-gradient(135deg, #1a0840, #4a1890, #1a0840)";
+
+  const subtitleClass = isDark ? "text-purple-400" : "text-purple-900";
+
   return (
     <header className="relative h-16 flex items-center justify-center overflow-hidden shrink-0"
-      style={{ background: "linear-gradient(180deg, #0d0014 0%, #120020 100%)" }}
+      style={{ background: headerBg }}
     >
       {/* Celtic top border */}
       <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: "6px" }}>
@@ -72,15 +82,17 @@ export function DragonHeader() {
           className="text-2xl font-black tracking-[0.25em] uppercase"
           style={{
             fontFamily: "'Cinzel', 'Georgia', serif",
-            background: "linear-gradient(135deg, #ffffff, #e0d0ff, #ffffff)",
+            background: titleGradient,
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            filter: "drop-shadow(0 0 10px rgba(255,255,255,0.25))",
+            filter: isDark
+              ? "drop-shadow(0 0 10px rgba(255,255,255,0.25))"
+              : "drop-shadow(0 1px 2px rgba(30,8,80,0.20))",
           }}
         >
           Selene's DM Screen
         </h1>
-        <div className="text-xs tracking-[0.35em] text-purple-400 uppercase opacity-80 mt-0.5">
+        <div className={`text-xs tracking-[0.35em] uppercase opacity-90 mt-0.5 ${subtitleClass}`}>
           D&amp;D 5.5e · 2024 Revision
         </div>
       </div>
@@ -90,7 +102,11 @@ export function DragonHeader() {
         onClick={toggle}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-purple-600/50 bg-black/30 hover:bg-purple-900/50 backdrop-blur-sm transition-all duration-200 group"
+        className={`absolute right-4 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full border backdrop-blur-sm transition-all duration-200 group ${
+          isDark
+            ? "border-purple-600/50 bg-black/30 hover:bg-purple-900/50"
+            : "border-purple-800/60 bg-black/10 hover:bg-purple-900/20"
+        }`}
       >
         {isDark ? (
           <>
@@ -99,8 +115,8 @@ export function DragonHeader() {
           </>
         ) : (
           <>
-            <Moon className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-100 transition-colors" />
-            <span className="text-[10px] font-medium text-purple-300 group-hover:text-white transition-colors hidden sm:block tracking-wide">DARK</span>
+            <Moon className="w-3.5 h-3.5 text-purple-900 group-hover:text-purple-700 transition-colors" />
+            <span className="text-[10px] font-bold text-purple-900 group-hover:text-purple-700 transition-colors hidden sm:block tracking-wide">DARK</span>
           </>
         )}
       </button>

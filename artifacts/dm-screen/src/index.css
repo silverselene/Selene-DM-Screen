@@ -91,25 +91,25 @@
 }
 
 .light-mode {
-  --dm-bg-page:      #F0EBE0;
-  --dm-bg-tile:      rgba(255, 252, 246, 0.97);
-  --dm-bg-input:     #EBE5D8;
-  --dm-bg-item:      rgba(235, 229, 216, 0.72);
-  --dm-bg-item-h:    rgba(138, 43, 226, 0.09);
-  --dm-bg-card:      rgba(255, 252, 248, 0.96);
-  --dm-bg-tag:       #DDD6C8;
-  --dm-bg-btn:       rgba(210, 200, 185, 0.70);
-  --dm-t1:           #1a1228;
-  --dm-t2:           #4a3d6a;
-  --dm-t3:           #7a6e90;
-  --dm-t4:           #9a8eba;
-  --dm-thead:        #0f0a1e;
-  --dm-border:       rgba(189, 178, 210, 0.50);
-  --dm-border-input: rgba(138, 43, 226, 0.38);
-  --dm-border-card:  rgba(138, 43, 226, 0.20);
-  --dm-placeholder:  #9a8eba;
-  --dm-scrollbar:    #c4a8e8;
-  --dm-scrollbar-h:  #9b6cd4;
+  --dm-bg-page:      #EDE5D5;
+  --dm-bg-tile:      rgba(255, 252, 244, 0.98);
+  --dm-bg-input:     #E4DDD0;
+  --dm-bg-item:      rgba(228, 221, 208, 0.80);
+  --dm-bg-item-h:    rgba(138, 43, 226, 0.10);
+  --dm-bg-card:      rgba(255, 251, 244, 0.98);
+  --dm-bg-tag:       #D4CCBC;
+  --dm-bg-btn:       rgba(200, 190, 175, 0.80);
+  --dm-t1:           #120a20;
+  --dm-t2:           #2e1f50;
+  --dm-t3:           #4a3868;
+  --dm-t4:           #6a5484;
+  --dm-thead:        #0a0614;
+  --dm-border:       rgba(148, 128, 180, 0.55);
+  --dm-border-input: rgba(100, 40, 180, 0.50);
+  --dm-border-card:  rgba(120, 60, 200, 0.25);
+  --dm-placeholder:  #7a6494;
+  --dm-scrollbar:    #b49ad0;
+  --dm-scrollbar-h:  #8a5cba;
 }
 
 /* ── Semantic helpers used across widgets ───────────────── */
