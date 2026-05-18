@@ -1,5 +1,5 @@
 import {
-  Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked,
+  Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users,
   ArrowRight, ArrowDown, Minimize2,
 } from "lucide-react";
 import type { TileEntry, WidgetType } from "@/types";
@@ -9,6 +9,7 @@ import { NotepadWidget } from "./widgets/NotepadWidget";
 import { OracleWidget } from "./widgets/OracleWidget";
 import { BestiaryWidget } from "./widgets/BestiaryWidget";
 import { WizardsTomeWidget } from "./widgets/WizardsTomeWidget";
+import { PartyWidget } from "./widgets/PartyWidget";
 
 interface Props {
   index: number;
@@ -57,6 +58,11 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
     icon: <BookMarked className="w-3 h-3" />,
     accent: "border-cyan-800/60 shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]",
   },
+  party: {
+    label: "Party",
+    icon: <Users className="w-3 h-3" />,
+    accent: "border-emerald-800/60 shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]",
+  },
 };
 
 function WidgetContent({
@@ -74,6 +80,7 @@ function WidgetContent({
   if (widget === "oracle") return <OracleWidget />;
   if (widget === "bestiary") return <BestiaryWidget target={bestiaryTarget} onTargetClear={onBestiaryTargetClear} />;
   if (widget === "wizard-tome") return <WizardsTomeWidget />;
+  if (widget === "party") return <PartyWidget />;
   return null;
 }
 

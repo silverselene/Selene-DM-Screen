@@ -1,4 +1,4 @@
-import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked } from "lucide-react";
+import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users } from "lucide-react";
 import type { WidgetType } from "@/types";
 
 interface Props {
@@ -48,6 +48,13 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
     description: "All D&D 5e spells levels 0–9, filterable by class & school.",
     icon: <BookMarked className="w-6 h-6" />,
     color: "from-cyan-900/60 to-cyan-800/40 border-cyan-600/50 hover:border-cyan-400",
+  },
+  {
+    type: "party",
+    label: "Party",
+    description: "Manage player characters — AC, HP, level, class, spells & weapons. Add to initiative.",
+    icon: <Users className="w-6 h-6" />,
+    color: "from-emerald-900/60 to-emerald-800/40 border-emerald-600/50 hover:border-emerald-400",
   },
 ];
 

@@ -1,4 +1,4 @@
-import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2 } from "lucide-react";
+import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2 } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -9,6 +9,7 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
   oracle: { label: "The Oracle", icon: <Wand2 className="w-3.5 h-3.5" />, color: "text-purple-400 bg-purple-900/20 border-purple-800/40" },
   bestiary: { label: "Bestiary", icon: <Skull className="w-3.5 h-3.5" />, color: "text-rose-400 bg-rose-900/20 border-rose-800/40" },
   "wizard-tome": { label: "Wizard's Tome", icon: <BookMarked className="w-3.5 h-3.5" />, color: "text-cyan-400 bg-cyan-900/20 border-cyan-800/40" },
+  party: { label: "Party", icon: <Users className="w-3.5 h-3.5" />, color: "text-emerald-400 bg-emerald-900/20 border-emerald-800/40" },
 };
 
 const GRID_SIZES = [2, 3, 4] as const;
