@@ -163,8 +163,140 @@ export const commonMagicItems: string[] = [
   "Wand of Smiles — Target smiles for 1 hour (Wis DC 10 negates)",
 ];
 
-export function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+// ── Place name generator ───────────────────────────────────────────────────
+
+const placePrefixes = [
+  "Iron","Silver","Storm","Oak","Ash","Crow","Ember","Dark","Mist","Gold",
+  "Frost","Stone","Thorn","Raven","Dusk","Bright","Salt","Hollow","Bone",
+  "Grim","Amber","Copper","Elder","Shadow","Marsh","Loch","Veil","Horn",
+  "Black","Red","White","High","Low","Old","New","North","South","East","West",
+];
+
+const placeSuffixes = [
+  "haven","ford","bridge","hold","gate","wick","ton","burg","fell","moor",
+  "vale","reach","keep","port","cross","mill","brook","cliff","wood","thorpe",
+  "stead","crest","hollow","watch","spire","mark","dale","field","holm","grove",
+];
+
+const placeAdjectives = [
+  "Grey","Pale","Ashen","Sunken","Crumbling","Forgotten","Cursed","Gilded",
+  "Verdant","Flooded","Foggy","Blasted","Hallowed","Fallen","Buried","Sacred",
+  "Wind-scarred","Smoke-stained","Ancient","Glittering","Twisted","Drowning",
+];
+
+const placeNouns = [
+  "Crossing","Landing","Hollow","Point","Rise","Reach","Pass","Narrows",
+  "Bluffs","Bend","Gap","Heights","Downs","Flats","Moors","Shores",
+  "Wastes","Pines","Cove","Basin","Fork","Briar","Ledge","Expanse",
+];
+
+const humanNames = [
+  "Aldric","Mira","Cassius","Lysa","Dorian","Petra","Gareth","Sela",
+  "Tristan","Brennan","Vesna","Orin","Marcus","Elara","Torben","Sienna",
+  "Davan","Rowan","Aleth","Cormac","Wren","Halden",
+];
+
+const placeNamePatterns = [
+  () => pickRandom(placePrefixes) + pickRandom(placeSuffixes),
+  () => pickRandom(placePrefixes) + pickRandom(placeSuffixes),
+  () => pickRandom(placeAdjectives) + " " + pickRandom(placeNouns),
+  () => pickRandom(humanNames) + "'s " + pickRandom(["Landing","Rest","Reach","Watch","Crossing","Hold","Ford","Gate","Folly","End"]),
+  () => "The " + pickRandom(placeAdjectives) + " " + pickRandom(["Gate","Hold","Spire","Tower","Ruins","Fang","Crown","Maw","Eye","Wound"]),
+  () => pickRandom(placePrefixes) + " " + pickRandom(["Peak","Isle","Bay","Fen","Glen","Mere","Tor","Rift","Crags","Vaults"]),
+];
+
+export const settlementTypes: Record<string, { label: string; descriptors: string[] }> = {
+  City: {
+    label: "City",
+    descriptors: [
+      "a sprawling walled city at the heart of the realm",
+      "a bustling trade hub where merchants from every land converge",
+      "an ancient city whose foundations predate written history",
+      "a fog-shrouded city built over a vast subterranean network",
+      "a city of gleaming towers under the shadow of a dormant volcano",
+      "a coastal city whose docks never sleep",
+      "a divided city, split between two feuding noble houses",
+      "a city carved into the face of a great white cliff",
+    ],
+  },
+  Town: {
+    label: "Town",
+    descriptors: [
+      "a prosperous market town at the junction of two trade roads",
+      "a river-crossing town known for its fine bridge and toll disputes",
+      "a mining town clinging to the edge of a worked-out vein",
+      "a town that swells threefold during the harvest festival",
+      "a border town where two nations eye each other nervously",
+      "a walled town that has seen better days since the war",
+      "a quiet town with an unusually active thieves' guild",
+      "a logging town carved from the edge of an ancient forest",
+    ],
+  },
+  Village: {
+    label: "Village",
+    descriptors: [
+      "a quiet farming village surrounded by golden fields",
+      "a remote mountain village where outsiders are rarely welcome",
+      "a fishing village where every family has lost someone to the sea",
+      "a half-abandoned village whose youth have all left for the city",
+      "a village that has somehow avoided every war and plague for a century",
+      "a village built around a sacred old tree the locals refuse to explain",
+      "a prosperous little village hiding a very large secret",
+      "a village perched on stilts above a boggy lake",
+    ],
+  },
+  Hamlet: {
+    label: "Hamlet",
+    descriptors: [
+      "a tiny hamlet of a dozen souls clinging to a hillside",
+      "a scattered cluster of farmsteads along a muddy road",
+      "a hamlet whose only notable feature is a strangely well-stocked inn",
+      "a crossroads hamlet that exists solely to serve travellers",
+      "a hamlet where every resident claims to be a cousin of every other",
+      "a bleak hamlet where no children have been born in seven years",
+    ],
+  },
+  Fort: {
+    label: "Fort / Keep",
+    descriptors: [
+      "a weather-beaten fortress atop a windswept hill",
+      "a border keep that has changed hands a dozen times in living memory",
+      "a garrisoned fort guarding the only mountain pass for fifty miles",
+      "a half-ruined keep that has been crudely re-occupied by a mercenary band",
+      "a newly built fort whose mortar has barely dried",
+      "a dreaded prison-fortress from which no one has ever escaped",
+    ],
+  },
+  Port: {
+    label: "Port",
+    descriptors: [
+      "a raucous harbour town where every ship captain owes a debt",
+      "a smuggler's port with a blind eye for an official",
+      "a prestigious naval port whose fleet rules these waters",
+      "a port city balanced on the knife-edge between two rival factions",
+      "a deep-water port half-built on barnacled piles over the sea",
+      "a pirate port operating just barely within the law",
+    ],
+  },
+  Ruins: {
+    label: "Ruins",
+    descriptors: [
+      "the crumbling ruins of a once-great imperial city",
+      "ruins reclaimed by the jungle, still avoided by the locals",
+      "a ruin said to be cursed since the night its walls fell in a single hour",
+      "the skeletal remains of a wizard's tower and the village it destroyed",
+      "sunken ruins visible at low tide, reaching up like stone fingers",
+      "ruins that pilgrims visit, though they never say why",
+    ],
+  },
+};
+
+export function generatePlaceName(type: string): string {
+  const patternFn = pickRandom(placeNamePatterns);
+  const name = patternFn();
+  const settl = settlementTypes[type] || settlementTypes["Town"];
+  const descriptor = pickRandom(settl.descriptors);
+  return `${name} — ${descriptor}.`;
 }
 
 export function generateName(race: string): string {
