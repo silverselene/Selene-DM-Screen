@@ -167,9 +167,13 @@ export function Sidebar({
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 pt-10 pb-3">
-          <Grid className="w-4 h-4 text-purple-700" title="Grid size" />
+          <span title="Grid size" className="flex">
+            <Grid className="w-4 h-4 text-purple-700" />
+          </span>
           <div className="w-3 h-px bg-purple-900/50" />
-          <Clock className="w-4 h-4 text-purple-700" title="Recent widgets" />
+          <span title="Recent widgets" className="flex">
+            <Clock className="w-4 h-4 text-purple-700" />
+          </span>
           {recentWidgets.length > 0 && (
             <span className="text-[9px] bg-purple-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
               {recentWidgets.length}
