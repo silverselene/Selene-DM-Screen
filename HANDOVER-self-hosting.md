@@ -139,23 +139,23 @@ bump the version suffix whenever a stored shape changes.
 Goal: every dataset the DB served now exists as a static file under `artifacts/dm-screen/src/data/`,
 generated **offline** (no network at app build/run time).
 
-- [ ] **Monster scope is decided: refresh the existing curated subset only** (do **not** import
+- [x] **Monster scope is decided: refresh the existing curated subset only** (do **not** import
       the full 204-file bestiary). Take the current creature list from `src/data/bestiary.ts` /
       the `Monsters_&_Beasts_*.csv` as the canonical set of *which* monsters to include, and
       re-pull each one's stat block from the local 5etools clone (`../5etools-src/data/bestiary/`,
       tag `v2.31.0`) so values/wording are current. Keep the set the same size; only refresh contents.
-- [ ] Audit counts. Compare `src/data/spells.ts` and `src/data/bestiary.ts` against the DB-era
+- [x] Audit counts. Compare `src/data/spells.ts` and `src/data/bestiary.ts` against the DB-era
       sources and the local 5etools clone. Document the gap.
-- [ ] **Port the import scripts to read from the local clone `../5etools-src/data`** (pinned to
+- [x] **Port the import scripts to read from the local clone `../5etools-src/data`** (pinned to
       tag `v2.31.0`) and **emit static JSON/TS into `src/data/`** instead of `INSERT`ing into
       Postgres. Reuse their existing `stripTags`/property-mapping logic verbatim; just swap the
       source (local files, not `raw.githubusercontent.com`) and the sink (file write, not pg).
       Run **once** to generate, then commit the output so the build never needs network.
-- [ ] Create a **weapons** static dataset (`src/data/weapons.ts` or `.json`) generated from
+- [x] Create a **weapons** static dataset (`src/data/weapons.ts` or `.json`) generated from
       `../5etools-src/data/items.json` + `items-base.json` — it has no static equivalent today.
-- [ ] Keep the data shape identical to what the widgets already consume so widget code
+- [x] Keep the data shape identical to what the widgets already consume so widget code
       changes stay minimal.
-- [ ] Note the data's source/attribution (5etools, MIT) — preserve existing licensing.
+- [x] Note the data's source/attribution (5etools, MIT) — preserve existing licensing.
 
 **Verify:** counts match the intended full set; data files are committed; nothing fetches
 from the network to build them.
@@ -316,3 +316,67 @@ The repo's HEAD did not build or typecheck on macOS (darwin-arm64) before the mi
 Verified: `pnpm install`, `PORT=5173 BASE_PATH=/ pnpm run typecheck`, `PORT=5173 BASE_PATH=/ pnpm run build` all succeed on macOS (darwin-arm64, node 24). Dev server serves HTTP 200 on `http://localhost:5174/` with the seven widget components present under `artifacts/dm-screen/src/components/widgets/` (Bestiary, Compendium, Initiative, Notepad, Oracle, Party, WizardsTome). No browser-side render check was possible from CLI — visual confirmation deferred to the user.
 
 5etools clone verified: `../5etools-src` is at tag `v2.31.0`, commit `ebd1827660ee61d1a59227d5979a137494dce1c8`.
+
+### Phase 1
+
+**Monster scope.** The plan's "current creature list from `src/data/bestiary.ts` / the
+`Monsters_&_Beasts_*.csv`" was ambiguous because those two files describe very different
+things: bestiary.ts is a curated 40-monster set with **rich stat blocks**, while the CSV is a
+2,169-row **thin index** (name + AC + HP + CR + size + type + source — no traits/actions, ability
+scores hardcoded to 10) that was upserted into Postgres via `seed-csv.ts` to power the Initiative
+widget's broader autocomplete. After discussing options with the owner, we decided to **keep both**:
+
+- The 40 rich entries are refreshed in place at `src/data/bestiary.ts`, preferring the 2024
+  Monster Manual (`bestiary-xmm.json`) where the entry exists, falling back to 2014 MM otherwise
+  (Bugbear, Drow, Gnoll, Goblin, Hobgoblin, Kobold, Orc — these 2024-era species moved out of
+  the Monster Manual into species/race books).
+- The CSV's 2,158 unique entries are shipped as a brand-new static file
+  `src/data/monsterIndex.ts` for the Initiative widget to autocomplete against (rewired in Phase 2).
+  Bestiary widget still works off the 40-row `bestiaryData`.
+
+**Generators live in `scripts/src/data-generators/`.** Four tsx scripts plus a shared
+`lib.ts` (5etools `stripTags`/`renderEntries` + a TS-literal serializer). Wired into
+`scripts/package.json` as `generate:spells | generate:monsters | generate:monster-index |
+generate:weapons` (and `generate:all`). They read exclusively from the local sibling clone at
+`../5etools-src/data` (pinned tag `v2.31.0`); no network at build or run time. The path is
+overridable via `FIVETOOLS_DIR` for CI flexibility.
+
+**Counts (final).**
+
+| Dataset | Source | Output | Count |
+|---|---|---|---|
+| Spells | 17 source files (PHB → XPHB → … → SCC) + `spells/sources.json` for class membership | `src/data/spells.ts` | 936 raw → **557** unique |
+| Bestiary (rich) | 40 names from the original `bestiary.ts`, looked up across 107 5etools bestiary files | `src/data/bestiary.ts` | **40/40** matched |
+| Monster index (thin) | `attached_assets/Monsters_&_Beasts_*.csv` | `src/data/monsterIndex.ts` | 2,170 rows → **2,158** unique |
+| Weapons | `items.json` + `items-base.json` (231 + 102, 2024 edition wins) | `src/data/weapons.ts` | **251** unique |
+
+The 557 spell count matches the README's claim. Weapons match the README's "250" figure (off by 1).
+
+**Notes about generated output.**
+
+- The 2024 Monster Manual (XMM) puts much heavier reliance on 5etools tag macros
+  (`{@h}`, `{@actSaveFail}`, `{@atkr m}`, `{@actSave int}`, `{@hit N}`, `{@dc N}`) than the
+  2014 MM did. The legacy `stripTags` would have left these as visible artifacts ("@h12 (2d6 + 5)"
+  etc.). The shared stripper in `scripts/src/data-generators/lib.ts` was upgraded to translate
+  these into plain-English combat labels — "Hit: 12 (2d6 + 5)", "Failure: …", "Int Save: DC 16",
+  "Melee Attack Roll: +9" — so the generated output reads cleanly. This is a *new* improvement
+  on top of the legacy importer's logic (which is otherwise reused verbatim).
+- 5etools v2 moved per-spell class membership out of the spell records and into a separate
+  `spells/sources.json` index (keyed by source → spell name → `class[]`). The generator now
+  consults this index so the Wizard's Tome can still filter by class.
+- The widgets still reference the API (`/api/monsters/search`, `/api/characters`, etc.) — they
+  are repointed off the API in Phase 2. Phase 1's brief is data only.
+
+**File header attribution.** Every generated output file starts with a comment block naming the
+source (`../5etools-src/data/…`), the pinned tag (`v2.31.0`), the generator path, and the 5etools
+MIT-licensing note. README-level docs will be updated in Phase 8.
+
+**Bundle size impact.** dm-screen production JS goes from 452KB raw / 128KB gzipped → 934KB raw /
+**251KB gzipped** (+123KB gzipped). Vite warns "chunk larger than 500KB" but the warning is
+informational — Phase 6 (PWA) and any later code-splitting can address it; nothing is broken.
+
+**Verified:** `pnpm run typecheck` and `pnpm run build` both green with the new data files in
+place. Spot checks: Aboleth (XMM stat block intact, clean text); Fireball (correct PHB classes
+Sorcerer + Wizard); Cure Wounds (Artificer/Bard/Cleric/Druid/Paladin/Ranger); Eldritch Blast
+(Warlock only); Longsword (1d8 slashing, Versatile 1d10, 15gp); Pech (CR 2, source "Creature
+Codex", AC 15 — round-tripped from the CSV with no enrichment).
