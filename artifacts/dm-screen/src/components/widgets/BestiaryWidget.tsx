@@ -1,38 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { bestiaryData, mod, crToNumber, type Monster } from "@/data/bestiary";
-
-// ── DB monster shape (snake_case from API) ───────────────────────────────────
-interface DbMonster {
-  id: number;
-  name: string;
-  size: string;
-  type: string;
-  alignment: string;
-  ac: number;
-  ac_type: string;
-  hp: string;
-  speed: string;
-  str: number; dex: number; con: number; int_score: number; wis: number; cha: number;
-  saving_throws?: string;
-  skills?: string;
-  damage_immunities?: string;
-  damage_resistances?: string;
-  damage_vulnerabilities?: string;
-  condition_immunities?: string;
-  senses: string;
-  languages: string;
-  cr: string;
-  traits: { name: string; desc: string }[];
-  actions: { name: string; desc: string }[];
-  reactions: { name: string; desc: string }[];
-  legendary_actions: { name: string; desc: string }[];
-  source?: string;
-  is_legendary?: boolean;
-  initiative_modifier?: number;
-}
+import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
 
 // ── Unified display type ─────────────────────────────────────────────────────
+// The widget combines two sources: bestiaryData (40 rich stat blocks) and
+// monsterIndex (2,158 thin entries — name/AC/HP/CR/size/type/source). Thin
+// entries render the header but the body falls back to "Full stat block not
+// available" — same UX as the old DB fallback, just sourced locally.
 interface UnifiedMonster {
   name: string;
   size: string;
@@ -64,23 +39,40 @@ function fromLocal(m: Monster): UnifiedMonster {
     ...m, acType: m.acType ?? "",
     traits: m.traits ?? [], reactions: m.reactions ?? [],
     legendaryActions: m.legendaryActions ?? [],
-    source: "5e SRD",
+    source: "5etools",
   };
 }
 
-function fromDb(m: DbMonster): UnifiedMonster {
+function fromIndex(m: MonsterIndexEntry): UnifiedMonster {
   return {
     name: m.name, size: m.size, type: m.type, alignment: m.alignment,
-    ac: m.ac, acType: m.ac_type ?? "", hp: m.hp, speed: m.speed,
-    str: m.str, dex: m.dex, con: m.con, int: m.int_score, wis: m.wis, cha: m.cha,
-    savingThrows: m.saving_throws, skills: m.skills,
-    damageImmunities: m.damage_immunities, damageResistances: m.damage_resistances,
-    damageVulnerabilities: m.damage_vulnerabilities, conditionImmunities: m.condition_immunities,
-    senses: m.senses, languages: m.languages, cr: m.cr,
-    traits: m.traits ?? [], actions: m.actions ?? [],
-    reactions: m.reactions ?? [], legendaryActions: m.legendary_actions ?? [],
+    ac: m.ac, acType: "", hp: m.hp, speed: "",
+    str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
+    senses: "", languages: "", cr: m.cr,
+    traits: [], actions: [], reactions: [], legendaryActions: [],
     source: m.source,
   };
+}
+
+// Lowercased-name → rich Monster lookup, built once.
+const RICH_BY_NAME = new Map<string, Monster>(
+  bestiaryData.map(m => [m.name.toLowerCase(), m]),
+);
+
+// Lowercased-name → first thin index hit, built once.
+const THIN_BY_NAME = new Map<string, MonsterIndexEntry>();
+for (const m of monsterIndex) {
+  const key = m.name.toLowerCase();
+  if (!THIN_BY_NAME.has(key)) THIN_BY_NAME.set(key, m);
+}
+
+function lookupByName(name: string): UnifiedMonster | null {
+  const key = name.toLowerCase();
+  const rich = RICH_BY_NAME.get(key);
+  if (rich) return fromLocal(rich);
+  const thin = THIN_BY_NAME.get(key);
+  if (thin) return fromIndex(thin);
+  return null;
 }
 
 // ── CR colour ────────────────────────────────────────────────────────────────
@@ -211,28 +203,9 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   useEffect(() => {
     if (!target) return;
     setLoadingTarget(true);
-
-    // Try API first (covers the full 2160-monster DB)
-    fetch(`/api/monsters/search?q=${encodeURIComponent(target)}`)
-      .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((results: DbMonster[]) => {
-        // Exact match preferred, otherwise first result
-        const exact = results.find((m) => m.name.toLowerCase() === target.toLowerCase());
-        const match = exact ?? results[0];
-        if (match) { setSelected(fromDb(match)); return; }
-        // Fall back to local SRD data
-        const local = bestiaryData.find(
-          (m) => m.name.toLowerCase() === target.toLowerCase()
-        );
-        if (local) setSelected(fromLocal(local));
-      })
-      .catch(() => {
-        const local = bestiaryData.find(
-          (m) => m.name.toLowerCase() === target.toLowerCase()
-        );
-        if (local) setSelected(fromLocal(local));
-      })
-      .finally(() => setLoadingTarget(false));
+    const match = lookupByName(target);
+    if (match) setSelected(match);
+    setLoadingTarget(false);
   }, [target]);
 
   // ── Local list (from the 40-monster SRD seed + DB search results) ────────
@@ -255,32 +228,30 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
       .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr));
   }, [query, sortMode, crFilter]);
 
-  // ── DB search results ────────────────────────────────────────────────────
-  const [dbResults, setDbResults] = useState<DbMonster[]>([]);
-  const [dbLoading, setDbLoading] = useState(false);
-  useEffect(() => {
-    if (!query.trim()) { setDbResults([]); return; }
-    const t = setTimeout(() => {
-      setDbLoading(true);
-      fetch(`/api/monsters/search?q=${encodeURIComponent(query)}`)
-        .then((r) => r.ok ? r.json() : Promise.resolve([]))
-        .then(setDbResults)
-        .catch(() => setDbResults([]))
-        .finally(() => setDbLoading(false));
-    }, 250);
-    return () => clearTimeout(t);
+  // ── Broader thin-index results when searching ────────────────────────────
+  // Local filter over the 2,158-row monsterIndex; rich entries are excluded
+  // (they already appear via localFiltered). Capped to keep the list short.
+  const thinResults = useMemo(() => {
+    if (!query.trim()) return [] as MonsterIndexEntry[];
+    const q = query.toLowerCase();
+    const richNames = new Set(bestiaryData.map(m => m.name.toLowerCase()));
+    const hits: MonsterIndexEntry[] = [];
+    for (const m of monsterIndex) {
+      if (richNames.has(m.name.toLowerCase())) continue;
+      if (m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q)) {
+        hits.push(m);
+        if (hits.length >= 200) break;
+      }
+    }
+    return hits;
   }, [query]);
 
-  // Merge DB + local for display when searching
+  // Merge rich + thin for display when searching.
   const displayList: UnifiedMonster[] = useMemo(() => {
     if (!query.trim()) return localFiltered.map(fromLocal);
-    const localNames = new Set(localFiltered.map((m) => m.name.toLowerCase()));
-    const extra = dbResults
-      .filter((m) => !localNames.has(m.name.toLowerCase()))
-      .map(fromDb);
-    return [...localFiltered.map(fromLocal), ...extra]
+    return [...localFiltered.map(fromLocal), ...thinResults.map(fromIndex)]
       .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr));
-  }, [query, localFiltered, dbResults, sortMode]);
+  }, [query, localFiltered, thinResults, sortMode]);
 
   const handleBack = () => {
     setSelected(null);
@@ -350,11 +321,8 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
-        {displayList.length === 0 && !dbLoading && (
+        {displayList.length === 0 && (
           <div className="text-xs text-gray-600 text-center py-4">No monsters found</div>
-        )}
-        {dbLoading && query && (
-          <div className="text-xs text-purple-500 text-center py-1 animate-pulse">Searching database…</div>
         )}
         {visibleList.map((m) => (
           <button

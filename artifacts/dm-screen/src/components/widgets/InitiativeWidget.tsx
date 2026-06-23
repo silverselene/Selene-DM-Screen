@@ -1,16 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Swords,
   SkipForward, RotateCcw, Search, Skull, User, Shield, ExternalLink, Users,
 } from "lucide-react";
 import type { Combatant, PlayerCharacter } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useParty } from "@/lib/partyStore";
+import { searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
 
 let idCounter = Date.now();
 const nextId = () => String(++idCounter);
 
+// Display shape for monster search results. Same fields the old API row had
+// (keeps the rendering JSX untouched), now sourced from the local index.
 interface MonsterSummary {
-  id: number;
+  id: string;
   name: string;
   size: string;
   type: string;
@@ -21,8 +25,22 @@ interface MonsterSummary {
   source?: string;
   is_legendary?: boolean;
   initiative_modifier?: number;
-  initiative_roll?: number;
-  environment?: string;
+}
+
+function hitToSummary(h: MonsterSearchHit): MonsterSummary {
+  return {
+    id: h.id,
+    name: h.name,
+    size: h.size,
+    type: h.type,
+    ac: h.ac,
+    ac_type: h.acType,
+    hp: h.hp,
+    cr: h.cr,
+    source: h.source,
+    is_legendary: h.isLegendary,
+    initiative_modifier: h.initiativeModifier,
+  };
 }
 
 function parseMaxHp(hpStr: string): number {
@@ -30,12 +48,37 @@ function parseMaxHp(hpStr: string): number {
   return m ? parseInt(m[1]) : 10;
 }
 
+// Read an older unversioned key once, so a DM with an encounter in progress
+// at upgrade time keeps the in-flight combat state across the version bump.
+function readLegacy<T>(legacyKey: string, fallback: T): T {
+  try {
+    const raw = window.localStorage.getItem(legacyKey);
+    if (raw == null) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 type AddMode = "player" | "monster" | "party";
 
 export function InitiativeWidget() {
-  const [combatants, setCombatants] = useLocalStorage<Combatant[]>("dm-initiative", []);
-  const [currentIndex, setCurrentIndex] = useLocalStorage<number>("dm-initiative-turn", 0);
-  const [round, setRound] = useLocalStorage<number>("dm-round", 1);
+  // Versioned per phase 2 ("Persist live combat state to a versioned key").
+  // Older unversioned keys (dm-initiative / dm-initiative-turn / dm-round)
+  // are read once for backward compatibility if the user already had an
+  // encounter in progress before this migration.
+  const [combatants, setCombatants] = useLocalStorage<Combatant[]>(
+    "dm-initiative-v1",
+    () => readLegacy<Combatant[]>("dm-initiative", []),
+  );
+  const [currentIndex, setCurrentIndex] = useLocalStorage<number>(
+    "dm-initiative-turn-v1",
+    () => readLegacy<number>("dm-initiative-turn", 0),
+  );
+  const [round, setRound] = useLocalStorage<number>(
+    "dm-round-v1",
+    () => readLegacy<number>("dm-round", 1),
+  );
   const [showForm, setShowForm] = useState(false);
   const [addMode, setAddMode] = useState<AddMode>("player");
 
@@ -48,12 +91,10 @@ export function InitiativeWidget() {
   const [selectedMonster, setSelectedMonster] = useState<MonsterSummary | null>(null);
   const [monsterInitiative, setMonsterInitiative] = useState("");
   const [monsterHpOverride, setMonsterHpOverride] = useState("");
-  const [loadingMonsters, setLoadingMonsters] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Party tab
-  const [partyChars, setPartyChars] = useState<PlayerCharacter[]>([]);
-  const [loadingParty, setLoadingParty] = useState(false);
+  // Party tab — sourced from the shared store. useParty re-renders on writes.
+  const partyChars = useParty();
   const [selectedPc, setSelectedPc] = useState<PlayerCharacter | null>(null);
   const [pcInitiative, setPcInitiative] = useState("");
 
@@ -72,40 +113,16 @@ export function InitiativeWidget() {
     return () => window.removeEventListener("dm-add-to-initiative", handler);
   }, [setCombatants]);
 
-  // ── Monster search ──
+  // ── Monster search (local index, debounced) ──
   useEffect(() => {
     if (addMode !== "monster") return;
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (!monsterQuery.trim()) { setMonsterResults([]); return; }
-    searchTimer.current = setTimeout(async () => {
-      setLoadingMonsters(true);
-      try {
-        const res = await fetch(`/api/monsters/search?q=${encodeURIComponent(monsterQuery)}`);
-        if (res.ok) setMonsterResults(await res.json());
-      } catch { /* silent */ } finally { setLoadingMonsters(false); }
-    }, 250);
+    searchTimer.current = setTimeout(() => {
+      setMonsterResults(searchMonsters(monsterQuery).map(hitToSummary));
+    }, 80);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [monsterQuery, addMode]);
-
-  // ── Fetch party characters ──
-  const loadParty = useCallback(async () => {
-    setLoadingParty(true);
-    try {
-      const res = await fetch("/api/characters");
-      if (res.ok) {
-        const data = await res.json();
-        setPartyChars(data.map((c: PlayerCharacter) => ({
-          ...c,
-          spells: Array.isArray(c.spells) ? c.spells : [],
-          weapons: Array.isArray(c.weapons) ? c.weapons : [],
-        })));
-      }
-    } catch { /* silent */ } finally { setLoadingParty(false); }
-  }, []);
-
-  useEffect(() => {
-    if (addMode === "party") loadParty();
-  }, [addMode, loadParty]);
 
   const selectMonster = (m: MonsterSummary) => {
     setSelectedMonster(m);
@@ -251,11 +268,10 @@ export function InitiativeWidget() {
 
           {addMode === "party" && (
             <div className="space-y-1.5">
-              {loadingParty && <p className="text-xs text-gray-500 text-center py-2">Loading party…</p>}
-              {!loadingParty && partyChars.length === 0 && (
+              {partyChars.length === 0 && (
                 <p className="text-xs text-gray-500 text-center py-2">No characters saved yet — add them in the Party widget.</p>
               )}
-              {!loadingParty && partyChars.length > 0 && (
+              {partyChars.length > 0 && (
                 <div className="space-y-1 max-h-40 overflow-y-auto">
                   {partyChars.map(pc => (
                     <button key={pc.id} onClick={() => { setSelectedPc(pc); setPcInitiative(""); }}
@@ -320,7 +336,6 @@ export function InitiativeWidget() {
                   ))}
                 </div>
               )}
-              {loadingMonsters && <p className="text-xs text-gray-600 text-center py-1">Searching…</p>}
               {selectedMonster && (
                 <div className="bg-rose-950/30 border border-rose-800/40 rounded px-2 py-1.5 text-xs">
                   <div className="flex items-center gap-1.5 mb-1">

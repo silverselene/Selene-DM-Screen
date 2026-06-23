@@ -1,28 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
   Heart, Star, BookOpen, Sword, Search,
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
-
-const API = "/api/characters";
-const WEAPONS_SEARCH = "/api/weapons/search";
-const WEAPONS_BY_NAMES = "/api/weapons/by-names";
+import { weaponsData, type Weapon } from "@/data/weapons";
+import {
+  addCharacter,
+  deleteCharacter,
+  updateCharacter,
+  useParty,
+} from "@/lib/partyStore";
 
 let idCounter = Date.now();
 const nextId = () => String(++idCounter);
 
-// ── Weapon summary from API ────────────────────────────────────────────────
-interface WeaponInfo {
-  id: number;
-  name: string;
-  category: string | null;
-  damage: string | null;
-  damage_type: string | null;
-  properties: string[];
-  cost: string | null;
-  weight: string | null;
-}
+// ── Weapon summary used by the tag-input and pill components ─────────────
+type WeaponInfo = Pick<
+  Weapon,
+  "id" | "name" | "category" | "damage" | "damage_type" | "properties" | "cost" | "weight"
+>;
 
 // ── Weapon tag-input component ─────────────────────────────────────────────
 function WeaponTagInput({
@@ -42,18 +39,25 @@ function WeaponTagInput({
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!query.trim()) { setSuggestions([]); setOpen(false); return; }
-    timer.current = setTimeout(async () => {
+    // Tiny debounce so each keystroke doesn't churn React; the actual filter
+    // is cheap (251 weapons) and runs synchronously.
+    timer.current = setTimeout(() => {
       setLoading(true);
-      try {
-        const res = await fetch(`${WEAPONS_SEARCH}?q=${encodeURIComponent(query)}&limit=10`);
-        if (res.ok) {
-          const data: WeaponInfo[] = await res.json();
-          // filter out already-selected
-          setSuggestions(data.filter(w => !selected.map(s => s.toLowerCase()).includes(w.name.toLowerCase())));
-          setOpen(true);
-        }
-      } catch { /* silent */ } finally { setLoading(false); }
-    }, 200);
+      const q = query.trim().toLowerCase();
+      const selectedLower = new Set(selected.map(s => s.toLowerCase()));
+      const matches = weaponsData
+        .filter(w => w.name.toLowerCase().includes(q) && !selectedLower.has(w.name.toLowerCase()))
+        .sort((a, b) => {
+          const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          if (ap !== bp) return ap - bp;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 10);
+      setSuggestions(matches);
+      setOpen(true);
+      setLoading(false);
+    }, 80);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [query, selected]);
 
@@ -165,69 +169,33 @@ const emptyForm = () => ({
   weapons: [] as string[],
 });
 
+// Lowercased-name lookup for the inline weapon stat pills. Built once.
+const WEAPON_STATS_BY_NAME: Map<string, WeaponInfo> = new Map(
+  weaponsData.map(w => [w.name.toLowerCase(), w]),
+);
+
 // ── Main widget ────────────────────────────────────────────────────────────
 export function PartyWidget() {
-  const [characters, setCharacters] = useState<PlayerCharacter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const characters = useParty();
   const [error, setError] = useState<string | null>(null);
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm());
-  const [saving, setSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState(emptyForm());
 
-  // Weapon stats map: lowercase name → WeaponInfo
-  const [weaponStats, setWeaponStats] = useState<Map<string, WeaponInfo>>(new Map());
+  const weaponStats = useMemo(() => WEAPON_STATS_BY_NAME, []);
 
   // Per-row initiative
   const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
   const [initiativeVal, setInitiativeVal] = useState("");
 
-  // ── Load characters ──────────────────────────────────────────────────────
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(API);
-      if (!res.ok) throw new Error("Failed to load");
-      const data: PlayerCharacter[] = await res.json();
-      const parsed = data.map(c => ({
-        ...c,
-        spells: Array.isArray(c.spells) ? c.spells : [],
-        weapons: Array.isArray(c.weapons) ? c.weapons : [],
-      }));
-      setCharacters(parsed);
-
-      // Batch-resolve all weapon names to stats
-      const allNames = [...new Set(parsed.flatMap(c => c.weapons))];
-      if (allNames.length) {
-        const wr = await fetch(WEAPONS_BY_NAMES, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ names: allNames }),
-        });
-        if (wr.ok) {
-          const wdata: WeaponInfo[] = await wr.json();
-          setWeaponStats(new Map(wdata.map(w => [w.name.toLowerCase(), w])));
-        }
-      }
-    } catch {
-      setError("Could not reach the server.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
   // ── Save new character ───────────────────────────────────────────────────
-  const save = async () => {
+  const save = () => {
     if (!form.name.trim()) return;
-    setSaving(true);
     try {
-      const body = {
+      addCharacter({
         name: form.name.trim(),
         race: form.race.trim() || null,
         class: form.class.trim() || null,
@@ -236,23 +204,16 @@ export function PartyWidget() {
         hp: form.hp ? parseInt(form.hp) : null,
         spells: form.spells.split(",").map(s => s.trim()).filter(Boolean),
         weapons: form.weapons,
-      };
-      const res = await fetch(API, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error();
-      setForm(emptyForm()); setShowAdd(false);
-      await load();
-    } catch { setError("Failed to save."); } finally { setSaving(false); }
+      setForm(emptyForm()); setShowAdd(false); setError(null);
+    } catch { setError("Failed to save."); }
   };
 
   // ── Save edit ────────────────────────────────────────────────────────────
-  const saveEdit = async () => {
+  const saveEdit = () => {
     if (editingId === null || !editForm.name.trim()) return;
-    setSaving(true);
     try {
-      const body = {
+      updateCharacter(editingId, {
         name: editForm.name.trim(),
         race: editForm.race.trim() || null,
         class: editForm.class.trim() || null,
@@ -261,21 +222,14 @@ export function PartyWidget() {
         hp: editForm.hp ? parseInt(editForm.hp) : null,
         spells: editForm.spells.split(",").map(s => s.trim()).filter(Boolean),
         weapons: editForm.weapons,
-      };
-      const res = await fetch(`${API}/${editingId}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error();
-      setEditingId(null);
-      await load();
-    } catch { setError("Failed to update."); } finally { setSaving(false); }
+      setEditingId(null); setError(null);
+    } catch { setError("Failed to update."); }
   };
 
-  const deleteChar = async (id: number) => {
+  const deleteChar = (id: number) => {
     try {
-      await fetch(`${API}/${id}`, { method: "DELETE" });
-      setCharacters(prev => prev.filter(c => c.id !== id));
+      deleteCharacter(id);
     } catch { setError("Failed to delete."); }
   };
 
@@ -365,9 +319,9 @@ export function PartyWidget() {
           <p className="text-xs font-semibold text-emerald-400 mb-2">New Character</p>
           <FormFields f={form} setF={setForm} />
           <div className="flex gap-1 mt-2">
-            <button onClick={save} disabled={saving || !form.name.trim()}
+            <button onClick={save} disabled={!form.name.trim()}
               className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
-              {saving ? "Saving…" : "Save Character"}
+              Save Character
             </button>
             <button onClick={() => setShowAdd(false)}
               className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">
@@ -379,9 +333,7 @@ export function PartyWidget() {
 
       {/* Character list */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-        {loading && <div className="text-center py-4 text-gray-500 text-xs">Loading…</div>}
-
-        {!loading && characters.length === 0 && !showAdd && (
+        {characters.length === 0 && !showAdd && (
           <div className="text-center py-6 flex flex-col items-center gap-2">
             <Users className="w-8 h-8 text-gray-700" />
             <p className="text-xs text-gray-500">No characters yet</p>
@@ -395,9 +347,9 @@ export function PartyWidget() {
               <div className="p-2">
                 <FormFields f={editForm} setF={setEditForm} />
                 <div className="flex gap-1 mt-2">
-                  <button onClick={saveEdit} disabled={saving}
+                  <button onClick={saveEdit}
                     className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold">
-                    {saving ? "Saving…" : "Save"}
+                    Save
                   </button>
                   <button onClick={() => setEditingId(null)}
                     className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400">

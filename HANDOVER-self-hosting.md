@@ -166,22 +166,22 @@ from the network to build them.
 
 Do not delete the server yet — get the frontend fully working without it first.
 
-- [ ] **Establish a shared Party store** in localStorage (versioned key, e.g. `dm-party-v1`)
+- [x] **Establish a shared Party store** in localStorage (versioned key, e.g. `dm-party-v1`)
       with a small typed helper for read/write. Both Party and Initiative use it so
       "add character to initiative" still works.
-- [ ] **PartyWidget**: replace `/api/characters` GET/POST/PUT/DELETE with the localStorage
+- [x] **PartyWidget**: replace `/api/characters` GET/POST/PUT/DELETE with the localStorage
       store; replace `/api/weapons/search` and `/api/weapons/by-names` with in-memory
       filtering over the new weapons dataset.
-- [ ] **BestiaryWidget**: replace the two `/api/monsters/search` fetches with an in-memory
+- [x] **BestiaryWidget**: replace the two `/api/monsters/search` fetches with an in-memory
       filter over `bestiaryData`.
-- [ ] **InitiativeWidget**: replace `/api/monsters/search` with the local filter; replace
+- [x] **InitiativeWidget**: replace `/api/monsters/search` with the local filter; replace
       `/api/characters` with the shared Party store.
-- [ ] **InitiativeWidget: persist live combat state** to a versioned localStorage key —
+- [x] **InitiativeWidget: persist live combat state** to a versioned localStorage key —
       combatant list, turn order, current round, and per-combatant HP — so stopping the
       server mid-combat and relaunching resumes the encounter intact. (Notepad and grid
       layout already persist; confirm they still do after the rewrites.)
-- [ ] Confirm the DOM `CustomEvent` wiring (Party → Initiative, Initiative → Bestiary) still fires.
-- [ ] Remove now-dead imports of `@workspace/api-client-react` / react-query data hooks
+- [x] Confirm the DOM `CustomEvent` wiring (Party → Initiative, Initiative → Bestiary) still fires.
+- [x] Remove now-dead imports of `@workspace/api-client-react` / react-query data hooks
       from these widgets.
 
 **Verify:** with the API server **stopped**, all 7 widgets work end to end in `pnpm dev`.
@@ -380,3 +380,67 @@ place. Spot checks: Aboleth (XMM stat block intact, clean text); Fireball (corre
 Sorcerer + Wizard); Cure Wounds (Artificer/Bard/Cleric/Druid/Paladin/Ranger); Eldritch Blast
 (Warlock only); Longsword (1d8 slashing, Versatile 1d10, 15gp); Pech (CR 2, source "Creature
 Codex", AC 15 — round-tripped from the CSV with no enrichment).
+
+### Phase 2
+
+**Shared infrastructure (two new lib modules):**
+
+- [artifacts/dm-screen/src/lib/partyStore.ts](artifacts/dm-screen/src/lib/partyStore.ts) — versioned
+  localStorage CRUD for the Party roster (`dm-party-v1`). Exposes `loadParty`, `addCharacter`,
+  `updateCharacter`, `deleteCharacter`, plus a React hook `useParty()` that subscribes to a
+  `dm-party-changed` CustomEvent the store dispatches on every mutation. This is required because
+  the browser's native `storage` event doesn't fire for same-tab writes, and both Party and
+  Initiative widgets need to see each other's changes live.
+- [artifacts/dm-screen/src/lib/monsterSearch.ts](artifacts/dm-screen/src/lib/monsterSearch.ts) —
+  unified search over `bestiaryData` (40 rich) + `monsterIndex` (2,158 thin). Returns a single
+  `MonsterSearchHit[]` shape; rich entries are prioritized when both datasets match the same name.
+  Used by Initiative for autocomplete; Bestiary inlines its own merge logic but could be
+  consolidated here later.
+
+**Widget rewrites (no behavioral changes; only data plumbing):**
+
+- [PartyWidget.tsx](artifacts/dm-screen/src/components/widgets/PartyWidget.tsx) — `/api/characters`
+  CRUD → `partyStore` calls. `/api/weapons/search` debounced fetch → in-memory filter over the new
+  `weaponsData` (251 weapons; debounce kept short at 80ms just to coalesce keystrokes). The "batch
+  resolve weapon names → stats" call (`/api/weapons/by-names`) is gone; replaced with a single
+  build-time `Map<lowerName, Weapon>` built once at module scope. `loading`/`saving` state removed
+  because localStorage is synchronous.
+- [BestiaryWidget.tsx](artifacts/dm-screen/src/components/widgets/BestiaryWidget.tsx) — both
+  `/api/monsters/search` fetches replaced with `bestiaryData` filtering merged with a thin
+  `monsterIndex` filter (capped at 200 hits per query). The `target` jump from Initiative now
+  resolves synchronously via a name → rich/thin lookup. The "Searching database…" pulse text and
+  `dbLoading` state are gone.
+- [InitiativeWidget.tsx](artifacts/dm-screen/src/components/widgets/InitiativeWidget.tsx) —
+  monster search uses `searchMonsters` over the local index; party tab uses `useParty()`.
+  Combat-state keys are bumped to versioned form (`dm-initiative-v1`, `dm-initiative-turn-v1`,
+  `dm-round-v1`) per the plan, with a one-shot legacy read from the unversioned keys so a DM with
+  an encounter in progress at upgrade time doesn't lose it. The combatant list, turn index, round
+  counter, *and* per-combatant HP all live in `dm-initiative-v1` (HP is a field on each Combatant
+  — already covered by the existing schema). Notepad (`dm-notepad`) and the grid layout
+  (`dm-tiles-v3`, `dm-grid-cols`, `dm-grid-rows`) were not touched and still persist.
+
+**useLocalStorage hook tweak.** Extended to accept a lazy `() => T` initializer in addition to a
+plain T, so the legacy-key fallback can be deferred. The eager-form call sites are unaffected.
+
+**CustomEvent wiring confirmed intact.** `dm-add-to-initiative` (Party → Initiative) at
+PartyWidget.tsx:254 and InitiativeWidget.tsx:103–113. `dm-open-bestiary` (Initiative → Bestiary) at
+InitiativeWidget.tsx:394 and App.tsx:47–48. A third event was added: `dm-party-changed` (PartyStore
+→ both widgets via `useParty`).
+
+**`@workspace/api-client-react` / react-query removal.** No usages anywhere in
+`artifacts/dm-screen/src/`. The two deps remain in `artifacts/dm-screen/package.json` and will be
+deleted in Phase 3 along with the lib packages themselves.
+
+**Bundle size impact.** dm-screen production JS goes from 934 KB raw / 251 KB gzipped (Phase 1)
+to **1,596 KB raw / 354 KB gzipped** (+103 KB gz). The increase is the same data the widgets used
+to fetch on-demand now being tree-shake-resistant inside their bundles. Phase 6 (PWA) and any
+later route-level code-splitting can address it.
+
+**Verified:**
+- `pnpm run typecheck` → green.
+- `PORT=5173 BASE_PATH=/ pnpm run build` → green.
+- Production bundle scanned: **zero `/api/` strings** survive (`grep "/api/" dist/public/assets/*.js` = 0).
+- Dev server starts with no api-server process running (`PORT=5174 BASE_PATH=/ pnpm dev` → HTTP
+  200 on `/`, correct page title).
+- Visual in-browser verification is left to the user — there is no automated UI test in this
+  repo.
