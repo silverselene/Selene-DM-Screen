@@ -190,16 +190,16 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 3 — Remove backend & DB packages
 
-- [ ] Delete `artifacts/api-server`, `lib/db`, `lib/api-spec`, `lib/api-client-react`, `lib/api-zod`.
-- [ ] Remove `@workspace/api-client-react` (and any other removed workspace deps) from
+- [x] Delete `artifacts/api-server`, `lib/db`, `lib/api-spec`, `lib/api-client-react`, `lib/api-zod`.
+- [x] Remove `@workspace/api-client-react` (and any other removed workspace deps) from
       `artifacts/dm-screen/package.json` and from its `tsconfig.json` `references`.
-- [ ] Remove the API-codegen / drizzle / DATABASE_URL references from root `package.json`
+- [x] Remove the API-codegen / drizzle / DATABASE_URL references from root `package.json`
       scripts, `tsconfig.json` project references, and `pnpm-workspace.yaml` catalog entries
       that are now unused.
-- [ ] Remove `artifacts/mockup-sandbox` entirely (dev-only scratch space, not part of the
+- [x] Remove `artifacts/mockup-sandbox` entirely (dev-only scratch space, not part of the
       shipped app). Delete the directory, drop it from `pnpm-workspace.yaml`, and remove any
       root tsconfig/script references to it. (Recoverable from git history if ever needed.)
-- [ ] `pnpm install` to refresh the lockfile.
+- [x] `pnpm install` to refresh the lockfile.
 
 **Verify:** `pnpm run typecheck` and `pnpm run build` pass with the backend gone.
 
@@ -444,3 +444,44 @@ later route-level code-splitting can address it.
   200 on `/`, correct page title).
 - Visual in-browser verification is left to the user — there is no automated UI test in this
   repo.
+
+### Phase 3
+
+Deletions (the directories will all be in the previous commit's git history if ever needed):
+
+- `artifacts/api-server/`            (Express + raw `pg.Pool` API)
+- `artifacts/mockup-sandbox/`        (Vite dev scratch — never shipped)
+- `lib/db/`                          (Drizzle schema template — was empty)
+- `lib/api-spec/`                    (OpenAPI + Orval config)
+- `lib/api-client-react/`            (generated React Query hooks)
+- `lib/api-zod/`                     (generated Zod schemas)
+- the now-empty `lib/` directory     (removed once all four sub-packages were gone)
+
+Configuration cleanups:
+
+- `artifacts/dm-screen/package.json` — dropped `@tanstack/react-query` and
+  `@workspace/api-client-react` from devDependencies.
+- `artifacts/dm-screen/tsconfig.json` — removed the `references` block (its single entry
+  pointed at the deleted `lib/api-client-react`).
+- Root `tsconfig.json` — emptied the `references` array (all three entries pointed at deleted
+  lib packages).
+- `pnpm-workspace.yaml`:
+  - `packages:` — dropped the now-empty `lib/*` and the always-empty `lib/integrations/*`
+    globs; the workspace is now `artifacts/* + scripts`.
+  - `catalog:` — dropped the unused `@tanstack/react-query` and `drizzle-orm` entries. The
+    `@replit/vite-plugin-*` entries stay; Phase 4 removes them along with the rest of the
+    Replit machinery.
+- Root `package.json` — already had no API-codegen / Drizzle / `DATABASE_URL` references, so
+  nothing to remove there.
+
+**Lockfile.** `pnpm install` removed **226 packages** (net `-226 / +3`) — the entire
+api-server + drizzle + Orval + tanstack-query + lots-of-transitive-pg tree is gone. Three
+workspace projects remain (root + dm-screen + scripts; the lockfile reports `Scope: 2 of 3`
+because the root has no scripts of its own).
+
+**Verified:**
+- `pnpm install` → green; supply-chain release-age check still enforced (`minimumReleaseAge:
+  1440` untouched).
+- `pnpm run typecheck` → green for dm-screen and scripts.
+- `PORT=5173 BASE_PATH=/ pnpm run build` → green. Bundle unchanged from Phase 2 (1,596 KB raw
+  / 354 KB gzipped) — Phase 3 deleted infrastructure, not bundled code.
