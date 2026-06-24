@@ -2,50 +2,21 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const rawPort = process.env.PORT;
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
+// PORT and BASE_PATH are both optional. Useful overrides for self-hosters
+// behind a reverse proxy or sub-path, but the defaults are sane for a clean
+// `pnpm install && pnpm dev` checkout with no environment set.
+const DEFAULT_PORT = 5173;
+const portEnv = process.env["PORT"];
+const port = portEnv ? Number(portEnv) : DEFAULT_PORT;
+if (!Number.isFinite(port) || port <= 0) {
+  throw new Error(`Invalid PORT value: "${portEnv}"`);
 }
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+const basePath = process.env["BASE_PATH"] ?? "/";
 
 export default defineConfig({
   base: basePath,
-  plugins: [
-    react(),
-    tailwindcss(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
@@ -65,12 +36,6 @@ export default defineConfig({
     fs: {
       strict: true,
       deny: ["**/.*"],
-    },
-    proxy: {
-      "/api": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-      },
     },
   },
   preview: {

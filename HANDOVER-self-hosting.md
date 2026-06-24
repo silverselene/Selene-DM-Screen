@@ -207,12 +207,12 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 4 — De-Replit & sane defaults
 
-- [ ] `artifacts/dm-screen/vite.config.ts`: stop throwing on missing `PORT`/`BASE_PATH`;
+- [x] `artifacts/dm-screen/vite.config.ts`: stop throwing on missing `PORT`/`BASE_PATH`;
       default `PORT` (e.g. 5173) and `base` to `'/'`. Remove the `/api` dev proxy.
-- [ ] Remove the `@replit/vite-plugin-*` plugins and their deps.
-- [ ] Delete `.replit`, `.replitignore`, `replit.md`, `scripts/post-merge.sh`, and the
+- [x] Remove the `@replit/vite-plugin-*` plugins and their deps.
+- [x] Delete `.replit`, `.replitignore`, `replit.md`, `scripts/post-merge.sh`, and the
       `[deployment]`/`[nix]`/`[agent]` Replit assumptions.
-- [ ] Keep `minimumReleaseAge: 1440` in `pnpm-workspace.yaml` (supply-chain defense — do not remove).
+- [x] Keep `minimumReleaseAge: 1440` in `pnpm-workspace.yaml` (supply-chain defense — do not remove).
 
 **Verify:** a clean clone runs `pnpm install && pnpm dev` with **no env vars set**.
 
@@ -485,3 +485,43 @@ because the root has no scripts of its own).
 - `pnpm run typecheck` → green for dm-screen and scripts.
 - `PORT=5173 BASE_PATH=/ pnpm run build` → green. Bundle unchanged from Phase 2 (1,596 KB raw
   / 354 KB gzipped) — Phase 3 deleted infrastructure, not bundled code.
+
+### Phase 4
+
+`vite.config.ts` rewritten:
+
+- `PORT` and `BASE_PATH` are now both **optional**. `PORT` defaults to **5173**, `base` to
+  `'/'`. The throwing-on-missing-env guards from the Replit setup are gone. The numeric-port
+  validation stays.
+- All three `@replit/vite-plugin-*` imports/uses removed (`runtime-error-modal`,
+  `cartographer`, `dev-banner`), along with the `REPL_ID` env-var conditional. The plugin
+  block is now just `[react(), tailwindcss()]`.
+- The `/api → http://localhost:8080` dev proxy is gone — there is no backend to proxy to.
+
+Dependency cleanup:
+
+- `artifacts/dm-screen/package.json` drops `@replit/vite-plugin-cartographer`,
+  `-dev-banner`, and `-runtime-error-modal`.
+- `pnpm-workspace.yaml` drops the three matching catalog entries.
+
+Files deleted:
+
+- `.replit`, `.replitignore`, `replit.md`, `scripts/post-merge.sh`.
+
+`minimumReleaseAge: 1440` left in place as required.
+
+**One thing left alone:** the `// @replit …` annotation comments inside the shadcn-derived
+`src/components/ui/badge.tsx` and `button.tsx` are *just code comments* documenting
+"this is a Replit customization vs. vanilla shadcn." They don't change any behavior or pull
+in any Replit infrastructure. Removing them would be cosmetic grooming, not de-Replit-ing —
+left untouched.
+
+Lockfile: `pnpm install` removed 4 more packages (the three Replit plugins + a transitive).
+
+**Verified:**
+- `env -i HOME=… PATH=… pnpm --filter @workspace/dm-screen run dev` (i.e. an **empty
+  environment**, no `PORT`/`BASE_PATH`/`NODE_ENV`/anything) → Vite serves the SPA on
+  `http://localhost:5173/` with HTTP 200 and the correct page title.
+- `env -i HOME=… PATH=… pnpm run typecheck` → green.
+- `env -i HOME=… PATH=… pnpm run build` → green. Bundle unchanged from Phase 2/3 (354 KB
+  gzipped).

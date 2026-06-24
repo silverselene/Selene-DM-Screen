@@ -32,9 +32,6 @@ packages:
   - scripts
 
 catalog:
-  '@replit/vite-plugin-cartographer': ^0.5.0
-  '@replit/vite-plugin-dev-banner': ^0.1.1
-  '@replit/vite-plugin-runtime-error-modal': ^0.0.6
   '@tailwindcss/vite': ^4.1.14
   '@types/node': ^25.3.3
   '@types/react': ^19.2.0
