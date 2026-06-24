@@ -1,0 +1,17 @@
+services:
+  dm-screen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: selene-dm-screen:latest
+    container_name: selene-dm-screen
+    restart: unless-stopped
+    ports:
+      # host:container. Change the host side if 5173 is already taken.
+      - "5173:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

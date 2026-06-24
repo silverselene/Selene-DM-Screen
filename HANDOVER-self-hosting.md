@@ -242,10 +242,10 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 7 — Docker
 
-- [ ] Multi-stage `Dockerfile`: stage 1 `node` builds the SPA; stage 2 copies `dist` into a
+- [x] Multi-stage `Dockerfile`: stage 1 `node` builds the SPA; stage 2 copies `dist` into a
       small static server image (nginx or `caddy`/`busybox httpd`).
-- [ ] `docker-compose.yml`: single service, one published port, no DB.
-- [ ] `.dockerignore` (allowlist the build inputs; exclude `node_modules`, `.git`, etc.).
+- [x] `docker-compose.yml`: single service, one published port, no DB.
+- [x] `.dockerignore` (allowlist the build inputs; exclude `node_modules`, `.git`, etc.).
 
 **Verify:** `docker compose up` serves the working app on the mapped port from a clean checkout.
 
@@ -617,3 +617,49 @@ test in the plan's Verify box is a manual step. The mechanical guarantees that m
 (no `/api/*` requests survive after Phase 2, no CDN fetches except Google Fonts which are
 covered by runtime caching), and the SPA falls back to `index.html` for any unknown
 navigation.
+
+### Phase 7
+
+Four new files:
+
+- `Dockerfile` — multi-stage. Build on `node:24-bookworm-slim`, runtime on `nginx:alpine`.
+  **Why glibc for the build:** `pnpm-workspace.yaml`'s `overrides:` block still excludes
+  the `linux-x64-musl` variants of rollup / esbuild / lightningcss / oxide (a hold-over
+  from when the workspace was Replit-only). `node:24-alpine` (musl) would fail to install
+  the matching binaries. `bookworm-slim` ships glibc, which matches the `linux-x64-gnu`
+  binaries that aren't excluded. The runtime stage has no node deps so musl is fine for
+  `nginx:alpine`. `pnpm` is materialised by `corepack enable` from the pinned lockfile.
+- `artifacts/dm-screen/docker/nginx.conf` — SPA-aware site config. gzip on for text
+  responses (the ~1.6 MiB JS → ~354 KiB on the wire); `try_files $uri $uri/ /index.html`
+  for SPA fallback (future-proof, the app has no client-side routing today); long-lived
+  `immutable` cache for `/assets/*` (Vite emits hashed filenames); `no-cache` for `sw.js`
+  / `registerSW.js` / `manifest.webmanifest` / `index.html` so PWA updates land on the
+  next reload instead of getting pinned by an intermediate cache.
+- `docker-compose.yml` — single `dm-screen` service, no DB, published `5173:80`,
+  `restart: unless-stopped`, `wget`-based healthcheck on `/`. Host port matches the
+  dev/preview port for muscle-memory consistency.
+- `.dockerignore` — `**/node_modules`, `**/dist`, `.git`, editor + OS noise, the Docker
+  scaffolding itself (no point shipping the Dockerfile into the image), and the intake
+  docs (HANDOVER, CLAUDE.md). The build context stays small and never picks up local
+  build artefacts.
+
+**ARM64 caveat.** The remaining platform-binary overrides also exclude `linux-arm64`
+variants. Building this image on a Raspberry Pi or AWS Graviton will fail until those
+lines are dropped from `pnpm-workspace.yaml`. Cleaning that up is out of scope for
+Phase 7 (Phase 0 only removed the darwin-arm64 lines needed to unblock local dev); a
+follow-up can extend the same treatment to linux-arm64.
+
+**Verified mechanically (CLI):**
+- `docker compose config` parses cleanly and resolves service name (`selene-dm-screen`),
+  ports (`5173:80`), and healthcheck.
+- All four artefacts present on disk; nginx config syntactically reasonable.
+- `node:24-bookworm-slim` exists for linux/amd64 (verified via
+  `docker buildx imagetools inspect`).
+
+**Not verified mechanically — needs a running Docker daemon.** The plan's Verify box
+(`docker compose up` from a clean checkout) requires the daemon to actually run the
+build. The Docker CLI is installed in this environment but the daemon isn't up, so the
+actual smoke test is left to the user. Mechanical proof points that make it
+should-work: compose YAML validates, both base images exist on Docker Hub,
+`pnpm install --frozen-lockfile` will fail loudly if the lockfile drifts, and the
+in-image build runs the same `pnpm build` we've verified green for several phases now.
