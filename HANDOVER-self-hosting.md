@@ -220,7 +220,7 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 5 — Run scripts (dev / build / preview)
 
-- [ ] Root `package.json`: add convenient passthrough scripts so the owner can run from root:
+- [x] Root `package.json`: add convenient passthrough scripts so the owner can run from root:
       `dev` (vite dev), `build` (vite build), `preview`/`serve` (vite preview of `dist`).
 - [ ] Document the exact commands in the README (Phase 8).
 
@@ -525,3 +525,23 @@ Lockfile: `pnpm install` removed 4 more packages (the three Replit plugins + a t
 - `env -i HOME=… PATH=… pnpm run typecheck` → green.
 - `env -i HOME=… PATH=… pnpm run build` → green. Bundle unchanged from Phase 2/3 (354 KB
   gzipped).
+
+### Phase 5
+
+Three new passthrough scripts in the root `package.json`:
+
+- `pnpm dev`     → `pnpm --filter @workspace/dm-screen run dev`
+- `pnpm preview` → `pnpm --filter @workspace/dm-screen run serve` (vite preview of `dist/`)
+- `pnpm serve`   → same as `preview`, alias kept for the README later
+
+The existing root `pnpm build` (`pnpm run typecheck && pnpm -r --if-present run build`) was
+already a root-level entry point, so it didn't need a new wrapper.
+
+The one box left unticked in this phase ("Document the exact commands in the README") is
+explicitly owned by Phase 8 per the source plan.
+
+**Verified** with an empty environment (`env -i HOME=… PATH=… …`):
+- `pnpm dev` from repo root → Vite serves `http://localhost:5173/` HTTP 200, correct title.
+- `pnpm build` from repo root → typecheck + Vite build both green.
+- `pnpm preview` from repo root → Vite preview serves the freshly built `dist/public/` on
+  the same default port, HTTP 200, correct title.
