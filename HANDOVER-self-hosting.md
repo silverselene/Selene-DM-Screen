@@ -230,10 +230,10 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 6 — Offline PWA (stretch, but aligns with "reliable at the table")
 
-- [ ] Add `vite-plugin-pwa` (or a hand-written service worker) to precache the app shell
+- [x] Add `vite-plugin-pwa` (or a hand-written service worker) to precache the app shell
       and the bundled data so the screen works fully offline after first load.
-- [ ] Provide `manifest.webmanifest` + icons; set theme color.
-- [ ] Include a clean update strategy (hashed assets; activate-on-reload) so stale caches
+- [x] Provide `manifest.webmanifest` + icons; set theme color.
+- [x] Include a clean update strategy (hashed assets; activate-on-reload) so stale caches
       don't strand the user on an old build.
 
 **Verify:** load once online, go offline (devtools), reload — app and all data still work.
@@ -545,3 +545,75 @@ explicitly owned by Phase 8 per the source plan.
 - `pnpm build` from repo root → typecheck + Vite build both green.
 - `pnpm preview` from repo root → Vite preview serves the freshly built `dist/public/` on
   the same default port, HTTP 200, correct title.
+
+### Phase 6
+
+Wired `vite-plugin-pwa@^1.3.0` (chosen because it owns the Workbox + manifest +
+SW-registration story in one plugin; the alternative was a hand-written service worker plus a
+manual manifest, which would have been ~150 lines of glue we'd then need to maintain).
+
+`vite.config.ts` plugin block now includes a `VitePWA({...})` entry with:
+
+- `registerType: "autoUpdate"` and `injectRegister: "auto"` — the plugin auto-injects
+  `<script src="/registerSW.js">` into the built `index.html` and the SW activates on the
+  next page load when a new build is detected.
+- `cleanupOutdatedCaches: true` (Workbox option) so old precached assets are pruned on every
+  new SW activation. Combined with Vite's hashed asset filenames, this is the "stale caches
+  can't strand the DM" guarantee.
+- `clientsClaim: true` — the new SW takes control of open tabs immediately on activation.
+  With the autoUpdate registerType the plugin also emits `self.skipWaiting()` in the SW,
+  giving us proper activate-on-reload semantics (DM reloads the tab → new code is live; they
+  don't need to close every tab first).
+- `navigateFallback: "index.html"` — SPA routing.
+- `maximumFileSizeToCacheInBytes: 4 MiB` — the dm-screen JS bundle is ~1.6 MiB raw, so the
+  default 2 MiB cap is uncomfortably close. 4 MiB gives headroom for future growth without
+  spilling into runtime caching.
+- `globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff,woff2}"]` — precaches every
+  bundled asset. The reference data is part of the JS bundle, so it's covered too.
+- Two `runtimeCaching` rules for the Google Fonts stylesheet (`StaleWhileRevalidate`) and
+  the woff2 files (`CacheFirst`, 30 entries, 1 year) so the Inter font keeps working when
+  offline.
+
+Manifest values (`name`, `short_name`, `description`, `theme_color: #1a0a2e`,
+`background_color: #050009`, `display: standalone`, `scope: .`, `start_url: .`).
+
+Icons (committed under `artifacts/dm-screen/public/`):
+
+- `favicon.svg` — 64×64 themed icon (deep amethyst gradient, amethyst stroke,
+  serif "DM" wordmark). Replaces the old orange Replit placeholder.
+- `pwa-icon.svg` — 512×512 maskable variant with the badge centred inside the
+  80% safe area so OS-applied masks (Android round, iOS squircle) don't crop the wordmark.
+
+**Why SVG-only, no PNG variants.** Modern browsers and PWA installers (Chrome, Firefox,
+Edge, recent Safari) honour SVG icons in `manifest.webmanifest`. Older iOS Safari versions
+may want a PNG specifically for the home-screen shortcut, and Windows install dialogs
+sometimes prefer raster — those are minor cosmetic regressions, not functional offline
+breakage. Avoided adding a build-time PNG-render dependency (`@vite-pwa/assets-generator` /
+`sharp`) for now; a follow-up can drop in PNGs if any specific install target loses fidelity.
+
+**Build artefacts in `dist/public/`** after `pnpm build`:
+
+- `sw.js` (1.7 KB) — generated Workbox SW.
+- `workbox-<hash>.js` (22 KB) — Workbox runtime.
+- `manifest.webmanifest` (562 B) — PWA manifest.
+- `registerSW.js` (134 B) — registers the SW on `window.load`.
+
+Workbox precache manifest size on this build: **9 entries, 1,694 KiB** — the app shell
+(index.html), the hashed CSS+JS bundles (which carry all of bestiary/spells/weapons/
+monsterIndex data), both icons, the manifest, and the SW registrar.
+
+**Verified mechanically (CLI):**
+- `pnpm build` → green; PWA plugin reports `precache 9 entries (1694.48 KiB)`.
+- `pnpm preview` then `curl -I` each PWA artefact: `manifest.webmanifest` (HTTP 200,
+  Content-Type `application/manifest+json`), `sw.js` (200, `text/javascript`),
+  `registerSW.js` (200, `text/javascript`), both SVG icons (200, `image/svg+xml`).
+- Built `index.html` now contains `<link rel="manifest" href="/manifest.webmanifest">` and
+  `<script id="vite-plugin-pwa:register-sw" src="/registerSW.js">`.
+
+**Not verified mechanically — requires a real browser (Chrome DevTools → Application →
+Service Workers → Offline → reload).** The "load once online, go offline, reload" smoke
+test in the plan's Verify box is a manual step. The mechanical guarantees that make it
+*should-work*: every URL the SPA fetches at runtime is in the precache manifest
+(no `/api/*` requests survive after Phase 2, no CDN fetches except Google Fonts which are
+covered by runtime caching), and the SPA falls back to `index.html` for any unknown
+navigation.
