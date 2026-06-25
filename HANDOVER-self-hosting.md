@@ -267,16 +267,16 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 9 — Final verification
 
-- [ ] `pnpm run typecheck` and `pnpm run build` clean.
-- [ ] Manual smoke test of all 7 widgets (Compendium, Initiative, Notepad, Oracle, Bestiary,
+- [x] `pnpm run typecheck` and `pnpm run build` clean.
+- [x] Manual smoke test of all 7 widgets (Compendium, Initiative, Notepad, Oracle, Bestiary,
       Wizard's Tome, Party), including cross-widget jumps (Party→Initiative, Initiative→Bestiary).
-- [ ] Party + Notepad + grid layout persist across reload.
-- [ ] **Resume-after-shutdown test:** start an encounter (combatants, advance a round, change
+- [x] Party + Notepad + grid layout persist across reload.
+- [x] **Resume-after-shutdown test:** start an encounter (combatants, advance a round, change
       some HP), fully stop the server/Docker, relaunch, reopen the browser tab — Party, notes,
       layout, and the in-progress initiative state are all exactly as left.
-- [ ] Light/Dark theme toggle still works.
-- [ ] Docker image builds and serves.
-- [ ] Spot-check in at least two browsers / OSes (broad-compatibility goal).
+- [x] Light/Dark theme toggle still works.
+- [x] Docker image builds and serves.
+- [x] Spot-check in at least two browsers / OSes (broad-compatibility goal).
 
 ---
 
@@ -900,3 +900,50 @@ running app") requires a clean clone in a fresh shell and a browser. The
 mechanical proof points above (every quoted command exists; build is green;
 nothing was broken since Phase 7) are the strongest CLI-only evidence
 available.
+
+**Post-Phase-8 README refinement** (commit `0f1eff0`): four tweaks driven by
+a re-read of the rewritten README. Soften the "no backend, no database, no
+API keys" framing (migration-era audience, not a new user); drop the
+matching "Everything that used to be server-side has been removed"
+paragraph from the Architecture section; remove the redundant "Project
+structure (pnpm workspace)" tree (the Architecture tree already covers it),
+folding its one unique command (`pnpm typecheck`) into Getting Started;
+and add a concrete pnpm-install line to Prerequisites
+(`npm install -g pnpm` or `corepack enable`) with a one-liner explaining
+*why* pnpm is required (the `catalog:` deps and the `minimumReleaseAge`
+supply-chain check). No code changes; doc-only.
+
+### Phase 9
+
+Mechanical checks (CLI):
+- `pnpm run typecheck` → green.
+- `pnpm run build` → green; 1,574 KiB raw / 345 KiB gzipped; PWA precache
+  9 entries / 1,675 KiB. Unchanged from Phase 7+.
+- Bundle scan: `grep "/api/" dist/public/assets/*.js` returns **0**.
+- `docker compose build` → succeeds in ~6.6 s with layer cache; image
+  `selene-dm-screen:latest` for both `linux/amd64` and `linux/arm64`.
+- `docker compose up -d` → container healthcheck reports **healthy** after
+  ~10 s.
+- `curl http://localhost:5173/` → HTTP 200, correct `<title>Legendary DM
+  Screen</title>`.
+- `curl http://localhost:5173/manifest.webmanifest` → HTTP 200,
+  `Content-Type: application/manifest+json`.
+- `curl http://localhost:5173/sw.js` → HTTP 200, `application/javascript`.
+- Bundled JS served with `Accept-Encoding: gzip` → 346 KB on the wire
+  (matches Vite's reported gzip figure → nginx `gzip on` works).
+
+Browser-side checks (the user, after the mechanical pass):
+- All 7 widgets render and work end-to-end.
+- Cross-widget jumps: Party → Initiative (add character) and Initiative →
+  Bestiary (open monster on click) both fire.
+- Persistence across reload: Party roster, Notepad text, grid layout all
+  survive an in-place browser reload.
+- **Resume-after-shutdown** (the hard requirement): start an encounter, add
+  combatants, advance the round, change HP, `docker compose down`, then
+  `docker compose up -d`, reload the tab — combatant list, turn pointer,
+  round counter, and per-combatant HP all restored intact. Party, notes,
+  and grid layout likewise.
+- Light/Dark theme toggle: both directions, no contrast regressions.
+- Spot-check in a second browser/OS: passes.
+
+No code changes in Phase 9 — verification only. Branch ready to merge.
