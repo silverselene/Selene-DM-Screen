@@ -4,17 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. Two deployable artifacts plus a sandbox, backed by a shared Drizzle/Postgres library and an OpenAPI-driven client.
+pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required.
 
-> ⚠️ `replit.md` describes an older "no backend, 4 widgets, localStorage only" version and is **out of date**. The current architecture has a Postgres-backed Express API server (see `README.md` and `artifacts/api-server`). When the two disagree, trust `README.md` and the code.
+History: this used to be a three-tier app (React + Express + PostgreSQL on Replit). The migration to a fully static, self-hostable SPA is documented in [HANDOVER-self-hosting.md](HANDOVER-self-hosting.md) — that file is the source of truth for *why* things are the way they are. Anything pre-migration (the API server, Drizzle, the OpenAPI/Orval codegen, the mockup sandbox, Replit infra) has been deleted; if you find references to them in old commits or comments, they're historical.
 
-## Required environment variables
+## No required environment variables
 
-Most packages fail fast at boot if these are missing:
-
-- `DATABASE_URL` — PostgreSQL connection string. Required by `@workspace/db`, `@workspace/api-server`, and `drizzle-kit push`.
-- `PORT` — both `dm-screen` (Vite) and `mockup-sandbox` (Vite) and `api-server` throw if `PORT` is unset. The frontend convention is API on `8080`, Vite proxies `/api` → `http://localhost:8080` (see `artifacts/dm-screen/vite.config.ts`).
-- `BASE_PATH` — required by both Vite configs (used as the `base` for the bundle).
+The app runs from a clean clone with `pnpm install && pnpm dev` and zero env vars. `vite.config.ts` defaults `PORT` to `5173` and `base` to `'/'`.
 
 ## Commands
 
@@ -24,99 +20,113 @@ Always use `pnpm` — the root `preinstall` script rejects npm/yarn.
 # Install
 pnpm install
 
-# Typecheck (root): builds libs then typechecks each artifact/script
-pnpm run typecheck
+# Dev / build / preview (all from the repo root)
+pnpm dev          # Vite dev server on http://localhost:5173
+pnpm build        # typecheck + vite build → artifacts/dm-screen/dist/public/
+pnpm preview      # vite preview of the built bundle
 
-# Build everything (typechecks first, then runs `build` in each package)
-pnpm run build
+# Typecheck only
+pnpm typecheck                                       # whole workspace, project-references-aware
+pnpm --filter @workspace/dm-screen run typecheck     # single package
 
-# Dev: run API and frontend in separate terminals
-PORT=8080 DATABASE_URL=... pnpm --filter @workspace/api-server run dev
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/dm-screen run dev
+# Regenerate bundled reference data from the local ../5etools-src clone (tag v2.31.0)
+pnpm --filter @workspace/scripts run generate:all
+# Or individually:
+pnpm --filter @workspace/scripts run generate:spells
+pnpm --filter @workspace/scripts run generate:monsters
+pnpm --filter @workspace/scripts run generate:monster-index
+pnpm --filter @workspace/scripts run generate:weapons
 
-# Typecheck a single package
-pnpm --filter @workspace/dm-screen run typecheck
-pnpm --filter @workspace/api-server run typecheck
-
-# Push Drizzle schema to the DB
-pnpm --filter @workspace/db run push
-pnpm --filter @workspace/db run push-force   # destructive — be careful
-
-# Regenerate API client + Zod schemas from lib/api-spec/openapi.yaml
-pnpm --filter @workspace/api-spec run codegen
-
-# Seed data (run from artifacts/api-server)
-tsx src/seed.ts                              # monsters from bestiary.ts
-tsx src/seed-csv.ts                          # monsters from attached CSV
-node scripts/import-spells.mjs               # 557 spells
-node scripts/import-weapons.mjs              # 250 weapons
+# Docker
+docker compose up --build                            # http://localhost:5173 (host) → 80 (nginx container)
 ```
 
-There is no test runner configured in this repo.
+There is no test runner configured in this repo. Verification is manual + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero).
 
 ## Repository layout
 
 ```
 artifacts/
-  api-server/     Express 5 + node-postgres (raw pg.Pool, not Drizzle)
-  dm-screen/      React 19 + Vite + Tailwind v4 — the DM dashboard
-  mockup-sandbox/ Vite playground that auto-discovers UI mockups
-lib/
-  db/             Drizzle schema + pg Pool (currently empty schema)
-  api-spec/       OpenAPI 3.1 spec + Orval config
-  api-client-react/  Generated React Query hooks (from Orval, do not edit by hand)
-  api-zod/        Generated Zod schemas (from Orval, do not edit by hand)
-scripts/          Standalone tsx scripts, treated as one workspace package
+  dm-screen/                  React 19 + Vite + Tailwind v4 — the only deployable
+    src/data/                 Bundled reference data (spells, bestiary, monsterIndex, weapons, …)
+    src/lib/                  localStorage stores, backup/restore, shared UI primitives
+    src/components/widgets/   The seven widgets
+    public/                   PWA icons + static assets
+    docker/nginx.conf         SPA-aware nginx config used by the Docker image
+scripts/                      Standalone tsx data generators (offline, read from ../5etools-src)
+attached_assets/              Source CSV for the 2,158-row monster index
+Dockerfile, docker-compose.yml, .dockerignore
+HANDOVER-self-hosting.md      Migration log + per-phase deviations
 ```
 
 ## TypeScript / project references
 
-Every package extends `tsconfig.base.json` (`composite: true`, `moduleResolution: "bundler"`, `customConditions: ["workspace"]`). The root `tsconfig.json` lists `lib/*` as project references.
+Every package extends `tsconfig.base.json` (`composite: true`, `moduleResolution: "bundler"`, `customConditions: ["workspace"]`). The root `tsconfig.json` currently has an empty `references` array — all the old `lib/*` packages are gone.
 
-- **Typecheck from the root** so cross-package types resolve correctly. Individual `pnpm --filter ... run typecheck` works because each package's `tsconfig.json` declares its `references`.
-- When package A starts importing from package B, add `{ "path": "../../lib/<b>" }` to A's `tsconfig.json` `references` array.
-- `tsc` is only used for type-checking and `.d.ts` emission. Bundling is handled by Vite (frontend) and esbuild via [artifacts/api-server/build.ts](artifacts/api-server/build.ts) (backend).
-
-## API codegen workflow
-
-The frontend does NOT hand-write API clients. The flow is:
-
-1. Edit [lib/api-spec/openapi.yaml](lib/api-spec/openapi.yaml).
-2. Run `pnpm --filter @workspace/api-spec run codegen`.
-3. Orval writes into `lib/api-client-react/src/generated/` (React Query hooks) and `lib/api-zod/src/generated/` (Zod schemas + TS types).
-4. The backend also imports schemas from `@workspace/api-zod` (e.g. [artifacts/api-server/src/routes/health.ts](artifacts/api-server/src/routes/health.ts)) so request/response shapes are shared.
-
-The OpenAPI `info.title` is forced to `"Api"` by a transformer — generated files assume this name. Don't rename it.
-
-## Backend split: raw pg vs Drizzle
-
-This is the most surprising thing in the codebase. The api-server currently uses raw `pg.Pool` queries from [artifacts/api-server/src/lib/db.ts](artifacts/api-server/src/lib/db.ts), targeting tables (`monsters`, `player_characters`, `weapons`, `spells`, etc.) that were created out-of-band — they are not yet declared in the Drizzle schema. [lib/db/src/schema/index.ts](lib/db/src/schema/index.ts) is intentionally empty (template only). Two consequences:
-
-- `drizzle-kit push` currently has nothing to push.
-- Route handlers are raw SQL — when adding a column, you must update both the DB and the route's SELECT/INSERT lists.
-
-When migrating to Drizzle, add the table to `lib/db/src/schema/`, export it from the schema index, and switch routes to `db.select(...)` against `@workspace/db`.
+- Typecheck from the root so workspace cross-references resolve. `pnpm --filter ... run typecheck` also works because each package declares its own references.
+- If you ever re-introduce a workspace library, add `{ "path": "..." }` to the importing package's `tsconfig.json` `references` array and to the root `tsconfig.json`.
+- `tsc` is only for type-checking and `.d.ts` emission. Bundling is handled by Vite.
 
 ## Frontend architecture (dm-screen)
 
 - Path alias: `@/* → src/*` and `@assets/* → ../../attached_assets/*`.
 - shadcn/ui (style: `new-york`) lives in `src/components/ui/`; do not hand-edit those — re-add via the shadcn CLI.
-- State lives in `localStorage` via the generic `useLocalStorage` hook. Keys are versioned (e.g. `dm-tiles-v3`) — bump the suffix when shape changes to avoid corrupt-state crashes on load.
-- **Cross-widget communication uses DOM CustomEvents on `window`**, not React context. Example: clicking a monster in the Initiative tracker dispatches `dm-open-bestiary` with `{ detail: { name } }`, and [App.tsx](artifacts/dm-screen/src/App.tsx) listens to auto-open the Bestiary widget. Search `window.dispatchEvent`/`addEventListener` to find the wiring.
-- The 3x3 (configurable 2–4 × 2–4) grid supports `colSpan`/`rowSpan` of 1 or 2; tiles spanned over are stored as `null` in the tiles array. Read [App.tsx](artifacts/dm-screen/src/App.tsx) before changing tile-resize logic — the `null` placeholders are easy to break.
-- Theme is dark by default, with a light "Midnight & Amethyst" alternate driven by the `light-mode` class on the root element. CSS variables (`--dm-bg-page`, `--dm-t3`, ...) live in `src/index.css`.
+- **All state lives in `localStorage`** via the generic `useLocalStorage` hook or one of the typed stores under `src/lib/` (`partyStore.ts`, `backup.ts`).
+  - Keys are **versioned** (e.g. `dm-tiles-v3`, `dm-party-v1`, `dm-initiative-v1`). **Bump the version suffix whenever the stored shape changes** to avoid corrupt-state crashes on load. Where helpful, read the legacy key once on first mount to migrate users with in-progress state.
+  - Every key uses the `dm-` prefix so the full-backup sweep in `src/lib/backup.ts` picks it up automatically — no central registry to update.
+  - Persisted state includes the in-progress Initiative tracker (combatant list, turn order, current round, per-combatant HP) so the DM can stop the server / Docker mid-encounter and resume intact.
+- **Cross-widget communication uses DOM CustomEvents on `window`**, not React context. Examples:
+  - `dm-add-to-initiative` (Party → Initiative)
+  - `dm-open-bestiary` (Initiative → Bestiary, listened to in [App.tsx](artifacts/dm-screen/src/App.tsx))
+  - `dm-party-changed` (PartyStore → both Party and Initiative widgets — required because the browser's native `storage` event doesn't fire for same-tab writes)
+  Search `window.dispatchEvent` / `addEventListener` to find the wiring. **Preserve this pattern** — don't refactor to context/props.
+- The grid (configurable 2–4 × 2–4) supports `colSpan` / `rowSpan` of 1 or 2; tiles spanned over are stored as `null` in the tiles array. Read [App.tsx](artifacts/dm-screen/src/App.tsx) before changing tile-resize logic — the `null` placeholders are easy to break. The grid wrapper has `minHeight: 0; minWidth: 0; overflow: hidden` to prevent tall widgets from pushing the row past its `1fr` track.
+- Theme is dark by default with a light "Midnight & Amethyst" alternate driven by the `light-mode` class on the root. CSS variables (`--dm-bg-page`, `--dm-t3`, ...) live in `src/index.css`.
+- Anchored dropdowns (autocomplete suggestion lists, comboboxes) portal via `src/lib/AnchoredDropdown.tsx` so they escape each tile's `overflow: hidden`.
 
-## mockup-sandbox
+## Bundled reference data
 
-A Vite app that auto-generates `src/.generated/mockup-components.ts` by scanning `src/components/mockups/**/*.tsx`. Files or folders prefixed with `_` are excluded. The Vite plugin in [mockupPreviewPlugin.ts](artifacts/mockup-sandbox/mockupPreviewPlugin.ts) regenerates on file add/remove and on dev-server 404s for the generated module. Don't commit changes to `src/.generated/`.
+| Dataset | File | Count | Source |
+|---|---|---|---|
+| Spells | `src/data/spells.ts` | 557 | 5etools `data/spells/*.json` + `sources.json` |
+| Bestiary (rich) | `src/data/bestiary.ts` | 40 | 5etools `data/bestiary/*.json` (XMM > MM) |
+| Monster index (thin) | `src/data/monsterIndex.ts` | 2,158 | `attached_assets/Monsters_&_Beasts_*.csv` |
+| Weapons | `src/data/weapons.ts` | 251 | 5etools `data/items.json` + `items-base.json` (2024 wins) |
+| Compendium / Oracle / generators | `src/data/{compendium,generators,playerOptions}.ts` | — | hand-curated |
+
+All datasets are **bundled at build time** — no network at runtime. Generators live in `scripts/src/data-generators/` and read **only** from a local sibling clone at `../5etools-src` pinned to tag `v2.31.0` (overridable via `FIVETOOLS_DIR`). When regenerating:
+
+- Prefer 2024 sources (XPHB, XMM) over 2014 (PHB, MM) — the strippers and source-priority lists already encode this.
+- The shared `stripTags` in `scripts/src/data-generators/lib.ts` translates 5etools tag macros (`{@h}`, `{@actSaveFail}`, `{@hit N}`, `{@dc N}`, `{@damage}`, `{@scaledice}`, …) into plain-English combat labels. Extend it there, not in individual generators.
+- File headers preserve 5etools MIT attribution. Keep them.
+
+## PWA / service worker
+
+The app is a PWA via `vite-plugin-pwa` configured in `vite.config.ts`:
+
+- `registerType: "autoUpdate"` + `clientsClaim: true` + `skipWaiting` (implicit) — new SW takes over open tabs on next page load.
+- `cleanupOutdatedCaches: true` + Vite's hashed asset filenames = stale caches can't strand the DM.
+- `navigateFallback: "index.html"` for SPA routing.
+- `maximumFileSizeToCacheInBytes: 4 MiB` (the JS bundle is ~1.6 MiB raw; default 2 MiB cap was uncomfortably close).
+- `globPatterns` precaches `js, css, html, svg, png, ico, webp, woff, woff2`.
+- Two `runtimeCaching` rules for Google Fonts (stylesheet StaleWhileRevalidate, woff2 CacheFirst).
+
+The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control: no-cache` on `sw.js` / `registerSW.js` / `manifest.webmanifest` / `index.html` so PWA updates land on the next reload instead of being pinned by intermediate caches.
+
+## Docker
+
+- Multi-stage `Dockerfile`: build on `node:24-bookworm-slim` (glibc — must match the `linux-{x64,arm64}-gnu` native binaries), runtime on `nginx:alpine`. **Don't switch the build stage to `node:24-alpine`** — `pnpm-workspace.yaml`'s `overrides:` block still excludes the `-musl` rollup/esbuild/lightningcss/oxide variants.
+- `docker-compose.yml`: single service, no DB, publishes `5173:80`. Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host).
+- `.dockerignore` is an allowlist style for build inputs; never ship `node_modules`, `dist`, `.git`, or the intake docs into the image.
+- Builds on ARM64 (Apple Silicon, Pi, Graviton) — the `linux-arm64-gnu` variants are explicitly **not** excluded.
 
 ## Security: npm minimum release age
 
 [pnpm-workspace.yaml](pnpm-workspace.yaml) sets `minimumReleaseAge: 1440` (24 hours). This is a supply-chain attack defense and **must not be lowered or removed**. If a brand-new release is urgently needed, add it to a `minimumReleaseAgeExclude` allowlist and remove the exclusion once 24 hours have passed.
 
-## Replit specifics
+## Backup / restore
 
-- `nodejs-24` + `postgresql-16` via Nix; agent runs in `expertMode`.
-- [scripts/post-merge.sh](scripts/post-merge.sh) runs `pnpm install --frozen-lockfile && pnpm --filter db push` after each merge — schema changes propagate to the Replit DB automatically.
-- The deployment target is `autoscale` and the post-build prunes the pnpm store.
-- Many platform-specific optional native deps (rollup, esbuild, lightningcss, tailwindcss-oxide, ngrok-bin) are explicitly nulled out via `overrides:` because Replit is linux-x64 only. If you add a dep with platform binaries, you may need to extend that list.
+Two surfaces in `src/lib/`:
+
+- `partyStore.ts` — `exportPartyAsJson` / `importPartyFromJson` (envelope `schema: "selene-dm-party"`, version 1). Wired into the Party widget header.
+- `backup.ts` — `exportFullBackupAsJson` / `importFullBackupFromJson` (envelope `schema: "selene-dm-full"`, version 1). Sweeps every `dm-*` localStorage key — no registry to maintain. Wired into the sidebar BACKUP panel. Import wipes existing `dm-*` keys first then reloads the page so every widget initializes from the restored state cleanly.

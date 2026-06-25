@@ -253,12 +253,12 @@ Do not delete the server yet — get the frontend fully working without it first
 
 ## Phase 8 — Docs
 
-- [ ] Rewrite `README.md`: remove Postgres prerequisites, seeding, and API endpoint sections;
+- [x] Rewrite `README.md`: remove Postgres prerequisites, seeding, and API endpoint sections;
       add the static run commands and the Docker instructions.
-- [ ] Update `CLAUDE.md` to describe the new static architecture (no api-server / Drizzle /
+- [x] Update `CLAUDE.md` to describe the new static architecture (no api-server / Drizzle /
       raw-SQL notes; localStorage as the only persistence).
-- [ ] Remove the now-inaccurate `replit.md`.
-- [ ] Add a short note that Party/Notepad data is **per-browser** and clearing site data
+- [x] Remove the now-inaccurate `replit.md`.
+- [x] Add a short note that Party/Notepad data is **per-browser** and clearing site data
       loses it.
 
 **Verify:** README instructions, followed literally on a clean clone, produce a running app.
@@ -810,3 +810,93 @@ darwin-arm64 entries that had previously been forced via the override block),
 
 Local `pnpm typecheck` + `pnpm build` re-verified green. Docker build now succeeds
 on Apple Silicon end-to-end. `minimumReleaseAge: 1440` untouched.
+
+### Phase 8
+
+Three files touched.
+
+**`README.md` — full rewrite.** The previous file described a Postgres-backed
+three-tier app: DATABASE_URL prereq, an "API Endpoints" table, "Seeding the
+database" instructions, `pnpm --filter @workspace/api-server run dev`, and a
+`Table Contents` schema listing for `spells / weapons / monsters /
+player_characters / rules / homebrew` Postgres tables. All of that is now
+obsolete and would have actively misled a self-hoster (DATABASE_URL doesn't
+exist; api-server doesn't exist; nothing reads from Postgres). Replaced with:
+
+- "Fully static SPA, no backend" framing up front.
+- The seven widgets restated against the new data sources (557 spells, 251
+  weapons, 40 rich bestiary + 2,158-row thin index).
+- A **Persistence model — read this** section that makes the per-browser
+  localStorage trade-off explicit and points at the Backup/Restore buttons.
+  Calls out specifically that switching ports starts a fresh, separate store.
+- Getting started: `pnpm install && pnpm dev` — no env vars, no Postgres.
+- Production: `pnpm build && pnpm preview`.
+- Docker: `docker compose up --build` → `http://localhost:5173`, plus the
+  ARM64 note (Apple Silicon / Pi / Graviton all work since Phase 7.3).
+- Architecture diagram + bundled-data table + regeneration instructions
+  (`pnpm --filter @workspace/scripts run generate:all` against the local
+  `../5etools-src` clone at tag v2.31.0).
+- `minimumReleaseAge: 1440` security note preserved.
+- License note for 5etools MIT attribution.
+
+**`CLAUDE.md` — full rewrite.** The previous file was the pre-migration agent
+guide: it warned about a stale `replit.md`, listed DATABASE_URL/PORT/BASE_PATH
+as required, documented the Drizzle-vs-raw-pg split, the API-codegen
+workflow, and the mockup-sandbox auto-discovery plugin. All of that is now
+either deleted or wrong. New version:
+
+- Overview now says "one deployable artifact, no backend, no env vars" and
+  points at HANDOVER-self-hosting.md for the migration history.
+- Commands section reflects the actual root scripts (`pnpm dev`, `pnpm
+  build`, `pnpm preview`, the `scripts` package's `generate:*` commands,
+  `docker compose up --build`).
+- Repository layout updated — `lib/` is gone, `artifacts/` only has
+  `dm-screen`.
+- TypeScript / project-references section notes the root `references` array
+  is now empty.
+- Frontend architecture section consolidated and updated: documents the
+  versioned `dm-*` localStorage convention, the CustomEvent wiring including
+  the new `dm-party-changed` event, the grid-cell `minHeight/minWidth: 0`
+  fix from Phase 7.1, and the AnchoredDropdown portal pattern.
+- New **Bundled reference data** section with the counts table and pointers
+  to the offline generators (`scripts/src/data-generators/`,
+  `FIVETOOLS_DIR` override, XPHB/XMM source priority, shared `stripTags`).
+- New **PWA / service worker** section documenting the `vite-plugin-pwa`
+  config from Phase 6 (autoUpdate, clientsClaim, cleanupOutdatedCaches,
+  4 MiB cache cap, Google Fonts runtime caching, no-cache headers on SW
+  artefacts).
+- New **Docker** section explaining why the build stage is `bookworm-slim`
+  glibc (not alpine/musl), why port 5173:80 (muscle-memory + shared
+  localStorage origin), and the ARM64 status.
+- New **Backup / restore** section pointing at the two envelopes (party-only
+  and full).
+- `minimumReleaseAge: 1440` security note preserved verbatim.
+
+**`replit.md` — already deleted.** No-op for this phase; the file was
+removed in Phase 4 along with `.replit` / `.replitignore` /
+`scripts/post-merge.sh`.
+
+**Per-browser data warning** (the fourth checkbox): folded into the README's
+"Persistence model — read this" section (its own callout block, with concrete
+trade-offs and a pointer at the Backup/Restore buttons), and into CLAUDE.md's
+frontend-architecture bullets. Both make the same three points: data lives
+only in this browser, clearing site data loses it, use the Backup buttons
+before clearing or migrating.
+
+**Verified.**
+- `pnpm typecheck` → green.
+- `pnpm build` → green; bundle size unchanged from Phase 7 (~1.6 MiB raw /
+  ~354 KiB gzipped); PWA precache reports 9 entries / ~1,694 KiB; build
+  warns about the >500 KiB JS chunk (informational, pre-existing).
+- Hand-traced the README's "Getting started" steps against the current root
+  `package.json` scripts (`dev`, `build`, `preview`) and the actual
+  workspace layout — every command quoted in the README resolves.
+- `replit.md` confirmed absent from the working tree.
+- `minimumReleaseAge: 1440` confirmed unchanged in `pnpm-workspace.yaml`.
+
+**Not mechanically verified — needs the user.** The plan's Phase 8 Verify
+box ("README instructions, followed literally on a clean clone, produce a
+running app") requires a clean clone in a fresh shell and a browser. The
+mechanical proof points above (every quoted command exists; build is green;
+nothing was broken since Phase 7) are the strongest CLI-only evidence
+available.
