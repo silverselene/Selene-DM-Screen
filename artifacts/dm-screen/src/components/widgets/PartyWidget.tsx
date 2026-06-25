@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
-  Heart, Star, BookOpen, Sword, Search,
+  Heart, Star, BookOpen, Sword, Search, Download, Upload,
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
 import { weaponsData, type Weapon } from "@/data/weapons";
@@ -9,9 +9,12 @@ import { spellData, type Spell } from "@/data/spells";
 import {
   addCharacter,
   deleteCharacter,
+  exportPartyAsJson,
+  importPartyFromJson,
   updateCharacter,
   useParty,
 } from "@/lib/partyStore";
+import { downloadJsonFile, promptForJsonFile } from "@/lib/backup";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { Combobox } from "@/lib/Combobox";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
@@ -489,6 +492,23 @@ export function PartyWidget() {
     });
   };
 
+  const exportParty = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadJsonFile(`selene-party-${stamp}.json`, exportPartyAsJson());
+  };
+
+  const importParty = async () => {
+    try {
+      const text = await promptForJsonFile();
+      const count = importPartyFromJson(text);
+      setError(null);
+      // eslint-disable-next-line no-alert
+      window.alert(`Imported ${count} character${count === 1 ? "" : "s"}.`);
+    } catch (e) {
+      setError(`Import failed: ${(e as Error).message}`);
+    }
+  };
+
   const addToInitiative = (c: PlayerCharacter) => {
     const combatant: Combatant = {
       id: nextId(), name: c.name,
@@ -507,12 +527,29 @@ export function PartyWidget() {
         <span className="text-xs text-gray-400">
           {characters.length} character{characters.length !== 1 ? "s" : ""}
         </span>
-        <button
-          onClick={() => { setShowAdd(v => !v); setForm(emptyForm()); }}
-          className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
-        >
-          <Plus className="w-3 h-3" />Add Character
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={exportParty}
+            disabled={characters.length === 0}
+            title="Export party to JSON"
+            className="w-6 h-6 flex items-center justify-center text-emerald-500 hover:text-emerald-300 hover:bg-emerald-900/30 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Download className="w-3 h-3" />
+          </button>
+          <button
+            onClick={importParty}
+            title="Import party from JSON (replaces current roster)"
+            className="w-6 h-6 flex items-center justify-center text-emerald-500 hover:text-emerald-300 hover:bg-emerald-900/30 rounded transition-colors"
+          >
+            <Upload className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => { setShowAdd(v => !v); setForm(emptyForm()); }}
+            className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
+          >
+            <Plus className="w-3 h-3" />Add Character
+          </button>
+        </div>
       </div>
 
       {error && (

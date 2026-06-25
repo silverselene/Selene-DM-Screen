@@ -1,6 +1,31 @@
-import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2 } from "lucide-react";
+import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { useTheme } from "@/contexts/ThemeContext";
+import {
+  downloadJsonFile,
+  exportFullBackupAsJson,
+  importFullBackupFromJson,
+  promptForJsonFile,
+} from "@/lib/backup";
+
+async function runFullImport() {
+  if (!window.confirm("Importing a backup will REPLACE all current widget state (party, notes, layout, in-progress combat). Continue?")) {
+    return;
+  }
+  try {
+    const text = await promptForJsonFile();
+    const count = importFullBackupFromJson(text);
+    window.alert(`Restored ${count} key${count === 1 ? "" : "s"}. Reloading…`);
+    window.location.reload();
+  } catch (e) {
+    window.alert(`Import failed: ${(e as Error).message}`);
+  }
+}
+
+function runFullExport() {
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadJsonFile(`selene-dm-backup-${stamp}.json`, exportFullBackupAsJson());
+}
 
 const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: React.ReactNode; color: string }> = {
   compendium: { label: "Compendium", icon: <BookOpen className="w-3.5 h-3.5" />, color: "text-blue-400 bg-blue-900/20 border-blue-800/40" },
@@ -164,6 +189,35 @@ export function Sidebar({
               })}
             </div>
           </div>
+
+          {/* ── Backup / Restore ── */}
+          <div className="shrink-0 border-t p-3" style={{ borderTopColor: "var(--dm-border)" }}>
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--dm-t2)" }}>Backup</span>
+              </div>
+            </div>
+            <p className="text-[10px] leading-relaxed mb-2" style={{ color: "var(--dm-t4)" }}>
+              State is stored per-browser. Export a snapshot to move it to another browser or back up.
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={runFullExport}
+                title="Download a full backup of all widget state"
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40 transition-colors"
+              >
+                <Download className="w-3 h-3" /> Export
+              </button>
+              <button
+                onClick={runFullImport}
+                title="Restore from a backup (replaces ALL current state, then reloads)"
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40 transition-colors"
+              >
+                <Upload className="w-3 h-3" /> Import
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 pt-10 pb-3">
@@ -179,6 +233,21 @@ export function Sidebar({
               {recentWidgets.length}
             </span>
           )}
+          <div className="w-3 h-px bg-purple-900/50" />
+          <button
+            onClick={runFullExport}
+            title="Export a full backup of all widget state"
+            className="text-purple-700 hover:text-purple-300 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          <button
+            onClick={runFullImport}
+            title="Import a backup (replaces all current state)"
+            className="text-purple-700 hover:text-purple-300 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
         </div>
       )}
     </aside>

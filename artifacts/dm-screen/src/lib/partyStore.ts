@@ -90,6 +90,52 @@ export function deleteCharacter(id: number): void {
   write(next);
 }
 
+// ── JSON export / import (Party only) ────────────────────────────────────
+// Self-contained envelope so an imported file has provenance + a version we
+// can branch on later if the PlayerCharacter shape evolves.
+interface PartyExportEnvelope {
+  schema: "selene-dm-party";
+  version: 1;
+  exportedAt: string;
+  party: PlayerCharacter[];
+}
+
+export function exportPartyAsJson(): string {
+  const env: PartyExportEnvelope = {
+    schema: "selene-dm-party",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    party: readRaw(),
+  };
+  return JSON.stringify(env, null, 2);
+}
+
+/** Validate + write an import envelope. Returns the imported count, or
+ *  throws on a malformed file (caller renders the message). */
+export function importPartyFromJson(text: string): number {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    throw new Error("File isn't valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("File isn't a Party export.");
+  }
+  const env = parsed as Partial<PartyExportEnvelope>;
+  if (env.schema !== "selene-dm-party") {
+    throw new Error(
+      `Unexpected schema "${env.schema ?? "?"}" — looking for "selene-dm-party".`,
+    );
+  }
+  if (!Array.isArray(env.party)) {
+    throw new Error("Envelope is missing a `party` array.");
+  }
+  const normalized = env.party.map(normalize);
+  write(normalized);
+  return normalized.length;
+}
+
 function nextId(list: PlayerCharacter[]): number {
   const max = list.reduce((m, c) => (c.id > m ? c.id : m), 0);
   // Combine "monotonic since boot" with the max id seen — handles the rare
