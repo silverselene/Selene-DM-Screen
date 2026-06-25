@@ -1,11 +1,18 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Search, BookOpen } from "lucide-react";
 import { compendiumData, categories } from "@/data/compendium";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export function CompendiumWidget() {
-  const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
+  const [query, setQuery] = useLocalStorage<string>("dm-compendium-query-v1", "");
+  const [selectedCategory, setSelectedCategory] = useLocalStorage<string>(
+    "dm-compendium-category-v1",
+    "All",
+  );
+  const [selectedEntry, setSelectedEntry] = useLocalStorage<string | null>(
+    "dm-compendium-entry-v1",
+    null,
+  );
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();

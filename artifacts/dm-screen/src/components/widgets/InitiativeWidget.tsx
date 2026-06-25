@@ -80,15 +80,31 @@ export function InitiativeWidget() {
     () => readLegacy<number>("dm-round", 1),
   );
   const [showForm, setShowForm] = useState(false);
-  const [addMode, setAddMode] = useState<AddMode>("player");
+  // Persist the last-used Add tab — the DM tends to add the same kind of
+  // combatant repeatedly in a given session.
+  const [addMode, setAddMode] = useLocalStorage<AddMode>("dm-initiative-mode-v1", "player");
 
   // Player/custom form
-  const [form, setForm] = useState({ name: "", initiative: "", hp: "", ac: "", isPlayer: false });
+  // Custom-combatant form. Initiative is pre-rolled with a fresh d20 each
+  // time the form is opened or after a successful add, so the DM doesn't
+  // have to roll a die just to type a number; they can still override.
+  const rollD20 = () => Math.floor(Math.random() * 20) + 1;
+  const freshForm = () => ({
+    name: "",
+    initiative: String(rollD20()),
+    hp: "",
+    ac: "",
+    isPlayer: false,
+  });
+  const [form, setForm] = useState(freshForm);
 
   // Monster search
   const [monsterQuery, setMonsterQuery] = useState("");
   const [monsterResults, setMonsterResults] = useState<MonsterSummary[]>([]);
   const [selectedMonster, setSelectedMonster] = useState<MonsterSummary | null>(null);
+  // Three independent fields: the raw d20 the DM rolled, the final initiative
+  // (auto = d20 + DEX mod, but DM-editable to override), and an HP override.
+  const [monsterD20Roll, setMonsterD20Roll] = useState("");
   const [monsterInitiative, setMonsterInitiative] = useState("");
   const [monsterHpOverride, setMonsterHpOverride] = useState("");
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,7 +145,24 @@ export function InitiativeWidget() {
     setMonsterHpOverride(String(parseMaxHp(m.hp)));
     setMonsterResults([]);
     setMonsterQuery(m.name);
-    if (m.initiative_modifier != null) setMonsterInitiative(String(m.initiative_modifier));
+    // Auto-roll initiative for the DM: 1d20 in the left box, (d20 + DEX
+    // mod) in the middle box. Either is freely editable.
+    const mod = m.initiative_modifier ?? 0;
+    const d20 = Math.floor(Math.random() * 20) + 1;
+    setMonsterD20Roll(String(d20));
+    setMonsterInitiative(String(d20 + mod));
+  };
+
+  // When the DM types a new d20 result, recompute the resulting initiative
+  // automatically. Manual edits to the initiative field after this still
+  // win (this only fires on d20 changes).
+  const updateD20 = (v: string) => {
+    setMonsterD20Roll(v);
+    const roll = parseInt(v);
+    if (Number.isFinite(roll)) {
+      const mod = selectedMonster?.initiative_modifier ?? 0;
+      setMonsterInitiative(String(roll + mod));
+    }
   };
 
   // ── Add combatant helpers ──
@@ -143,7 +176,7 @@ export function InitiativeWidget() {
       isPlayer: form.isPlayer,
     };
     setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
-    setForm({ name: "", initiative: "", hp: "", ac: "", isPlayer: false });
+    setForm(freshForm());
     setShowForm(false);
   };
 
@@ -156,7 +189,8 @@ export function InitiativeWidget() {
       hp, maxHp: hp, ac: selectedMonster.ac, isPlayer: false,
     };
     setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
-    setSelectedMonster(null); setMonsterQuery(""); setMonsterInitiative(""); setMonsterHpOverride("");
+    setSelectedMonster(null); setMonsterQuery("");
+    setMonsterD20Roll(""); setMonsterInitiative(""); setMonsterHpOverride("");
     setShowForm(false);
   };
 
@@ -207,7 +241,21 @@ export function InitiativeWidget() {
             className="flex items-center gap-1 text-xs px-2 py-1 bg-purple-800/50 hover:bg-purple-700/60 disabled:opacity-40 rounded transition-colors text-purple-200">
             <SkipForward className="w-3 h-3" />Next
           </button>
-          <button onClick={() => setShowForm((v) => !v)}
+          <button
+            onClick={() => {
+              setShowForm((v) => {
+                // Re-roll a fresh initiative each time the form is opened
+                // (and only if the DM hasn't already typed something in).
+                if (!v) {
+                  setForm((f) =>
+                    f.name === "" && (f.hp === "" || f.hp === undefined) && (f.ac === "" || f.ac === undefined)
+                      ? freshForm()
+                      : f,
+                  );
+                }
+                return !v;
+              });
+            }}
             className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-700/60 hover:bg-gray-600/60 rounded transition-colors text-gray-300">
             <Plus className="w-3 h-3" />
           </button>
@@ -247,12 +295,21 @@ export function InitiativeWidget() {
                 onKeyDown={(e) => e.key === "Enter" && addPlayer()}
                 className={`w-full ${inputCls}`} />
               <div className="flex gap-1">
-                <input placeholder="Initiative" type="number" value={form.initiative}
-                  onChange={(e) => setForm({ ...form, initiative: e.target.value })} className={`w-1/3 ${inputCls}`} />
-                <input placeholder="HP" type="number" value={form.hp}
-                  onChange={(e) => setForm({ ...form, hp: e.target.value })} className={`w-1/3 ${inputCls}`} />
-                <input placeholder="AC" type="number" value={form.ac}
-                  onChange={(e) => setForm({ ...form, ac: e.target.value })} className={`w-1/3 ${inputCls}`} />
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">Initiative</label>
+                  <input type="number" value={form.initiative}
+                    onChange={(e) => setForm({ ...form, initiative: e.target.value })} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">HP</label>
+                  <input type="number" value={form.hp}
+                    onChange={(e) => setForm({ ...form, hp: e.target.value })} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
+                  <input type="number" value={form.ac}
+                    onChange={(e) => setForm({ ...form, ac: e.target.value })} className={`w-full ${inputCls}`} />
+                </div>
               </div>
               <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                 <input type="checkbox" checked={form.isPlayer}
@@ -348,16 +405,38 @@ export function InitiativeWidget() {
                     <span className="flex items-center gap-0.5"><Shield className="w-3 h-3" />{selectedMonster.ac}{selectedMonster.ac_type && ` (${selectedMonster.ac_type})`}</span>
                     <span>HP {selectedMonster.hp}</span>
                     {selectedMonster.initiative_modifier != null && (
-                      <span>Init {selectedMonster.initiative_modifier >= 0 ? "+" : ""}{selectedMonster.initiative_modifier}</span>
+                      <span title="Initiative modifier (DEX mod), already applied to the roll on the right">
+                        Init mod {selectedMonster.initiative_modifier >= 0 ? "+" : ""}{selectedMonster.initiative_modifier}
+                      </span>
                     )}
                   </div>
                 </div>
               )}
               <div className="flex gap-1">
-                <input placeholder="Initiative roll" type="number" value={monsterInitiative}
-                  onChange={(e) => setMonsterInitiative(e.target.value)} className={`w-1/2 ${inputCls}`} />
-                <input placeholder="HP override" type="number" value={monsterHpOverride}
-                  onChange={(e) => setMonsterHpOverride(e.target.value)} className={`w-1/2 ${inputCls}`} />
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5" title="Your d20 roll">d20 roll</label>
+                  <input type="number" min="1" max="20" value={monsterD20Roll}
+                    onChange={(e) => updateD20(e.target.value)} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="w-1/3">
+                  <label
+                    className="text-[10px] text-gray-500 block mb-0.5"
+                    title={
+                      selectedMonster?.initiative_modifier != null
+                        ? `d20 + ${selectedMonster.initiative_modifier >= 0 ? "+" : ""}${selectedMonster.initiative_modifier} DEX mod`
+                        : "d20 + DEX mod"
+                    }
+                  >
+                    Initiative
+                  </label>
+                  <input type="number" value={monsterInitiative}
+                    onChange={(e) => setMonsterInitiative(e.target.value)} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">HP override</label>
+                  <input type="number" value={monsterHpOverride}
+                    onChange={(e) => setMonsterHpOverride(e.target.value)} className={`w-full ${inputCls}`} />
+                </div>
               </div>
               <button onClick={addMonster} disabled={!selectedMonster}
                 className="w-full py-1 bg-rose-800 hover:bg-rose-700 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">

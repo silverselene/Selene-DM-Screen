@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Search, BookMarked, ChevronLeft } from "lucide-react";
 import { spellData, spellSchools, spellClasses, type Spell } from "@/data/spells";
+import { Combobox } from "@/lib/Combobox";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const levelLabels = ["Cantrip", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
@@ -72,11 +74,35 @@ function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
 }
 
 export function WizardsTomeWidget() {
-  const [query, setQuery] = useState("");
-  const [filterLevel, setFilterLevel] = useState(-1);
-  const [filterClass, setFilterClass] = useState("All");
-  const [filterSchool, setFilterSchool] = useState("All");
-  const [selected, setSelected] = useState<Spell | null>(null);
+  // Persisted state. The selected spell is stored by name and re-resolved
+  // against the live dataset on mount, so regenerating spells.ts later
+  // doesn't strand a stale entry.
+  const [query, setQuery] = useLocalStorage<string>("dm-tome-query-v1", "");
+  const [filterLevel, setFilterLevel] = useLocalStorage<number>(
+    "dm-tome-level-v1",
+    -1,
+  );
+  // "" = no filter; non-empty = the picked class/school name.
+  const [filterClass, setFilterClass] = useLocalStorage<string>(
+    "dm-tome-class-v1",
+    "",
+  );
+  const [filterSchool, setFilterSchool] = useLocalStorage<string>(
+    "dm-tome-school-v1",
+    "",
+  );
+  const [selectedName, setSelectedName] = useLocalStorage<string | null>(
+    "dm-tome-selected-v1",
+    null,
+  );
+  const selected: Spell | null = useMemo(
+    () =>
+      selectedName
+        ? spellData.find((s) => s.name === selectedName) ?? null
+        : null,
+    [selectedName],
+  );
+  const setSelected = (s: Spell | null) => setSelectedName(s?.name ?? null);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -84,8 +110,8 @@ export function WizardsTomeWidget() {
       .filter((s) => {
         const matchQ = !q || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q);
         const matchLv = filterLevel < 0 || s.level === filterLevel;
-        const matchCl = filterClass === "All" || s.classes.includes(filterClass);
-        const matchSch = filterSchool === "All" || s.school === filterSchool;
+        const matchCl = !filterClass || s.classes.includes(filterClass);
+        const matchSch = !filterSchool || s.school === filterSchool;
         return matchQ && matchLv && matchCl && matchSch;
       })
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
@@ -93,7 +119,7 @@ export function WizardsTomeWidget() {
 
   if (selected) return <SpellDetail spell={selected} onBack={() => setSelected(null)} />;
 
-  const isFiltered = query.trim() !== "" || filterLevel !== -1 || filterClass !== "All" || filterSchool !== "All";
+  const isFiltered = query.trim() !== "" || filterLevel !== -1 || filterClass !== "" || filterSchool !== "";
   const visibleSpells = isFiltered ? filtered : filtered.slice(0, 7);
 
   return (
@@ -122,22 +148,24 @@ export function WizardsTomeWidget() {
             <option key={i} value={i}>{l}</option>
           ))}
         </select>
-        <select
+        <Combobox
           value={filterClass}
-          onChange={(e) => setFilterClass(e.target.value)}
-          className="text-xs bg-gray-900 border border-cyan-900/50 rounded px-1.5 py-1 text-gray-300 focus:outline-none focus:border-cyan-600 flex-1 min-w-0"
-        >
-          <option>All</option>
-          {spellClasses.map((c) => <option key={c}>{c}</option>)}
-        </select>
-        <select
+          onChange={setFilterClass}
+          options={spellClasses}
+          placeholder="All Classes"
+          ariaLabel="Filter spells by class"
+          allowCustom={false}
+          className="flex-1 min-w-0"
+        />
+        <Combobox
           value={filterSchool}
-          onChange={(e) => setFilterSchool(e.target.value)}
-          className="text-xs bg-gray-900 border border-cyan-900/50 rounded px-1.5 py-1 text-gray-300 focus:outline-none focus:border-cyan-600 flex-1 min-w-0"
-        >
-          <option>All</option>
-          {spellSchools.map((s) => <option key={s}>{s}</option>)}
-        </select>
+          onChange={setFilterSchool}
+          options={spellSchools}
+          placeholder="All Schools"
+          ariaLabel="Filter spells by school"
+          allowCustom={false}
+          className="flex-1 min-w-0"
+        />
       </div>
 
       {/* Result count */}

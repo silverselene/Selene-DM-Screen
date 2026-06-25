@@ -5,12 +5,16 @@ import {
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
 import { weaponsData, type Weapon } from "@/data/weapons";
+import { spellData, type Spell } from "@/data/spells";
 import {
   addCharacter,
   deleteCharacter,
   updateCharacter,
   useParty,
 } from "@/lib/partyStore";
+import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
+import { Combobox } from "@/lib/Combobox";
+import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
 
 let idCounter = Date.now();
 const nextId = () => String(++idCounter);
@@ -74,10 +78,13 @@ function WeaponTagInput({
 
   const inputCls = "flex-1 min-w-[120px] bg-transparent text-xs text-gray-200 placeholder-gray-500 outline-none py-0.5";
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="relative">
-      {/* Tags + input row */}
+    <div>
+      {/* Tags + input row (also the dropdown anchor) */}
       <div
+        ref={wrapperRef}
         className="flex flex-wrap gap-1 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded focus-within:border-purple-500 cursor-text min-h-[30px]"
         onClick={() => inputRef.current?.focus()}
       >
@@ -106,42 +113,38 @@ function WeaponTagInput({
         {loading && <Search className="w-3 h-3 text-gray-600 self-center animate-pulse" />}
       </div>
 
-      {/* Dropdown suggestions */}
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-gray-900 border border-gray-700 rounded shadow-xl max-h-48 overflow-y-auto">
-          {suggestions.map(w => (
-            <button
-              key={w.id}
-              type="button"
-              onMouseDown={e => { e.preventDefault(); add(w.name); }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-amber-900/30 text-left transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-gray-200">{w.name}</span>
-                {w.category && <span className="text-[9px] text-gray-600 ml-1 capitalize">{w.category}</span>}
-              </div>
-              {w.damage && (
-                <span className="text-[10px] text-amber-400 shrink-0 font-mono">
-                  {w.damage}{w.damage_type ? ` ${w.damage_type[0]}` : ""}
-                </span>
-              )}
-              {(w.properties || []).slice(0, 3).map(p => (
-                <span key={p} className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">{p.slice(0, 3)}</span>
-              ))}
-            </button>
-          ))}
-          {/* Allow adding the typed name even if it appears in results */}
-          {query && !suggestions.some(s => s.name.toLowerCase() === query.toLowerCase()) && (
-            <button
-              type="button"
-              onMouseDown={e => { e.preventDefault(); add(query); }}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
-            >
-              <Plus className="w-3 h-3" />Add "{query}" as custom weapon
-            </button>
-          )}
-        </div>
-      )}
+      <AnchoredDropdown anchor={wrapperRef.current} open={open && suggestions.length > 0}>
+        {suggestions.map(w => (
+          <button
+            key={w.id}
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(w.name); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-amber-900/30 text-left transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <span className="text-xs text-gray-200">{w.name}</span>
+              {w.category && <span className="text-[9px] text-gray-600 ml-1 capitalize">{w.category}</span>}
+            </div>
+            {w.damage && (
+              <span className="text-[10px] text-amber-400 shrink-0 font-mono">
+                {w.damage}{w.damage_type ? ` ${w.damage_type[0]}` : ""}
+              </span>
+            )}
+            {(w.properties || []).slice(0, 3).map(p => (
+              <span key={p} className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">{p.slice(0, 3)}</span>
+            ))}
+          </button>
+        ))}
+        {query && !suggestions.some(s => s.name.toLowerCase() === query.toLowerCase()) && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(query); }}
+            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
+          >
+            <Plus className="w-3 h-3" />Add "{query}" as custom weapon
+          </button>
+        )}
+      </AnchoredDropdown>
     </div>
   );
 }
@@ -162,16 +165,257 @@ function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, We
   );
 }
 
+// ── Spell tag-input (mirror of WeaponTagInput against the 557-spell dataset)
+type SpellInfo = Pick<
+  Spell,
+  "name" | "level" | "school" | "classes" | "damage" | "healing"
+>;
+
+// Inline pill rendered on a saved character. Mirrors WeaponPill: a "stats at
+// a glance" badge with the spell's damage dice + type when it deals damage,
+// the healing dice (+ heart icon) when it heals, or level + school for
+// utility spells like Mage Hand. A spell can do both — `damage` takes
+// priority for the badge slot.
+function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, SpellInfo> }) {
+  const info = statsMap.get(name.toLowerCase());
+  const levelLabel =
+    info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300">
+      <BookOpen className="w-2.5 h-2.5 shrink-0" />
+      <span>{name}</span>
+      {info?.damage ? (
+        <span
+          className="text-cyan-500 font-mono"
+          title={info.damage.scaling ?? undefined}
+        >
+          {info.damage.dice} {info.damage.type[0]?.toUpperCase()}
+        </span>
+      ) : info?.healing ? (
+        <span
+          className="flex items-center gap-0.5 text-emerald-400 font-mono"
+          title={info.healing.scaling ?? undefined}
+        >
+          <Heart className="w-2.5 h-2.5 shrink-0" />
+          {info.healing.dice}
+        </span>
+      ) : (
+        levelLabel && (
+          <span className="text-cyan-500 font-mono">{levelLabel}</span>
+        )
+      )}
+      {info?.school && (
+        <span className="text-cyan-700">{info.school.slice(0, 3)}</span>
+      )}
+    </span>
+  );
+}
+
+function SpellTagInput({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (names: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SpellInfo[]>([]);
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!query.trim()) { setSuggestions([]); setOpen(false); return; }
+    timer.current = setTimeout(() => {
+      const q = query.trim().toLowerCase();
+      const selectedLower = new Set(selected.map(s => s.toLowerCase()));
+      const matches = spellData
+        .filter(s => s.name.toLowerCase().includes(q) && !selectedLower.has(s.name.toLowerCase()))
+        .sort((a, b) => {
+          const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          if (ap !== bp) return ap - bp;
+          if (a.level !== b.level) return a.level - b.level;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 10);
+      setSuggestions(matches);
+      setOpen(true);
+    }, 80);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [query, selected]);
+
+  const add = (name: string) => {
+    if (!name.trim() || selected.map(s => s.toLowerCase()).includes(name.trim().toLowerCase())) return;
+    onChange([...selected, name.trim()]);
+    setQuery("");
+    setSuggestions([]);
+    setOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const remove = (name: string) => onChange(selected.filter(s => s !== name));
+
+  const inputCls = "flex-1 min-w-[120px] bg-transparent text-xs text-gray-200 placeholder-gray-500 outline-none py-0.5";
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div>
+      <div
+        ref={wrapperRef}
+        className="flex flex-wrap gap-1 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded focus-within:border-purple-500 cursor-text min-h-[30px]"
+        onClick={() => inputRef.current?.focus()}
+      >
+        {selected.map(name => (
+          <span key={name} className="flex items-center gap-1 text-[10px] bg-cyan-900/40 border border-cyan-700/40 text-cyan-300 rounded px-1.5 py-0.5">
+            <BookOpen className="w-2.5 h-2.5 shrink-0" />
+            {name}
+            <button type="button" onClick={e => { e.stopPropagation(); remove(name); }} className="text-cyan-500 hover:text-red-400 transition-colors">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter") { e.preventDefault(); if (query.trim()) add(query.trim()); }
+            if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
+            if (e.key === "Escape") { setOpen(false); setQuery(""); }
+          }}
+          placeholder={selected.length === 0 ? "Search or type a spell…" : "Add more…"}
+          className={inputCls}
+        />
+      </div>
+
+      <AnchoredDropdown anchor={wrapperRef.current} open={open && suggestions.length > 0}>
+        {suggestions.map(s => (
+          <button
+            key={s.name}
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(s.name); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-cyan-900/30 text-left transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <span className="text-xs text-gray-200">{s.name}</span>
+              <span className="text-[9px] text-gray-600 ml-1">
+                {s.level === 0 ? "Cantrip" : `Lvl ${s.level}`} · {s.school}
+              </span>
+            </div>
+            {s.classes && s.classes.length > 0 && (
+              <span className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">
+                {s.classes.slice(0, 3).map(c => c.slice(0, 3)).join("/")}
+              </span>
+            )}
+          </button>
+        ))}
+        {query && !suggestions.some(s => s.name.toLowerCase() === query.toLowerCase()) && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(query); }}
+            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
+          >
+            <Plus className="w-3 h-3" />Add "{query}" as custom spell
+          </button>
+        )}
+      </AnchoredDropdown>
+    </div>
+  );
+}
+
 // ── emptyForm with weapons as array ───────────────────────────────────────
 const emptyForm = () => ({
   name: "", race: "", class: "", level: "1",
-  ac: "", hp: "", spells: "",
+  ac: "", hp: "",
+  spells: [] as string[],
   weapons: [] as string[],
 });
+
+type CharacterForm = ReturnType<typeof emptyForm>;
+
+const INPUT_CLS =
+  "w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
+
+// Module-scope (not nested inside PartyWidget) so React keeps the same
+// component identity across renders — otherwise every keystroke unmounts
+// and remounts the inputs and the focused field loses focus mid-type.
+function FormFields({
+  f,
+  setF,
+}: {
+  f: CharacterForm;
+  setF: (v: CharacterForm) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <input placeholder="Name *" value={f.name}
+        onChange={e => setF({ ...f, name: e.target.value })} className={INPUT_CLS} />
+      <div className="flex gap-1">
+        <Combobox
+          value={f.race}
+          onChange={(v) => setF({ ...f, race: v })}
+          options={PLAYER_RACES}
+          placeholder="Race"
+          ariaLabel="Race"
+          className="flex-1"
+        />
+        <Combobox
+          value={f.class}
+          onChange={(v) => setF({ ...f, class: v })}
+          options={PLAYER_CLASSES}
+          placeholder="Class"
+          ariaLabel="Class"
+          className="flex-1"
+        />
+      </div>
+      <div className="flex gap-1">
+        <div className="w-16 shrink-0">
+          <label className="text-[10px] text-gray-500 block mb-0.5">Level</label>
+          <input type="number" min="1" max="20" value={f.level}
+            onChange={e => setF({ ...f, level: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
+          <input type="number" value={f.ac}
+            onChange={e => setF({ ...f, ac: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] text-gray-500 block mb-0.5">Max HP</label>
+          <input type="number" value={f.hp}
+            onChange={e => setF({ ...f, hp: e.target.value })} className={INPUT_CLS} />
+        </div>
+      </div>
+      {/* Weapons — searchable tag input */}
+      <div>
+        <label className="text-[10px] text-gray-500 block mb-0.5">Weapons</label>
+        <WeaponTagInput
+          selected={f.weapons}
+          onChange={weapons => setF({ ...f, weapons })}
+        />
+      </div>
+      {/* Spells — searchable tag input */}
+      <div>
+        <label className="text-[10px] text-gray-500 block mb-0.5">Spells</label>
+        <SpellTagInput
+          selected={f.spells}
+          onChange={spells => setF({ ...f, spells })}
+        />
+      </div>
+    </div>
+  );
+}
 
 // Lowercased-name lookup for the inline weapon stat pills. Built once.
 const WEAPON_STATS_BY_NAME: Map<string, WeaponInfo> = new Map(
   weaponsData.map(w => [w.name.toLowerCase(), w]),
+);
+
+// Same idea, but for spell pills.
+const SPELL_STATS_BY_NAME: Map<string, SpellInfo> = new Map(
+  spellData.map(s => [s.name.toLowerCase(), s]),
 );
 
 // ── Main widget ────────────────────────────────────────────────────────────
@@ -186,6 +430,7 @@ export function PartyWidget() {
   const [editForm, setEditForm] = useState(emptyForm());
 
   const weaponStats = useMemo(() => WEAPON_STATS_BY_NAME, []);
+  const spellStats = useMemo(() => SPELL_STATS_BY_NAME, []);
 
   // Per-row initiative
   const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
@@ -202,7 +447,7 @@ export function PartyWidget() {
         level: parseInt(form.level) || 1,
         ac: form.ac ? parseInt(form.ac) : null,
         hp: form.hp ? parseInt(form.hp) : null,
-        spells: form.spells.split(",").map(s => s.trim()).filter(Boolean),
+        spells: form.spells,
         weapons: form.weapons,
       });
       setForm(emptyForm()); setShowAdd(false); setError(null);
@@ -220,7 +465,7 @@ export function PartyWidget() {
         level: parseInt(editForm.level) || 1,
         ac: editForm.ac ? parseInt(editForm.ac) : null,
         hp: editForm.hp ? parseInt(editForm.hp) : null,
-        spells: editForm.spells.split(",").map(s => s.trim()).filter(Boolean),
+        spells: editForm.spells,
         weapons: editForm.weapons,
       });
       setEditingId(null); setError(null);
@@ -239,7 +484,7 @@ export function PartyWidget() {
       name: c.name, race: c.race || "", class: c.class || "",
       level: String(c.level), ac: c.ac != null ? String(c.ac) : "",
       hp: c.hp != null ? String(c.hp) : "",
-      spells: (c.spells || []).join(", "),
+      spells: c.spells || [],
       weapons: c.weapons || [],
     });
   };
@@ -254,43 +499,6 @@ export function PartyWidget() {
     window.dispatchEvent(new CustomEvent("dm-add-to-initiative", { detail: { combatant } }));
     setInitiativeFor(null); setInitiativeVal("");
   };
-
-  const inputCls = "w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
-
-  // ── Shared form fields ───────────────────────────────────────────────────
-  const FormFields = ({
-    f, setF,
-  }: { f: typeof form; setF: (v: typeof form) => void }) => (
-    <div className="space-y-1.5">
-      <input placeholder="Name *" value={f.name}
-        onChange={e => setF({ ...f, name: e.target.value })} className={inputCls} />
-      <div className="flex gap-1">
-        <input placeholder="Race" value={f.race}
-          onChange={e => setF({ ...f, race: e.target.value })} className={`${inputCls} flex-1`} />
-        <input placeholder="Class" value={f.class}
-          onChange={e => setF({ ...f, class: e.target.value })} className={`${inputCls} flex-1`} />
-      </div>
-      <div className="flex gap-1">
-        <input placeholder="Level" type="number" min="1" max="20" value={f.level}
-          onChange={e => setF({ ...f, level: e.target.value })}
-          className={`${inputCls} w-16 shrink-0`} />
-        <input placeholder="AC" type="number" value={f.ac}
-          onChange={e => setF({ ...f, ac: e.target.value })} className={`${inputCls} flex-1`} />
-        <input placeholder="Max HP" type="number" value={f.hp}
-          onChange={e => setF({ ...f, hp: e.target.value })} className={`${inputCls} flex-1`} />
-      </div>
-      {/* Weapons — searchable tag input */}
-      <div>
-        <label className="text-[10px] text-gray-500 block mb-0.5">Weapons</label>
-        <WeaponTagInput
-          selected={f.weapons}
-          onChange={weapons => setF({ ...f, weapons })}
-        />
-      </div>
-      <input placeholder="Spells (comma-separated)" value={f.spells}
-        onChange={e => setF({ ...f, spells: e.target.value })} className={inputCls} />
-    </div>
-  );
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -435,9 +643,10 @@ export function PartyWidget() {
                       </div>
                     )}
                     {(c.spells?.length ?? 0) > 0 && (
-                      <div className="flex items-start gap-1">
-                        <BookOpen className="w-2.5 h-2.5 text-cyan-600 mt-0.5 shrink-0" />
-                        <span className="text-[10px] text-gray-500 leading-tight">{c.spells.join(", ")}</span>
+                      <div className="flex items-start gap-1 flex-wrap">
+                        {c.spells.map(s => (
+                          <SpellPill key={s} name={s} statsMap={spellStats} />
+                        ))}
                       </div>
                     )}
                   </div>

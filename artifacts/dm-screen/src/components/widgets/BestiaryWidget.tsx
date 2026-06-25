@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { bestiaryData, mod, crToNumber, type Monster } from "@/data/bestiary";
 import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 // ── Unified display type ─────────────────────────────────────────────────────
 // The widget combines two sources: bestiaryData (40 rich stat blocks) and
@@ -116,68 +117,132 @@ function TraitSection({ title, items }: { title: string; items: { name: string; 
   );
 }
 
+type StatBlockTab = "traits" | "actions" | "reactions" | "legendary";
+
+const TAB_LABELS: Record<StatBlockTab, string> = {
+  traits: "Traits",
+  actions: "Actions",
+  reactions: "Reactions",
+  legendary: "Legendary",
+};
+
 function StatBlock({ monster }: { monster: UnifiedMonster }) {
   const hasAbilities = monster.str !== 10 || monster.dex !== 10 || monster.con !== 10 || monster.int !== 10;
-  const hasTraits = monster.traits.length > 0 || monster.actions.length > 0;
+
+  // Decide which tabs have content. Pick the first non-empty as default; reset
+  // when the monster changes so jumping from Aboleth → Goblin starts at the
+  // first tab that's actually populated for the new entry.
+  const tabContent: Record<StatBlockTab, { name: string; desc: string }[]> = {
+    traits: monster.traits,
+    actions: monster.actions,
+    reactions: monster.reactions,
+    legendary: monster.legendaryActions,
+  };
+  const presentTabs = (Object.keys(tabContent) as StatBlockTab[]).filter(
+    (k) => tabContent[k].length > 0,
+  );
+  const [activeTab, setActiveTab] = useState<StatBlockTab | null>(
+    presentTabs[0] ?? null,
+  );
+  useEffect(() => {
+    setActiveTab(presentTabs[0] ?? null);
+    // Tab membership is fully determined by `monster`, so keying on its name
+    // is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monster.name]);
 
   return (
-    <div className="text-[10px] leading-relaxed">
-      <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
-        <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
-        <div className="flex items-center gap-1.5">
-          {monster.source && <span className="text-[9px] text-gray-600 bg-gray-900/60 px-1 rounded">{monster.source}</span>}
-          <span className={`text-xs font-bold ${crColor(monster.cr)}`}>CR {monster.cr}</span>
+    // `flex-1 min-h-0` claims the remaining height inside the detail-view
+    // card; `overflow-hidden` forces the column to honour its computed
+    // height instead of stretching to the tab body's content.
+    <div className="flex-1 min-h-0 overflow-hidden flex flex-col text-[10px] leading-relaxed">
+      {/* ── Sticky header (always visible) ───────────────────────────────── */}
+      <div className="shrink-0">
+        <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
+          <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
+          <div className="flex items-center gap-1.5">
+            {monster.source && <span className="text-[9px] text-gray-600 bg-gray-900/60 px-1 rounded">{monster.source}</span>}
+            <span className={`text-xs font-bold ${crColor(monster.cr)}`}>CR {monster.cr}</span>
+          </div>
         </div>
-      </div>
 
-      <div className="flex gap-3 mb-2 flex-wrap">
-        <div className="flex items-center gap-1">
-          <Shield className="w-3 h-3 text-blue-400" />
-          <span className="text-gray-300">AC {monster.ac}{monster.acType ? ` (${monster.acType})` : ""}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Heart className="w-3 h-3 text-red-400" />
-          <span className="text-gray-300">{monster.hp} HP</span>
-        </div>
-        {monster.speed && (
+        <div className="flex gap-3 mb-2 flex-wrap">
           <div className="flex items-center gap-1">
-            <Zap className="w-3 h-3 text-yellow-400" />
-            <span className="text-gray-300">{monster.speed}</span>
+            <Shield className="w-3 h-3 text-blue-400" />
+            <span className="text-gray-300">AC {monster.ac}{monster.acType ? ` (${monster.acType})` : ""}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Heart className="w-3 h-3 text-red-400" />
+            <span className="text-gray-300">{monster.hp} HP</span>
+          </div>
+          {monster.speed && (
+            <div className="flex items-center gap-1">
+              <Zap className="w-3 h-3 text-yellow-400" />
+              <span className="text-gray-300">{monster.speed}</span>
+            </div>
+          )}
+        </div>
+
+        {hasAbilities && (
+          <div className="flex gap-1 mb-2 flex-wrap">
+            <AbilityScore label="STR" score={monster.str} />
+            <AbilityScore label="DEX" score={monster.dex} />
+            <AbilityScore label="CON" score={monster.con} />
+            <AbilityScore label="INT" score={monster.int} />
+            <AbilityScore label="WIS" score={monster.wis} />
+            <AbilityScore label="CHA" score={monster.cha} />
           </div>
         )}
-      </div>
 
-      {hasAbilities && (
-        <div className="flex gap-1 mb-2 flex-wrap">
-          <AbilityScore label="STR" score={monster.str} />
-          <AbilityScore label="DEX" score={monster.dex} />
-          <AbilityScore label="CON" score={monster.con} />
-          <AbilityScore label="INT" score={monster.int} />
-          <AbilityScore label="WIS" score={monster.wis} />
-          <AbilityScore label="CHA" score={monster.cha} />
+        <div className="space-y-0.5 mb-2">
+          {monster.savingThrows && <div><span className="text-gray-500 font-semibold">Saving Throws </span><span className="text-gray-300">{monster.savingThrows}</span></div>}
+          {monster.skills && <div><span className="text-gray-500 font-semibold">Skills </span><span className="text-gray-300">{monster.skills}</span></div>}
+          {monster.damageImmunities && <div><span className="text-gray-500 font-semibold">Immunities </span><span className="text-gray-300">{monster.damageImmunities}</span></div>}
+          {monster.damageResistances && <div><span className="text-gray-500 font-semibold">Resistances </span><span className="text-gray-300">{monster.damageResistances}</span></div>}
+          {monster.damageVulnerabilities && <div><span className="text-gray-500 font-semibold">Vulnerabilities </span><span className="text-gray-300">{monster.damageVulnerabilities}</span></div>}
+          {monster.conditionImmunities && <div><span className="text-gray-500 font-semibold">Condition Immunities </span><span className="text-gray-300">{monster.conditionImmunities}</span></div>}
+          {monster.senses && <div><span className="text-gray-500 font-semibold">Senses </span><span className="text-gray-300">{monster.senses}</span></div>}
+          {monster.languages && <div><span className="text-gray-500 font-semibold">Languages </span><span className="text-gray-300">{monster.languages}</span></div>}
         </div>
-      )}
-
-      <div className="space-y-0.5 mb-2">
-        {monster.savingThrows && <div><span className="text-gray-500 font-semibold">Saving Throws </span><span className="text-gray-300">{monster.savingThrows}</span></div>}
-        {monster.skills && <div><span className="text-gray-500 font-semibold">Skills </span><span className="text-gray-300">{monster.skills}</span></div>}
-        {monster.damageImmunities && <div><span className="text-gray-500 font-semibold">Immunities </span><span className="text-gray-300">{monster.damageImmunities}</span></div>}
-        {monster.damageResistances && <div><span className="text-gray-500 font-semibold">Resistances </span><span className="text-gray-300">{monster.damageResistances}</span></div>}
-        {monster.damageVulnerabilities && <div><span className="text-gray-500 font-semibold">Vulnerabilities </span><span className="text-gray-300">{monster.damageVulnerabilities}</span></div>}
-        {monster.conditionImmunities && <div><span className="text-gray-500 font-semibold">Condition Immunities </span><span className="text-gray-300">{monster.conditionImmunities}</span></div>}
-        {monster.senses && <div><span className="text-gray-500 font-semibold">Senses </span><span className="text-gray-300">{monster.senses}</span></div>}
-        {monster.languages && <div><span className="text-gray-500 font-semibold">Languages </span><span className="text-gray-300">{monster.languages}</span></div>}
       </div>
 
-      {hasTraits ? (
-        <>
-          <TraitSection title="Traits" items={monster.traits} />
-          <TraitSection title="Actions" items={monster.actions} />
-          <TraitSection title="Reactions" items={monster.reactions} />
-          <TraitSection title="Legendary Actions" items={monster.legendaryActions} />
-        </>
+      {/* ── Tab strip + scrollable tab body ──────────────────────────────── */}
+      {presentTabs.length === 0 ? (
+        <p className="text-[10px] text-gray-600 italic mt-2 shrink-0">Full stat block not available for this monster.</p>
       ) : (
-        <p className="text-[10px] text-gray-600 italic mt-2">Full stat block not available for this monster.</p>
+        <>
+          <div className="flex gap-0.5 border-b border-purple-900/40 shrink-0">
+            {presentTabs.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                    isActive
+                      ? "text-purple-300 border-purple-400"
+                      : "text-gray-500 border-transparent hover:text-purple-400"
+                  }`}
+                >
+                  {TAB_LABELS[tab]}
+                  <span className="ml-1 text-[9px] opacity-60">{tabContent[tab].length}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto pt-1.5">
+            {activeTab && (
+              <div className="space-y-1.5">
+                {tabContent[activeTab].map((t, i) => (
+                  <div key={i} className="text-[10px] leading-relaxed text-gray-300">
+                    <span className="font-bold italic text-gray-100">{t.name}. </span>{t.desc}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -192,11 +257,31 @@ interface Props {
 type SortMode = "alpha" | "cr";
 
 export function BestiaryWidget({ target, onTargetClear }: Props) {
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<UnifiedMonster | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>("alpha");
-  const [crFilter, setCrFilter] = useState("All");
+  // Persist the open monster (by name) + view preferences so a tab reload
+  // / server bounce drops the DM back exactly where they were. The selected
+  // monster is stored as a name and resolved against the live datasets on
+  // mount; that survives regenerations of the underlying data files.
+  const [selectedName, setSelectedName] = useLocalStorage<string | null>(
+    "dm-bestiary-selected-v1",
+    null,
+  );
+  const [query, setQuery] = useLocalStorage<string>("dm-bestiary-query-v1", "");
+  const [sortMode, setSortMode] = useLocalStorage<SortMode>(
+    "dm-bestiary-sort-v1",
+    "alpha",
+  );
+  const [crFilter, setCrFilter] = useLocalStorage<string>(
+    "dm-bestiary-cr-v1",
+    "All",
+  );
   const [loadingTarget, setLoadingTarget] = useState(false);
+
+  // Resolve the persisted name back to a UnifiedMonster.
+  const selected: UnifiedMonster | null = useMemo(
+    () => (selectedName ? lookupByName(selectedName) : null),
+    [selectedName],
+  );
+  const setSelected = (m: UnifiedMonster | null) => setSelectedName(m?.name ?? null);
   const crOptions = ["All", "0–1", "2–4", "5–10", "11–16", "17+"];
 
   // ── When a target name arrives from Initiative Tracker ───────────────────
@@ -276,11 +361,9 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         >
           ← Back to list
         </button>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="bg-gray-900/80 border border-red-900/40 rounded p-2.5">
-            <h3 className="text-sm font-bold text-white mb-1">{selected.name}</h3>
-            <StatBlock monster={selected} />
-          </div>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-gray-900/80 border border-red-900/40 rounded p-2.5">
+          <h3 className="text-sm font-bold text-white mb-1 shrink-0">{selected.name}</h3>
+          <StatBlock monster={selected} />
         </div>
       </div>
     );

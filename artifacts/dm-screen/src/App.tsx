@@ -206,9 +206,17 @@ function AppContent() {
               return (
                 <div
                   key={i}
+                  // minHeight/minWidth: 0 turn off the CSS Grid item default
+                  // (`auto` = `min-content`) which would otherwise let a tall
+                  // widget grow the row past its `1fr` track size. overflow:
+                  // hidden clips anything the widget can't fit, so content
+                  // overflow visually respects the grid cell boundary.
                   style={{
                     gridColumn: `${tileCol} / span ${colSpan}`,
                     gridRow: `${tileRow} / span ${rowSpan}`,
+                    minHeight: 0,
+                    minWidth: 0,
+                    overflow: "hidden",
                   }}
                 >
                   <DMTile

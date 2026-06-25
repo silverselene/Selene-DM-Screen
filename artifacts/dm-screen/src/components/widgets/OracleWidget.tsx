@@ -1,19 +1,31 @@
-import { useState } from "react";
 import { Wand2, RefreshCw, User, Gem, Sword, MapPin } from "lucide-react";
 import {
   generateName, generateLoot, generateItem, generatePlaceName,
   namesByRace, lootByCR, settlementTypes,
 } from "@/data/generators";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 type OracleTab = "names" | "loot" | "items" | "places";
 
 export function OracleWidget() {
-  const [tab, setTab] = useState<OracleTab>("names");
-  const [result, setResult] = useState<string>("");
-  const [selectedRace, setSelectedRace] = useState("Human");
-  const [selectedCR, setSelectedCR] = useState("CR 0-4");
-  const [selectedSettlement, setSelectedSettlement] = useState("Town");
-  const [history, setHistory] = useState<string[]>([]);
+  const [tab, setTab] = useLocalStorage<OracleTab>("dm-oracle-tab-v1", "names");
+  const [result, setResult] = useLocalStorage<string>("dm-oracle-result-v1", "");
+  const [selectedRace, setSelectedRace] = useLocalStorage<string>(
+    "dm-oracle-race-v1",
+    "Human",
+  );
+  const [selectedCR, setSelectedCR] = useLocalStorage<string>(
+    "dm-oracle-cr-v1",
+    "CR 0-4",
+  );
+  const [selectedSettlement, setSelectedSettlement] = useLocalStorage<string>(
+    "dm-oracle-settlement-v1",
+    "Town",
+  );
+  const [history, setHistory] = useLocalStorage<string[]>(
+    "dm-oracle-history-v1",
+    [],
+  );
 
   const generate = () => {
     let res = "";
