@@ -643,11 +643,11 @@ Four new files:
   docs (HANDOVER, CLAUDE.md). The build context stays small and never picks up local
   build artefacts.
 
-**ARM64 caveat.** The remaining platform-binary overrides also exclude `linux-arm64`
+**ARM64 caveat.** ~~The remaining platform-binary overrides also exclude `linux-arm64`
 variants. Building this image on a Raspberry Pi or AWS Graviton will fail until those
-lines are dropped from `pnpm-workspace.yaml`. Cleaning that up is out of scope for
-Phase 7 (Phase 0 only removed the darwin-arm64 lines needed to unblock local dev); a
-follow-up can extend the same treatment to linux-arm64.
+lines are dropped from `pnpm-workspace.yaml`.~~ **Resolved in Phase 7.3** (see below) —
+the linux-arm64 exclusions are now lifted, so the image builds cleanly on Apple Silicon
+Docker, Raspberry Pi 4/5, AWS Graviton, etc.
 
 **Verified mechanically (CLI):**
 - `docker compose config` parses cleanly and resolves service name (`selene-dm-screen`),
@@ -663,3 +663,150 @@ actual smoke test is left to the user. Mechanical proof points that make it
 should-work: compose YAML validates, both base images exist on Docker Hub,
 `pnpm install --frozen-lockfile` will fail loudly if the lockfile drifts, and the
 in-image build runs the same `pnpm build` we've verified green for several phases now.
+
+### Phase 7.1 — Post-Docker UX fixes + state persistence (commit `b782ca7`)
+
+The original plan had no "iterate on feedback" phase between Phase 7 and Phase 8; in
+practice the manual walkthrough of all 7 widgets surfaced a long list of issues, all
+behaviour-preserving on the data layer, all batched into one commit.
+
+**Shared infra (three new modules):**
+- `src/lib/AnchoredDropdown.tsx` — extracted from PartyWidget. Portal-renders a
+  dropdown anchored to a target element, tracking ancestor scrolls. Used by
+  WeaponTagInput, SpellTagInput, and the new Combobox so suggestion lists escape
+  the tile's `overflow: hidden`.
+- `src/lib/Combobox.tsx` — typeable autocomplete (single-value sibling of the tag
+  inputs). Free-text or closed-set via `allowCustom`; `placeholder` doubles as the
+  "no filter" hint when empty.
+- `src/data/playerOptions.ts` — hand-curated `PLAYER_CLASSES` (13 = 2024 PHB's 12 +
+  Artificer + Blood Hunter; the only non-WotC class with enough mainstream uptake to
+  list) and `PLAYER_RACES` (33 = 2024 XPHB core + 2014 PHB extras + Volo's/MotM,
+  Eberron, Strixhaven). Source-grouped with attribution.
+
+**Spell generator — structured damage + healing.** Walks the 5etools JSON tree (not
+free-text regex) for the documented tag macros:
+- `damage: { dice, type, scaling? }` — derived from `damageInflict[0]` + first
+  `{@damage}` macro in `entries`, or `scalingLevelDice` for cantrips, or
+  `{@scaledamage}` in `entriesHigherLevel` for slot upcasting.
+- `healing: { dice, scaling? }` — keyed off the canonical `miscTags: ["HL"]` flag +
+  first `{@dice}` macro. `Heal` (flat 70 HP) falls back to the `{@scaledice}` base
+  so flat-amount healing isn't lost.
+- Source priority flipped to **XPHB before PHB** so 2024 readings win (Cure Wounds
+  goes 1d8 → 2d8 in 2024 etc.) — matches the monster generator's XMM > MM
+  preference. Was an oversight in Phase 1.
+
+**Widget UX (PartyWidget):**
+- `FormFields` hoisted to module scope. The previous in-component declaration
+  re-created the component identity on every render, so React tore down the focused
+  input on each keystroke (the "I can't type more than one letter" bug).
+- Labels above Level / AC / Max HP (the bare type=number boxes were
+  indistinguishable when the placeholder text was clipped by their width).
+- New `SpellTagInput` mirroring `WeaponTagInput`, against the 557-spell dataset.
+- New `SpellPill` showing damage dice + type, heart-iconed healing dice, or level +
+  school fallback (priority order: damage → healing → level). Hover shows scaling.
+- Race and Class are typeable `Combobox`es against `PLAYER_RACES` /
+  `PLAYER_CLASSES` with free-text fallback — consistent with Wizard's Tome's
+  filter pattern.
+
+**Widget UX (BestiaryWidget):** the detail view was outgrowing the tile. Refactored
+into a sticky header (size/type/CR/AC/HP/Speed/abilities/saves/senses, always
+visible) + tab strip below (Traits / Actions / Reactions / Legendary, only shown if
+non-empty, with item-count badges). Tab body scrolls inside the tile.
+
+**Widget UX (WizardsTomeWidget):** Class and School filters became `Combobox`es
+with `allowCustom={false}`. Empty input = no filter (replaces the old "All"
+sentinel string). `aria-label`s added.
+
+**Widget UX (InitiativeWidget):**
+- Monster add tab now has three labelled boxes: **d20 roll** (auto-rolled when a
+  monster is picked) / **Initiative** (auto = d20 + DEX mod, also directly editable
+  to override) / **HP override**. The previous single-box "Initiative roll"
+  pre-filled with the modifier (e.g. `-1` for Aboleth) which wasn't a valid d20
+  outcome.
+- Custom-tab Initiative / HP / AC get labels too, and the Initiative field
+  auto-rolls a fresh d20 each time the form opens.
+
+**Layout fix (App.tsx).** Grid-cell wrapper now has `minHeight: 0; minWidth: 0;
+overflow: hidden`. CSS Grid items default to `min-height: auto` (= `min-content`),
+which let tall widgets push the row's actual track size past its `1fr`
+declaration — the actual root cause of "the Bestiary tile resizes when I switch
+tabs". The Bestiary-internal flex chain was a red herring.
+
+**State persistence — every widget except Notepad got versioned localStorage keys.**
+Notepad was already persisting (`dm-notepad`). The full backup (Phase 7.2) sweeps
+the `dm-` prefix, so any of these are picked up automatically:
+| Widget | Keys |
+|---|---|
+| BestiaryWidget | `dm-bestiary-{selected,query,sort,cr}-v1` |
+| WizardsTomeWidget | `dm-tome-{query,level,class,school,selected}-v1` |
+| CompendiumWidget | `dm-compendium-{query,category,entry}-v1` |
+| OracleWidget | `dm-oracle-{tab,result,race,cr,settlement,history}-v1` |
+| InitiativeWidget | `dm-initiative-mode-v1` (in addition to the existing combatants/turn/round) |
+
+Selected spell and monster are stored **by name** and re-resolved against the live
+datasets on mount, so regenerated data files don't strand stale snapshots.
+
+**Verified:** typecheck + build green. Bundle scan: zero `/api/` strings.
+CustomEvent wiring (Party→Initiative, Initiative→Bestiary, plus the
+PartyStore-internal `dm-party-changed`) intact. All persistence manually verified
+across reload + server bounce.
+
+### Phase 7.2 — Party JSON export/import + full backup/restore (commit `af13ab7`)
+
+Born from the manual-test discovery that opening the SPA in a second browser shows
+empty state — the plan's per-browser localStorage trade-off in practice. The plan's
+"Risks" section recommended an Export/Import escape hatch for the Party roster as a
+nice-to-have; this commit delivers that **and** a full-snapshot variant for the
+"move my whole session between browsers" case.
+
+**New `src/lib/backup.ts`:**
+- `exportFullBackupAsJson` / `importFullBackupFromJson` — operates on every
+  localStorage key matching the `dm-` prefix. No central registry to maintain;
+  any state we add later (new widgets, versioned key bumps) is captured
+  automatically.
+- Restore wipes existing `dm-*` keys first then writes the imported set verbatim;
+  caller reloads the page so every widget picks up its initial state cleanly.
+- Versioned envelope (`schema: "selene-dm-full"`, `version: 1`) so format changes
+  can branch on the schema field later.
+- `downloadJsonFile` / `promptForJsonFile` DOM helpers shared with the Party-only
+  variant.
+
+**`src/lib/partyStore.ts`** gains `exportPartyAsJson` / `importPartyFromJson` with
+their own envelope (`schema: "selene-dm-party"`, `version: 1`). Same
+`normalize`-on-import treatment as the live CRUD path so a malformed file can't
+poison state.
+
+**UI surfaces:**
+- PartyWidget header — ↓ Export (disabled when roster empty) and ↑ Import icons
+  next to **Add Character**. Writes `selene-party-YYYY-MM-DD.json`.
+- Sidebar bottom — new **BACKUP** panel with two buttons. Export writes
+  `selene-dm-backup-YYYY-MM-DD.json`; Import gates on a `confirm()` (it's
+  destructive) and then reloads. Collapsed-rail icons too.
+
+### Phase 7.3 — ARM64 binary exclusions lifted (commit `15a2856`)
+
+`docker compose up --build` from Phase 7 was failing inside the build stage on
+Apple Silicon / Pi / Graviton with `Cannot find module @rollup/rollup-linux-arm64-gnu`.
+Root cause: `pnpm-workspace.yaml` still excluded the linux-arm64 variants of the
+native deps (a hold-over from when Selene was Replit-only and linux-x64 was the only
+target). The build stage runs `node:24-bookworm-slim` (glibc), so when Docker is
+building a `linux/arm64` image, it needs the linux-arm64-gnu binaries.
+
+Lifted exclusions:
+- `@esbuild/linux-arm64`
+- `@rollup/rollup-linux-arm64-gnu`
+- `lightningcss-linux-arm64-gnu`
+- `@tailwindcss/oxide-linux-arm64-gnu`
+- `@expo/ngrok-bin-linux-arm64`
+
+Kept excluded: the `-musl` variants for lightningcss / oxide / rollup. Our build
+stage is glibc (`-gnu`); musl matters only if a self-hoster ever swaps the build
+stage to `node:24-alpine`, which is currently blocked by other exclusions anyway.
+
+`pnpm install` re-resolved the lockfile so the now-allowed optional deps are pinned
+and reproducible. Net change: `-14` packages locally (pnpm de-duped some
+darwin-arm64 entries that had previously been forced via the override block),
++arm64-gnu entries in the lockfile.
+
+Local `pnpm typecheck` + `pnpm build` re-verified green. Docker build now succeeds
+on Apple Silicon end-to-end. `minimumReleaseAge: 1440` untouched.
