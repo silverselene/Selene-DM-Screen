@@ -5,10 +5,9 @@ a Midnight & Amethyst theme. Initiative tracking, spell lookup, monster stats,
 party management, random generators — every tool a DM needs in one configurable
 interface.
 
-**It runs as a fully static single-page app.** No backend, no database, no API
-keys. Clone, `pnpm install && pnpm dev`, and you have a DM screen. All state
-lives in your browser via `localStorage`; the app also installs as an offline
-PWA so it keeps working at the table even if the wifi drops.
+It runs entirely in your browser — clone, `pnpm install && pnpm dev`, and you
+have a DM screen. All state is saved locally; the app also installs as an
+offline PWA so it keeps working at the table even if the wifi drops.
 
 ## Features
 
@@ -73,9 +72,9 @@ sessions via `localStorage`.
 ### Prerequisites
 
 - Node.js 24+
-- pnpm 9+ (the root `preinstall` script rejects npm/yarn)
-
-That's it. No PostgreSQL, no API keys, no environment variables.
+- pnpm 9+ — install with `npm install -g pnpm` or `corepack enable` (the
+  root `preinstall` script rejects npm/yarn; pnpm is required for the
+  workspace's `catalog:` deps and the `minimumReleaseAge` supply-chain check)
 
 ### Run locally
 
@@ -87,6 +86,7 @@ pnpm dev        # http://localhost:5173 (dev server with HMR)
 ### Production build
 
 ```bash
+pnpm typecheck  # project-references-aware tsc across the workspace
 pnpm build      # typechecks, then builds the SPA to artifacts/dm-screen/dist/public/
 pnpm preview    # serves the built bundle on http://localhost:5173
 ```
@@ -108,6 +108,8 @@ side of the port mapping in `docker-compose.yml` if 5173 is taken.
 
 ## Architecture
 
+pnpm workspace with one deployable plus an offline tooling package:
+
 ```
 artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only deployable)
   src/data/                  Bundled reference data: spells, bestiary,
@@ -120,10 +122,6 @@ scripts/                     Standalone tsx data-generators (run offline)
 attached_assets/             Source CSV for the thin monster index
 Dockerfile, docker-compose.yml, .dockerignore
 ```
-
-Everything that used to be server-side — Postgres, the Express API server,
-the OpenAPI/Orval codegen, Drizzle, the mockup sandbox — has been removed.
-See `HANDOVER-self-hosting.md` for the migration history.
 
 ### Bundled reference data
 
@@ -144,23 +142,6 @@ pnpm --filter @workspace/scripts run generate:all
 
 5etools content is MIT-licensed; attribution is preserved at the top of each
 generated data file.
-
-## Project structure (pnpm workspace)
-
-```
-artifacts/dm-screen          The SPA
-scripts                      Data generators (tsx)
-```
-
-Common commands from the repo root:
-
-```bash
-pnpm install
-pnpm typecheck               # project-references-aware tsc across the workspace
-pnpm build                   # typecheck then build the SPA
-pnpm dev                     # vite dev server
-pnpm preview                 # serve the built bundle
-```
 
 ## Security
 
