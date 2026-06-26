@@ -4,6 +4,13 @@ import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
 import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  MAX_TILES,
+  WIDGET_TYPES,
+  validateArrayOfEnum,
+  validateBoundedInt,
+  validateTiles,
+} from "@/lib/backup";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import type { TileEntry, WidgetType } from "@/types";
 
@@ -12,17 +19,26 @@ const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
 const getDefaultTiles = (cols: number, rows: number): TileEntry[] =>
   Array.from({ length: cols * rows }, empty);
 
+// Validators paired with each persistent key. Same shape checks the
+// backup-import path runs — so a malformed stored value (DevTools edit,
+// SW cache mismatch, future write bug) falls back to defaults instead of
+// crashing render.
+const validateGridDim = validateBoundedInt(2, 4);
+const validateRecentWidgets = validateArrayOfEnum(WIDGET_TYPES, MAX_TILES);
+
 function AppContent() {
   const { isDark } = useTheme();
-  const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3);
-  const [rows, setRows] = useLocalStorage<number>("dm-grid-rows", 3);
+  const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3, validateGridDim);
+  const [rows, setRows] = useLocalStorage<number>("dm-grid-rows", 3, validateGridDim);
   const [tiles, setTiles] = useLocalStorage<TileEntry[]>(
     "dm-tiles-v3",
-    getDefaultTiles(3, 3)
+    getDefaultTiles(3, 3),
+    validateTiles,
   );
   const [recentWidgets, setRecentWidgets] = useLocalStorage<WidgetType[]>(
     "dm-recent-widgets",
-    []
+    [],
+    validateRecentWidgets,
   );
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);

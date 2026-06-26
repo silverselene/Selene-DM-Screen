@@ -1,4 +1,18 @@
-export type WidgetType = "compendium" | "initiative" | "notepad" | "oracle" | "bestiary" | "wizard-tome" | "party" | "empty";
+// The runtime array is the source of truth; the type is derived from it.
+// Adding/removing a widget kind here updates both the union and any
+// runtime allowlist (e.g. backup validators, recent-widgets filters).
+export const WIDGET_TYPES = [
+  "compendium",
+  "initiative",
+  "notepad",
+  "oracle",
+  "bestiary",
+  "wizard-tome",
+  "party",
+  "empty",
+] as const;
+
+export type WidgetType = (typeof WIDGET_TYPES)[number];
 
 export type TileEntry = {
   widget: WidgetType;

@@ -19,16 +19,36 @@ function readRaw(): PlayerCharacter[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalize);
+    return normalizePartyBatch(parsed);
   } catch {
     return [];
   }
 }
 
+// Module-level monotonic counter for minted PC ids. Lazily seeded from
+// Date.now() so minted ids are roughly wall-clock-ordered, but always
+// post-increments — so synchronous batches (e.g. `arr.map(normalize)` on
+// an import where every record is missing `id`) never collide. Every
+// observed existing id also bumps the counter via `bumpIdCounter` so a
+// subsequent mint can't accidentally land on it.
+let idCounter = 0;
+
+function bumpIdCounter(seen: number): void {
+  if (seen > idCounter) idCounter = seen;
+}
+
+function mintId(): number {
+  const now = Date.now();
+  if (now > idCounter) idCounter = now;
+  return ++idCounter;
+}
+
 function normalize(c: unknown): PlayerCharacter {
   const obj = c as Partial<PlayerCharacter>;
+  const hasValidId = typeof obj.id === "number" && Number.isFinite(obj.id);
+  if (hasValidId) bumpIdCounter(obj.id as number);
   return {
-    id: typeof obj.id === "number" ? obj.id : Date.now(),
+    id: hasValidId ? (obj.id as number) : mintId(),
     name: typeof obj.name === "string" ? obj.name : "",
     race: typeof obj.race === "string" ? obj.race : null,
     class: typeof obj.class === "string" ? obj.class : null,
@@ -38,6 +58,48 @@ function normalize(c: unknown): PlayerCharacter {
     spells: Array.isArray(obj.spells) ? obj.spells.filter(isString) : [],
     weapons: Array.isArray(obj.weapons) ? obj.weapons.filter(isString) : [],
   };
+}
+
+function isPlainObject(x: unknown): x is Record<string, unknown> {
+  return x !== null && typeof x === "object" && !Array.isArray(x);
+}
+
+/** Normalize a batch of PlayerCharacters with id-uniqueness guarantees.
+ *  Used by every code path that ingests external data (storage reads,
+ *  party-only imports, full-backup restores). Closes three failure modes:
+ *  (1) non-object array elements (e.g. `["A","B"]`) are dropped outright
+ *  rather than coerced into synthetic empty PCs that pollute the roster;
+ *  (2) per-element `normalize()` minting via the monotonic `mintId`
+ *  counter so missing ids in the batch get distinct values even when
+ *  `.map`'d synchronously; (3) a post-pass that detects explicit duplicate
+ *  ids in the input and renumbers the collisions. */
+export function normalizePartyBatch(arr: unknown[]): PlayerCharacter[] {
+  const normalized = arr.filter(isPlainObject).map(normalize);
+  // Fast path: no duplicates → return as-is (common case for legitimate
+  // storage reads, where every id is already distinct).
+  const seen = new Set<number>();
+  let hasDups = false;
+  for (const pc of normalized) {
+    if (seen.has(pc.id)) {
+      hasDups = true;
+      break;
+    }
+    seen.add(pc.id);
+  }
+  if (!hasDups) return normalized;
+  // Renumber duplicates. The counter has already been bumped past every
+  // observed id (by `normalize`/`bumpIdCounter`), so freshly minted ids
+  // are guaranteed greater than anything in the batch.
+  seen.clear();
+  return normalized.map((pc) => {
+    if (seen.has(pc.id)) {
+      const fresh = mintId();
+      seen.add(fresh);
+      return { ...pc, id: fresh };
+    }
+    seen.add(pc.id);
+    return pc;
+  });
 }
 
 function isString(x: unknown): x is string {
@@ -131,17 +193,15 @@ export function importPartyFromJson(text: string): number {
   if (!Array.isArray(env.party)) {
     throw new Error("Envelope is missing a `party` array.");
   }
-  const normalized = env.party.map(normalize);
+  const normalized = normalizePartyBatch(env.party);
   write(normalized);
   return normalized.length;
 }
 
-function nextId(list: PlayerCharacter[]): number {
-  const max = list.reduce((m, c) => (c.id > m ? c.id : m), 0);
-  // Combine "monotonic since boot" with the max id seen — handles the rare
-  // case where the user deletes the most recent entry and adds another in
-  // the same millisecond.
-  return Math.max(max + 1, Date.now());
+function nextId(_list: PlayerCharacter[]): number {
+  // `readRaw` → `normalizePartyBatch` already bumped the counter past every
+  // id in storage, so a fresh mint is guaranteed greater than the list max.
+  return mintId();
 }
 
 // React hook: returns the current party, re-reads on cross-widget mutations.

@@ -4,18 +4,49 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   downloadJsonFile,
   exportFullBackupAsJson,
-  importFullBackupFromJson,
+  prepareImport,
   promptForJsonFile,
 } from "@/lib/backup";
 
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
 async function runFullImport() {
-  if (!window.confirm("Importing a backup will REPLACE all current widget state (party, notes, layout, in-progress combat). Continue?")) {
+  let text: string;
+  try {
+    text = await promptForJsonFile();
+  } catch {
+    // User cancelled or picker failed — treat as no-op rather than error.
     return;
   }
   try {
-    const text = await promptForJsonFile();
-    const count = importFullBackupFromJson(text);
-    window.alert(`Restored ${count} key${count === 1 ? "" : "s"}. Reloading…`);
+    // Two-phase: prepare (parse + validate + snapshot) now, commit after
+    // the user confirms. Closes the TOCTOU window — the bytes the user
+    // sees in the prompt match what the commit will wipe, even if other
+    // tabs write between confirm-show and confirm-accept.
+    const { summary, commit } = prepareImport(text);
+    const itemWord = summary.accepted === 1 ? "item" : "items";
+    let prompt =
+      `Import ${summary.accepted} ${itemWord} (${formatBytes(summary.bytes)}) from this backup?\n\n` +
+      `This will REPLACE all current widget state — party, notes, layout, in-progress combat ` +
+      `(currently ${formatBytes(summary.currentBytes)}).`;
+    if (summary.skipped.length > 0) {
+      const sample = summary.skipped.slice(0, 3).join(", ");
+      const more = summary.skipped.length > 3 ? ` (+${summary.skipped.length - 3} more)` : "";
+      prompt +=
+        `\n\n⚠ ${summary.skipped.length} item${summary.skipped.length === 1 ? "" : "s"} ` +
+        `will be skipped — malformed or unrecognized values — and those widgets will reset to default:\n` +
+        `${sample}${more}`;
+    }
+    if (!window.confirm(prompt)) return;
+    const { skipped } = commit();
+    if (skipped.length > 0) {
+      console.warn("Backup import: skipped malformed keys:", skipped);
+    }
+    window.alert("Backup restored. Reloading…");
     window.location.reload();
   } catch (e) {
     window.alert(`Import failed: ${(e as Error).message}`);

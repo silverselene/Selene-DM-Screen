@@ -7,6 +7,20 @@ import type { Combatant, PlayerCharacter } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useParty } from "@/lib/partyStore";
 import { searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
+import {
+  INITIATIVE_MODES,
+  validateBoundedInt,
+  validateCombatants,
+  validateEnum,
+} from "@/lib/backup";
+
+// Validators paired with each persistent key. Same shape checks the
+// backup-import path runs — so a malformed stored value (DevTools edit,
+// SW cache mismatch, future write bug) falls back to defaults instead of
+// crashing render or producing NaN-poisoned HP.
+const validateTurn = validateBoundedInt(0, 999);
+const validateRound = validateBoundedInt(1, 9999);
+const validateAddMode = validateEnum(INITIATIVE_MODES);
 
 let idCounter = Date.now();
 const nextId = () => String(++idCounter);
@@ -60,7 +74,7 @@ function readLegacy<T>(legacyKey: string, fallback: T): T {
   }
 }
 
-type AddMode = "player" | "monster" | "party";
+type AddMode = (typeof INITIATIVE_MODES)[number];
 
 export function InitiativeWidget() {
   // Versioned per phase 2 ("Persist live combat state to a versioned key").
@@ -70,19 +84,26 @@ export function InitiativeWidget() {
   const [combatants, setCombatants] = useLocalStorage<Combatant[]>(
     "dm-initiative-v1",
     () => readLegacy<Combatant[]>("dm-initiative", []),
+    validateCombatants,
   );
   const [currentIndex, setCurrentIndex] = useLocalStorage<number>(
     "dm-initiative-turn-v1",
     () => readLegacy<number>("dm-initiative-turn", 0),
+    validateTurn,
   );
   const [round, setRound] = useLocalStorage<number>(
     "dm-round-v1",
     () => readLegacy<number>("dm-round", 1),
+    validateRound,
   );
   const [showForm, setShowForm] = useState(false);
   // Persist the last-used Add tab — the DM tends to add the same kind of
   // combatant repeatedly in a given session.
-  const [addMode, setAddMode] = useLocalStorage<AddMode>("dm-initiative-mode-v1", "player");
+  const [addMode, setAddMode] = useLocalStorage<AddMode>(
+    "dm-initiative-mode-v1",
+    "player",
+    validateAddMode,
+  );
 
   // Player/custom form
   // Custom-combatant form. Initiative is pre-rolled with a fresh d20 each
