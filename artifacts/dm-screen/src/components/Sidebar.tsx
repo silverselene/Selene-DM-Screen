@@ -18,8 +18,9 @@ async function runFullImport() {
   let text: string;
   try {
     text = await promptForJsonFile();
-  } catch {
-    // User cancelled or picker failed — treat as no-op rather than error.
+  } catch (e) {
+    if ((e as DOMException).name === "AbortError") return;
+    window.alert(`Import failed: ${(e as Error).message}`);
     return;
   }
   try {

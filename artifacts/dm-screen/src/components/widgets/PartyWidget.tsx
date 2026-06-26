@@ -10,7 +10,7 @@ import {
   addCharacter,
   deleteCharacter,
   exportPartyAsJson,
-  importPartyFromJson,
+  preparePartyImport,
   updateCharacter,
   useParty,
 } from "@/lib/partyStore";
@@ -475,9 +475,11 @@ export function PartyWidget() {
     } catch { setError("Failed to update."); }
   };
 
-  const deleteChar = (id: number) => {
+  const deleteChar = (c: PlayerCharacter) => {
+    const label = c.name?.trim() || "this character";
+    if (!window.confirm(`Delete ${label}? This can't be undone.`)) return;
     try {
-      deleteCharacter(id);
+      deleteCharacter(c.id);
     } catch { setError("Failed to delete."); }
   };
 
@@ -498,12 +500,34 @@ export function PartyWidget() {
   };
 
   const importParty = async () => {
+    let text: string;
     try {
-      const text = await promptForJsonFile();
-      const count = importPartyFromJson(text);
+      text = await promptForJsonFile();
+    } catch (e) {
+      if ((e as DOMException).name === "AbortError") return;
+      setError(`Import failed: ${(e as Error).message}`);
+      return;
+    }
+    let prepared;
+    try {
+      prepared = preparePartyImport(text);
+    } catch (e) {
+      setError(`Import failed: ${(e as Error).message}`);
+      return;
+    }
+    const { summary, commit } = prepared;
+    const charWord = (n: number) => `character${n === 1 ? "" : "s"}`;
+    const prompt =
+      summary.currentCount > 0
+        ? `Replace your current ${summary.currentCount} ${charWord(summary.currentCount)} ` +
+          `with ${summary.accepted} imported ${charWord(summary.accepted)}?`
+        : `Import ${summary.accepted} ${charWord(summary.accepted)}?`;
+    if (!window.confirm(prompt)) return;
+    try {
+      const count = commit();
       setError(null);
       // eslint-disable-next-line no-alert
-      window.alert(`Imported ${count} character${count === 1 ? "" : "s"}.`);
+      window.alert(`Imported ${count} ${charWord(count)}.`);
     } catch (e) {
       setError(`Import failed: ${(e as Error).message}`);
     }
@@ -643,7 +667,8 @@ export function PartyWidget() {
                       className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 hover:bg-gray-700/40 rounded transition-colors">
                       <Pencil className="w-3 h-3" />
                     </button>
-                    <button onClick={() => deleteChar(c.id)}
+                    <button onClick={() => deleteChar(c)}
+                      title="Delete character"
                       className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors">
                       <Trash2 className="w-3 h-3" />
                     </button>

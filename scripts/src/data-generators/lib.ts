@@ -94,6 +94,12 @@ export function stripTags(str: unknown): string {
       })
       // {@dc N} → "DC N".
       .replace(/\{@dc\s([^}]+)\}/g, (_, n: string) => `DC ${n.trim()}`)
+      // {@scaledamage <base>|<levels>|<step>} and {@scaledice ...} encode
+      // per-slot upcasting; the prose wants the STEP (3rd segment), not the
+      // base. e.g. Fireball "8d6|3-9|1d6" → "1d6", Heal "70|6-9|10" → "10".
+      .replace(/\{@scaled(?:amage|ice)\s+([^}]*)\}/g, (_, payload: string) =>
+        (payload.split("|")[2] ?? "").trim(),
+      )
       // Generic tag with payload → first pipe segment.
       .replace(/\{@\w+\s([^}]*)\}/g, (_, text: string) =>
         (text.split("|")[0] ?? "").trim(),

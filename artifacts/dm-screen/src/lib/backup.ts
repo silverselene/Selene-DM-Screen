@@ -483,22 +483,40 @@ export function downloadJsonFile(filename: string, contents: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Open a native file picker and resolve with the text contents. */
+/** Open a native file picker and resolve with the text contents. Rejects
+ *  with a DOMException whose `name === "AbortError"` if the user cancels
+ *  the picker (so callers can distinguish cancel from a real read failure
+ *  and silently no-op on the former). */
 export function promptForJsonFile(): Promise<string> {
   return new Promise((resolve, reject) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json,.json";
+    input.style.display = "none";
+    document.body.appendChild(input);
+    const cleanup = () => input.remove();
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) {
-        reject(new Error("No file selected."));
+        cleanup();
+        reject(new DOMException("Cancelled", "AbortError"));
         return;
       }
       const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(reader.error ?? new Error("Read failed."));
+      reader.onload = () => {
+        cleanup();
+        resolve(String(reader.result ?? ""));
+      };
+      reader.onerror = () => {
+        const err = reader.error ?? new Error("Read failed.");
+        cleanup();
+        reject(err);
+      };
       reader.readAsText(file);
+    };
+    input.oncancel = () => {
+      cleanup();
+      reject(new DOMException("Cancelled", "AbortError"));
     };
     input.click();
   });

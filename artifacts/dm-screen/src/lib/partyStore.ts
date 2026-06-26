@@ -172,13 +172,31 @@ export function exportPartyAsJson(): string {
   return JSON.stringify(env, null, 2);
 }
 
-/** Validate + write an import envelope. Returns the imported count, or
- *  throws on a malformed file (caller renders the message). */
-export function importPartyFromJson(text: string): number {
+export interface PartyImportSummary {
+  /** How many valid PCs the file will write. */
+  accepted: number;
+  /** How many PCs are currently in the roster (will be replaced). */
+  currentCount: number;
+  /** envelope.exportedAt, if present. */
+  exportedAt?: string;
+}
+
+export interface PreparedPartyImport {
+  summary: PartyImportSummary;
+  /** Replace the roster with the validated batch. Returns the written
+   *  count. Throws only on quota / storage failure. */
+  commit: () => number;
+}
+
+/** Two-phase party import: parse + validate now, commit after the user
+ *  confirms. Throws on a malformed envelope; the caller renders the
+ *  message. The summary lets the caller show "Replace your N characters
+ *  with M imported characters?" instead of a count-blind prompt. */
+export function preparePartyImport(text: string): PreparedPartyImport {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
-  } catch (e) {
+  } catch {
     throw new Error("File isn't valid JSON.");
   }
   if (!parsed || typeof parsed !== "object") {
@@ -194,8 +212,18 @@ export function importPartyFromJson(text: string): number {
     throw new Error("Envelope is missing a `party` array.");
   }
   const normalized = normalizePartyBatch(env.party);
-  write(normalized);
-  return normalized.length;
+  const summary: PartyImportSummary = {
+    accepted: normalized.length,
+    currentCount: readRaw().length,
+    ...(typeof env.exportedAt === "string" ? { exportedAt: env.exportedAt } : {}),
+  };
+  return {
+    summary,
+    commit: () => {
+      write(normalized);
+      return normalized.length;
+    },
+  };
 }
 
 function nextId(_list: PlayerCharacter[]): number {

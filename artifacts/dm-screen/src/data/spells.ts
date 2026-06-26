@@ -981,7 +981,7 @@ export const spellData: Spell[] = [
       "Warlock",
     ],
     description: "Invoking Hadar, you cause tendrils to erupt from yourself. Each creature in a 10-foot Emanation [Area of Effect] originating from you makes a Strength saving throw. On a failed save, a target takes 2d6 Necrotic damage and can't take Reactions until the start of its next turn. On a successful save, a target takes half as much damage only.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d6 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 1.",
     damage: {
       dice: "2d6",
       type: "necrotic",
@@ -1046,7 +1046,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A thin sheet of flames shoots forth from you. Each creature in a 15-foot Cone [Area of Effect] makes a Dexterity saving throw, taking 3d6 Fire damage on a failed save or half as much damage on a successful one.\nFlammable objects in the Cone [Area of Effect] that aren't being worn or carried start burning.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 1.",
     damage: {
       dice: "3d6",
       type: "fire",
@@ -1063,7 +1063,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "Choose one object weighing 1 to 5 pounds within range that isn't being worn or carried. The object flies in a straight line up to 90 feet in a direction you choose before falling to the ground, stopping early if it impacts against a solid surface. If the object would strike a creature, that creature must make a Dexterity saving throw. On a failed save, the object strikes the target and stops moving. When the object strikes something, the object and what it strikes each take 3d8 bludgeoning damage.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 2nd level or higher, the maximum weight of objects that you can target with this spell increases by 5 pounds, and the damage increases by 3d8, for each slot level above 1st.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 2nd level or higher, the maximum weight of objects that you can target with this spell increases by 5 pounds, and the damage increases by 1d8, for each slot level above 1st.",
     damage: {
       dice: "3d8",
       type: "bludgeoning",
@@ -1105,7 +1105,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You hurl an undulating, warbling mass of chaotic energy at one creature in range. Make a ranged spell attack against the target. On a hit, the target takes 2d8 + 1d6 damage. Choose one of the d8s. The number rolled on that die determines the attack's damage type, as shown below.\n | Acid\n | Cold\n | Fire\n | Force\n | Lightning\n | Poison\n | Psychic\n | Thunder\nIf you roll the same number on both d8s, the chaotic energy leaps from the target to a different creature of your choice within 30 feet of it. Make a new attack roll against the new target, and make a new damage roll, which could cause the chaotic energy to leap again.\nA creature can be targeted only once by each casting of this spell.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 2nd level or higher, each target takes 2d8 + 1d6 extra damage of the type rolled for each slot level above 1st.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 2nd level or higher, each target takes 1d6 extra damage of the type rolled for each slot level above 1st.",
     damage: {
       dice: "2d8 + 1d6",
       type: "acid",
@@ -1143,7 +1143,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You hurl an orb of energy at a target within range. Choose Acid, Cold, Fire, Lightning, Poison, or Thunder for the type of orb you create, and then make a ranged spell attack against the target. On a hit, the target takes 3d8 damage of the chosen type.\nIf you roll the same number on two or more of the d8s, the orb leaps to a different target of your choice within 30 feet of the target. Make an attack roll against the new target, and make a new damage roll. The orb can't leap again unless you cast the spell with a level 2+ spell slot.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d8 for each spell slot level above 1. The orb can leap a maximum number of times equal to the level of the slot expended, and a creature can be targeted only once by each casting of this spell.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 1. The orb can leap a maximum number of times equal to the level of the slot expended, and a creature can be targeted only once by each casting of this spell.",
     damage: {
       dice: "3d8",
       type: "acid",
@@ -1334,7 +1334,7 @@ export const spellData: Spell[] = [
       "Bard",
     ],
     description: "One creature of your choice that you can see within range hears a discordant melody in its mind. The target makes a Wisdom saving throw. On a failed save, it takes 3d6 Psychic damage and must immediately use its Reaction, if available, to move as far away from you as it can, using the safest route. On a successful save, the target takes half as much damage only.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 1.",
     damage: {
       dice: "3d6",
       type: "psychic",
@@ -1387,7 +1387,7 @@ export const spellData: Spell[] = [
       "Paladin",
     ],
     description: "The target takes an extra 2d8 Radiant damage from the attack. The damage increases by 1d8 if the target is a Fiend or an Undead.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d8 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 1.",
     damage: {
       dice: "2d8",
       type: "radiant",
@@ -1613,7 +1613,7 @@ export const spellData: Spell[] = [
       "Cleric",
     ],
     description: "You hurl a bolt of light toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 4d6 Radiant damage, and the next attack roll made against it before the end of your next turn has Advantage.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 4d6 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 1.",
     damage: {
       dice: "4d6",
       type: "radiant",
@@ -1671,7 +1671,7 @@ export const spellData: Spell[] = [
       "Warlock",
     ],
     description: "The creature that damaged you is momentarily surrounded by green flames. It makes a Dexterity saving throw, taking 2d10 Fire damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d10 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 1.",
     damage: {
       dice: "2d10",
       type: "fire",
@@ -1746,7 +1746,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe Cold damage increases by 2d6 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe Cold damage increases by 1d6 for each spell slot level above 1.",
     damage: {
       dice: "1d10",
       type: "cold",
@@ -1797,7 +1797,7 @@ export const spellData: Spell[] = [
       "Cleric",
     ],
     description: "A creature you touch makes a Constitution saving throw, taking 2d10 Necrotic damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d10 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 1.",
     damage: {
       dice: "2d10",
       type: "necrotic",
@@ -1901,7 +1901,7 @@ export const spellData: Spell[] = [
     duration: "1 round",
     classes: [],
     description: "The gravity in a 10-foot-radius sphere centered on a point you can see within range increases for a moment. Each creature in the sphere on the turn when you cast the spell must make a Constitution saving throw. On a failed save, a creature takes 2d8 force damage, and its speed is halved until the end of its next turn. On a successful save, a creature takes half as much damage and suffers no reduction to its speed.\nUntil the start of your next turn, any object that isn't being worn or carried in the sphere requires a successful Strength check against your spell save DC to pick up or move.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 2nd level or higher, the damage increases by 2d8 for each slot level above 1st.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 2nd level or higher, the damage increases by 1d8 for each slot level above 1st.",
     damage: {
       dice: "2d8",
       type: "force",
@@ -1956,7 +1956,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You shoot a greenish ray at a creature within range. Make a ranged spell attack against the target. On a hit, the target takes 2d8 Poison damage and has the Poisoned condition until the end of your next turn.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d8 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 1.",
     damage: {
       dice: "2d8",
       type: "poison",
@@ -2182,7 +2182,7 @@ export const spellData: Spell[] = [
       "Paladin",
     ],
     description: "Your strike rings with thunder that is audible within 300 feet of you, and the target takes an extra 2d6 Thunder damage from the attack. Additionally, if the target is a creature, it must succeed on a Strength saving throw or be pushed 10 feet away from you and have the Prone condition.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d6 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 1.",
     damage: {
       dice: "2d6",
       type: "thunder",
@@ -2204,7 +2204,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You unleash a wave of thunderous energy. Each creature in a 15-foot Cube [Area of Effect] originating from you makes a Constitution saving throw. On a failed save, a creature takes 2d8 Thunder damage and is pushed 10 feet away from you. On a successful save, a creature takes half as much damage only.\nIn addition, unsecured objects that are entirely within the Cube [Area of Effect] are pushed 10 feet away from you, and a thunderous boom is audible within 300 feet.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d8 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 1.",
     damage: {
       dice: "2d8",
       type: "thunder",
@@ -2264,7 +2264,7 @@ export const spellData: Spell[] = [
     ],
     description: "A beam of crackling energy lances toward a creature within range, forming a sustained arc of lightning between you and the target. Make a ranged spell attack against it. On a hit, the target takes 2d12 Lightning damage.\nOn each of your subsequent turns, you can take a Bonus Action to deal 1d12 Lightning damage to the target automatically, even if the first attack missed.\nThe spell ends if the target is ever outside the spell's range or if it has Total Cover from you.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe initial damage increases by 2d12 for each spell slot level above 1.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe initial damage increases by 1d12 for each spell slot level above 1.",
     damage: {
       dice: "2d12",
       type: "lightning",
@@ -2316,7 +2316,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "A line of roaring flame 30 feet long and 5 feet wide emanates from you in a direction you choose. Each creature in the line must make a Dexterity saving throw. A creature takes 3d8 fire damage on a failed save, or half as much damage on a successful one.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 3d8 for each slot level above 2nd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d8 for each slot level above 2nd.",
     damage: {
       dice: "3d8",
       type: "fire",
@@ -2535,7 +2535,7 @@ export const spellData: Spell[] = [
     ],
     description: "The next time you hit a creature with a weapon attack before this spell ends, the weapon gleams with astral radiance as you strike. The attack deals an extra 2d6 radiant damage to the target, which becomes visible if it's invisible, and the target sheds dim light in a 5-foot radius and can't become invisible until the spell ends.",
     concentration: true,
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the extra damage increases by 2d6 for each slot level above 2nd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the extra damage increases by 1d6 for each slot level above 2nd.",
     damage: {
       dice: "2d6",
       type: "radiant",
@@ -2573,7 +2573,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure spinning daggers in a 5-foot Cube [Area of Effect] centered on a point within range. Each creature in that area takes 4d4 Slashing damage. A creature also takes this damage if it enters the Cube [Area of Effect] or ends its turn there or if the Cube [Area of Effect] moves into its space. A creature takes this damage only once per turn.\nOn your later turns, you can take a Magic action to teleport the Cube [Area of Effect] up to 30 feet.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 4d4 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d4 for each spell slot level above 2.",
     damage: {
       dice: "4d4",
       type: "slashing",
@@ -2728,7 +2728,7 @@ export const spellData: Spell[] = [
     ],
     description: "You touch one willing creature, and choose Acid, Cold, Fire, Lightning, or Poison. Until the spell ends, the target can take a Magic action to exhale a 15-foot Cone [Area of Effect]. Each creature in that area makes a Dexterity saving throw, taking 3d6 damage of the chosen type on a failed save or half as much damage on a successful one.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 2.",
     damage: {
       dice: "3d6",
       type: "acid",
@@ -2875,7 +2875,7 @@ export const spellData: Spell[] = [
     ],
     description: "You evoke a fiery blade in your free hand. The blade is similar in size and shape to a scimitar, and it lasts for the duration. If you let go of the blade, it disappears, but you can evoke it again as a Bonus Action.\nAs a Magic action, you can make a melee spell attack with the fiery blade. On a hit, the target takes Fire damage equal to 3d6 plus your spellcasting ability modifier.\nThe flaming blade sheds Bright Light in a 10-foot radius and Dim Light for an additional 10 feet.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 2.",
     damage: {
       dice: "3d6",
       type: "fire",
@@ -2897,7 +2897,7 @@ export const spellData: Spell[] = [
     ],
     description: "You create a 5-foot-diameter sphere of fire in an unoccupied space on the ground within range. It lasts for the duration. Any creature that ends its turn within 5 feet of the sphere makes a Dexterity saving throw, taking 2d6 Fire damage on a failed save or half as much damage on a successful one.\nAs a Bonus Action, you can move the sphere up to 30 feet, rolling it along the ground. If you move the sphere into a creature's space, that creature makes the save against the sphere, and the sphere stops moving for the turn.\nWhen you move the sphere, you can direct it over barriers up to 5 feet tall and jump it across pits up to 10 feet wide. Flammable objects that aren't being worn or carried start burning if touched by the sphere, and it sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d6 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 2.",
     damage: {
       dice: "2d6",
       type: "fire",
@@ -3011,7 +3011,7 @@ export const spellData: Spell[] = [
     ],
     description: "Choose a manufactured metal object, such as a metal weapon or a suit of Heavy or Medium metal armor, that you can see within range. You cause the object to glow red-hot. Any creature in physical contact with the object takes 2d8 Fire damage when you cast the spell. Until the spell ends, you can take a Bonus Action on each of your later turns to deal this damage again if the object is within range.\nIf a creature is holding or wearing the object and takes the damage from it, the creature must succeed on a Constitution saving throw or drop the object if it can. If it doesn't drop the object, it has Disadvantage on attack rolls and ability checks until the start of your next turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d8 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 2.",
     damage: {
       dice: "2d8",
       type: "fire",
@@ -3264,7 +3264,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage (both initial and later) increases by 4d4;2d4 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage (both initial and later) increases by 1d4 for each spell slot level above 2.",
     damage: {
       dice: "4d4",
       type: "acid",
@@ -3286,7 +3286,7 @@ export const spellData: Spell[] = [
     ],
     description: "You drive a spike of psionic energy into the mind of one creature you can see within range. The target makes a Wisdom saving throw, taking 3d8 Psychic damage on a failed save or half as much damage on a successful one. On a failed save, you also always know the target's location until the spell ends, but only while the two of you are on the same plane of existence. While you have this knowledge, the target can't become hidden from you, and if it has the Invisible condition, it gains no benefit from that condition against you.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d8 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 2.",
     damage: {
       dice: "3d8",
       type: "psychic",
@@ -3337,7 +3337,7 @@ export const spellData: Spell[] = [
     ],
     description: "A silvery beam of pale light shines down in a 5-foot-radius, 40-foot-high Cylinder [Area of Effect] centered on a point within range. Until the spell ends, Dim Light fills the Cylinder [Area of Effect], and you can take a Magic action on later turns to move the Cylinder [Area of Effect] up to 60 feet.\nWhen the Cylinder [Area of Effect] appears, each creature in it makes a Constitution saving throw. On a failed save, a creature takes 2d10 Radiant damage, and if the creature is shape-shifted (as a result of the Polymorph spell, for example), it reverts to its true form and can't shape-shift until it leaves the Cylinder [Area of Effect]. On a successful save, a creature takes half as much damage only. A creature also makes this save when the spell's area moves into its space and when it enters the spell's area or ends its turn there. A creature makes this save only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d10 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 2.",
     damage: {
       dice: "2d10",
       type: "radiant",
@@ -3417,7 +3417,7 @@ export const spellData: Spell[] = [
       "Paladin",
     ],
     description: "Up to five creatures of your choice who remain within range for the spell's entire casting gain the benefits of a Short Rest and also regain 2d8 Hit Points. A creature can't be affected by this spell again until that creature finishes a Long Rest.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 2d8 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 1d8 for each spell slot level above 2.",
     healing: {
       dice: "2d8",
       scaling: "+1d8 per slot above 2",
@@ -3476,7 +3476,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "A burst of cold energy emanates from you in a 30-foot cone. Each creature in that area must make a Constitution saving throw. On a failed save, a creature takes 3d8 cold damage and is hindered by ice formations for 1 minute, or until it or another creature within reach of it uses an action to break away the ice. A creature hindered by ice has its speed reduced to 0. On a successful save, a creature takes half as much damage and isn't hindered by ice.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, increase the cold damage by 3d8 for each slot level above 2nd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, increase the cold damage by 1d8 for each slot level above 2nd.",
     damage: {
       dice: "3d8",
       type: "cold",
@@ -3563,7 +3563,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A loud noise erupts from a point of your choice within range. Each creature in a 10-foot-radius Sphere [Area of Effect] centered there makes a Constitution saving throw, taking 3d8 Thunder damage on a failed save or half as much damage on a successful one. A Construct has Disadvantage on the save.\nA nonmagical object that isn't being worn or carried also takes the damage if it's in the spell's area.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d8 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 2.",
     damage: {
       dice: "3d8",
       type: "thunder",
@@ -3583,7 +3583,7 @@ export const spellData: Spell[] = [
     ],
     description: "The target hit by the strike takes an extra 2d6 Radiant damage from the attack. Until the spell ends, the target sheds Bright Light in a 5-foot radius, attack rolls against it have Advantage, and it can't benefit from the Invisible condition.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d6 for each spell slot level above 2.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 2.",
     damage: {
       dice: "2d6",
       type: "radiant",
@@ -3630,7 +3630,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "A flurry of magic snowballs erupts from a point you choose within range. Each creature in a 5-foot-radius sphere centered on that point must make a Dexterity saving throw. A creature takes 3d6 cold damage on a failed save, or half as much damage on a successful one.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 3d6 for each slot level above 2nd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d6 for each slot level above 2nd.",
     damage: {
       dice: "3d6",
       type: "cold",
@@ -3704,7 +3704,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You spray a 15-foot cone of spectral cards. Each creature in that area must make a Dexterity saving throw. On a failed save, a creature takes 2d10 force damage and has the blinded condition until the end of its next turn. On a successful save, a creature takes half as much damage only.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 2d10 for each slot level above 2nd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d10 for each slot level above 2nd.",
     damage: {
       dice: "2d10",
       type: "force",
@@ -3852,7 +3852,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You invoke both death and life upon a 10-foot-radius sphere centered on a point within range. Each creature of your choice in that area must make a Constitution saving throw, taking 2d6 necrotic damage on a failed save, or half as much damage on a successful one. Nonmagical vegetation in that area withers.\nIn addition, one creature of your choice in that area can spend and roll one of its unspent Hit Dice and regain a number of hit points equal to the roll plus your spellcasting ability modifier.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 2d6 for each slot above the 2nd, and the number of Hit Dice that can be spent and added to the healing roll increases by one for each slot above 2nd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 3rd level or higher, the damage increases by 1d6 for each slot above the 2nd, and the number of Hit Dice that can be spent and added to the healing roll increases by one for each slot above 2nd.",
     damage: {
       dice: "2d6",
       type: "necrotic",
@@ -3912,7 +3912,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You whisper magical words that antagonize one creature of your choice within range. The target must make a Wisdom saving throw. On a failed save, the target takes 4d4 psychic damage and must immediately use its reaction to make a melee attack against another creature of your choice that you can see. If the target can't make this attack (for example, because there is no one within its reach or because its reaction is unavailable), the target instead has disadvantage on the next attack roll it makes before the start of your next turn. On a successful save, the target takes half as much damage only.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 4d4 for each slot level above 3rd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d4 for each slot level above 3rd.",
     damage: {
       dice: "4d4",
       type: "psychic",
@@ -4003,7 +4003,7 @@ export const spellData: Spell[] = [
       "Paladin",
     ],
     description: "The target hit by the strike takes an extra 3d8 Radiant damage from the attack, and the target has the Blinded condition until the spell ends. At the end of each of its turns, the Blinded target makes a Constitution saving throw, ending the spell on itself on a success.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe extra damage increases by 3d8 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe extra damage increases by 1d8 for each spell slot level above 3.",
     damage: {
       dice: "3d8",
       type: "radiant",
@@ -4040,7 +4040,7 @@ export const spellData: Spell[] = [
     ],
     description: "Thunderous reverberations fill a 10-foot Emanation [Area of Effect] originating from you for the duration. Whenever the Emanation [Area of Effect] enters a creature's space and whenever a creature enters the Emanation [Area of Effect] or ends its turn there, the creature makes a Constitution saving throw. On a failed save, the creature takes 3d6 Thunder damage and has the Deafened condition until the start of your next turn. On a successful save, the creature takes half as much damage only. A creature makes this save only once per turn. When you cast this spell, you can designate creatures to be unaffected by it.\nIn addition, you have Resistance to Thunder damage, and ranged attack rolls against you are made with Disadvantage.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 3.",
     damage: {
       dice: "3d6",
       type: "thunder",
@@ -4060,7 +4060,7 @@ export const spellData: Spell[] = [
     ],
     description: "A storm cloud appears at a point within range that you can see above yourself. It takes the shape of a Cylinder [Area of Effect] that is 10 feet tall with a 60-foot radius.\nWhen you cast the spell, choose a point you can see under the cloud. A lightning bolt shoots from the cloud to that point. Each creature within 5 feet of that point makes a Dexterity saving throw, taking 3d10 Lightning damage on a failed save or half as much damage on a successful one.\nUntil the spell ends, you can take a Magic action to call down lightning in that way again, targeting the same point or a different one.\nIf you're outdoors in a storm when you cast this spell, the spell gives you control over that storm instead of creating a new one. Under such conditions, the spell's damage increases by 1d10.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d10 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 3.",
     damage: {
       dice: "3d10",
       type: "lightning",
@@ -4110,7 +4110,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure nature spirits that appear as a Large pack of spectral, intangible animals in an unoccupied space you can see within range. The pack lasts for the duration, and you choose the spirits' animal form, such as wolves, serpents, or birds.\nYou have Advantage on Strength saving throws while you're within 5 feet of the pack, and when you move on your turn, you can also move the pack up to 30 feet to an unoccupied space you can see.\nWhenever the pack moves within 10 feet of a creature you can see and whenever a creature you can see enters a space within 10 feet of the pack or ends its turn there, you can force that creature to make a Dexterity saving throw. On a failed save, the creature takes 3d10 Slashing damage. A creature makes this save only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d10 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 3.",
     damage: {
       dice: "3d10",
       type: "slashing",
@@ -4129,7 +4129,7 @@ export const spellData: Spell[] = [
       "Ranger",
     ],
     description: "You brandish the weapon used to cast the spell and conjure similar spectral weapons (or ammunition appropriate to the weapon) that launch forward and then disappear. Each creature of your choice that you can see in a 60-foot Cone [Area of Effect] makes a Dexterity saving throw, taking 5d8 Force damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 5d8 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 3.",
     damage: {
       dice: "5d8",
       type: "force",
@@ -4149,7 +4149,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure a group of intangible, orderly spirits that appear as a Medium group of modrons or other Constructs in an unoccupied space you can see within range. The spirits last for the duration. When you cast this spell and as a Magic action on subsequent turns, you can command the spirits to target one creature or object you can see within 5 feet of the spirits and create one of the following effects:\n• Clockwork Force:\nThe target makes a Dexterity saving throw, taking 3d6 Force damage on a failed save or half as much damage on a successful one.\n• Orderly Ward:\nThe target gains Temporary Hit Points equal to 1d6 plus your spellcasting ability modifier.\nWhen you move on your turn, you can also move the spirits up to 30 feet to an unoccupied space you can see.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage and Temporary Hit Points both increase by 3d6 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage and Temporary Hit Points both increase by 1d6 for each spell slot level above 3.",
     damage: {
       dice: "3d6",
       type: "force",
@@ -4287,7 +4287,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "Choose a point you can see on the ground within range. A fountain of churned earth and stone erupts in a 20-foot cube centered on that point. Each creature in that area must make a Dexterity saving throw. A creature takes 3d12 bludgeoning damage on a failed save, or half as much damage on a successful one. Additionally, the ground in that area becomes difficult terrain until cleared. Each 5-foot-square portion of the area requires at least 1 minute to clear by hand.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 3d12 for each slot level above 3rd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d12 for each slot level above 3rd.",
     damage: {
       dice: "3d12",
       type: "bludgeoning",
@@ -4358,7 +4358,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere [Area of Effect] centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one.\nFlammable objects in the area that aren't being worn or carried start burning.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 8d6 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 3.",
     damage: {
       dice: "8d6",
       type: "fire",
@@ -4446,7 +4446,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You inscribe a glyph that later unleashes a magical effect. You inscribe it either on a surface (such as a table or a section of floor) or within an object that can be closed (such as a book or chest) to conceal the glyph. The glyph can cover an area no larger than 10 feet in diameter. If the surface or object is moved more than 10 feet from where you cast this spell, the glyph is broken, and the spell ends without being triggered.\nThe glyph is nearly imperceptible and requires a successful Wisdom (Perception) check against your spell save DC to notice.\nWhen you inscribe the glyph, you set its trigger and choose whether it's an explosive rune or a spell glyph, as explained below.\nSet the Trigger:\nYou decide what triggers the glyph when you cast the spell. For glyphs inscribed on a surface, common triggers include touching or stepping on the glyph, removing another object covering it, or approaching within a certain distance of it. For glyphs inscribed within an object, common triggers include opening that object or seeing the glyph. Once a glyph is triggered, this spell ends.\nYou can refine the trigger so that only creatures of certain types activate it (for example, the glyph could be set to affect Aberrations). You can also set conditions for creatures that don't trigger the glyph, such as those who say a certain password.\nExplosive Rune:\nWhen triggered, the glyph erupts with magical energy in a 20-foot-radius Sphere [Area of Effect] centered on the glyph. Each creature in the area makes a Dexterity saving throw. A creature takes 5d8 Acid, Cold, Fire, Lightning, or Thunder damage (your choice when you create the glyph) on a failed save or half as much damage on a successful one.\nSpell Glyph:\nYou can store a prepared spell of level 3 or lower in the glyph by casting it as part of creating the glyph. The spell must target a single creature or an area. The spell being stored has no immediate effect when cast in this way.\nWhen the glyph is triggered, the stored spell takes effect. If the spell has a target, it targets the creature that triggered the glyph. If the spell affects an area, the area is centered on that creature. If the spell summons Hostile [Attitude] creatures or creates harmful objects or traps, they appear as close as possible to the intruder and attack it. If the spell requires Concentration, it lasts until the end of its full duration.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage of an explosive rune increases by 5d8 for each spell slot level above 3. If you create a spell glyph, you can store any spell of up to the same level as the spell slot you use for the Glyph of Warding.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage of an explosive rune increases by 1d8 for each spell slot level above 3. If you create a spell glyph, you can store any spell of up to the same level as the spell slot you use for the Glyph of Warding.",
     damage: {
       dice: "5d8",
       type: "acid",
@@ -4482,7 +4482,7 @@ export const spellData: Spell[] = [
     ],
     description: "You open a gateway to the Far Realm, a region infested with unspeakable horrors. A 20-foot-radius Sphere [Area of Effect] of Darkness appears, centered on a point within range and lasting for the duration. The Sphere [Area of Effect] is Difficult Terrain, and it is filled with strange whispers and slurping noises, which can be heard up to 30 feet away. No light, magical or otherwise, can illuminate the area, and creatures fully within it have the Blinded condition.\nAny creature that starts its turn in the area takes 2d6 Cold damage. Any creature that ends its turn there must succeed on a Dexterity saving throw or take 2d6 Acid damage from otherworldly tentacles.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe Cold or Acid damage (your choice) increases by 2d6 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe Cold or Acid damage (your choice) increases by 1d6 for each spell slot level above 3.",
     damage: {
       dice: "2d6",
       type: "acid",
@@ -4551,7 +4551,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "Silver energy bursts out from you in a 120-foot-long, 5-foot-wide Line [Area of Effect]. Each creature of your choice in the Line [Area of Effect] makes a Strength saving throw. On a failed save, a creature takes 3d10 Force damage and has the Prone condition. On a successful save, a creature takes half as much damage only.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d10 for every spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for every spell slot level above 3.",
     damage: {
       dice: "3d10",
       type: "force",
@@ -4583,7 +4583,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You sacrifice some of your health to mend another creature's injuries. You take 4d8 necrotic damage, which can't be reduced in any way, and one creature of your choice that you can see within range regains a number of hit points equal to twice the necrotic damage you take.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 4d8 for each slot level above 3rd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d8 for each slot level above 3rd.",
     damage: {
       dice: "4d8",
       type: "necrotic",
@@ -4602,7 +4602,7 @@ export const spellData: Spell[] = [
       "Ranger",
     ],
     description: "As your attack hits or misses the target, the weapon or ammunition you're using transforms into a lightning bolt. Instead of taking any damage or other effects from the attack, the target takes 4d8 Lightning damage on a hit or half as much damage on a miss. Each creature within 10 feet of the target then makes a Dexterity saving throw, taking 2d8 Lightning damage on a failed save or half as much damage on a successful one.\nThe weapon or ammunition then returns to its normal form.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage for both effects of the spell increases by 4d8;2d8 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage for both effects of the spell increases by 1d8 for each spell slot level above 3.",
     damage: {
       dice: "4d8",
       type: "lightning",
@@ -4622,7 +4622,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A stroke of lightning forming a 100-foot-long, 5-foot-wide Line [Area of Effect] blasts out from you in a direction you choose. Each creature in the Line [Area of Effect] makes a Dexterity saving throw, taking 8d6 Lightning damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 8d6 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 3.",
     damage: {
       dice: "8d6",
       type: "lightning",
@@ -4694,7 +4694,7 @@ export const spellData: Spell[] = [
       "Cleric",
     ],
     description: "Up to six creatures of your choice that you can see within range regain Hit Points equal to 2d4 plus your spellcasting ability modifier.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 2d4 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 1d4 for each spell slot level above 3.",
     healing: {
       dice: "2d4",
       scaling: "+1d4 per slot above 3",
@@ -4825,7 +4825,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You create intense pressure, unleash it in a 30-foot cone, and decide whether the pressure pulls or pushes creatures and objects. Each creature in that cone must make a Constitution saving throw. A creature takes 6d6 force damage on a failed save, or half as much damage on a successful one. And every creature that fails the save is either pulled 15 feet toward you or pushed 15 feet away from you, depending on the choice you made for the spell.\nIn addition, unsecured objects that are completely within the cone are likewise pulled or pushed 15 feet.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 6d6 and the distance pulled or pushed increases by 5 feet for each slot level above 3rd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 and the distance pulled or pushed increases by 5 feet for each slot level above 3rd.",
     damage: {
       dice: "6d6",
       type: "force",
@@ -4955,7 +4955,7 @@ export const spellData: Spell[] = [
     ],
     description: "Protective spirits flit around you in a 15-foot Emanation [Area of Effect] for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.\nWhen you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation [Area of Effect], and whenever the Emanation [Area of Effect] enters a creature's space and whenever a creature enters the Emanation [Area of Effect] or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d8 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 3.",
     damage: {
       dice: "3d8",
       type: "necrotic",
@@ -5086,7 +5086,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You teleport yourself to an unoccupied space you can see within range. Immediately after you disappear, a thunderous boom sounds, and each creature within 10 feet of the space you left must make a Constitution saving throw, taking 3d10 thunder damage on a failed save, or half as much damage on a successful one. The thunder can be heard from up to 300 feet away.\nYou can bring along objects as long as their weight doesn't exceed what you can carry. You can also teleport one willing creature of your size or smaller who is carrying gear up to its carrying capacity. The creature must be within 5 feet of you when you cast this spell, and there must be an unoccupied space within 5 feet of your destination space for the creature to appear in; otherwise, the creature is left behind.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 3d10 for each slot level above 3rd.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d10 for each slot level above 3rd.",
     damage: {
       dice: "3d10",
       type: "thunder",
@@ -5152,7 +5152,7 @@ export const spellData: Spell[] = [
     ],
     description: "The touch of your shadow-wreathed hand can siphon life force from others to heal your wounds. Make a melee spell attack against one creature within reach. On a hit, the target takes 3d6 Necrotic damage, and you regain Hit Points equal to half the amount of Necrotic damage dealt.\nUntil the spell ends, you can make the attack again on each of your turns as a Magic action, targeting the same creature or a different one.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 3.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 3.",
     damage: {
       dice: "3d6",
       type: "necrotic",
@@ -5298,7 +5298,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You ward yourself against destructive energy, reducing the damage taken by 4d6 plus your spellcasting ability modifier.\nIf the triggering damage was from a creature within range, you can force the creature to make a Constitution saving throw. The creature takes 4d6 Force damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage reduction and Force damage from this spell both increase by 4d6 for every spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage reduction and Force damage from this spell both increase by 1d6 for every spell slot level above 4.",
     damage: {
       dice: "4d6",
       type: "force",
@@ -5339,7 +5339,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A creature that you can see within range makes a Constitution saving throw, taking 8d8 Necrotic damage on a failed save or half as much damage on a successful one. A Plant creature automatically fails the save.\nAlternatively, target a nonmagical plant that isn't a creature, such as a tree or shrub. It doesn't make a save; it simply withers and dies.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 8d8 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 4.",
     damage: {
       dice: "8d8",
       type: "necrotic",
@@ -5410,7 +5410,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure spirits from the Elemental Planes that flit around you in a 15-foot Emanation [Area of Effect] for the duration. Until the spell ends, any attack you make deals an extra 2d8 damage when you hit a creature in the Emanation [Area of Effect]. This damage is Acid, Cold, Fire, or Lightning (your choice when you make the attack).\nIn addition, the ground in the Emanation [Area of Effect] is Difficult Terrain for your enemies.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d8 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 4.",
     damage: {
       dice: "2d8",
       type: "acid",
@@ -5431,7 +5431,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure nature spirits that flit around you in a 10-foot Emanation [Area of Effect] for the duration. Whenever the Emanation [Area of Effect] enters the space of a creature you can see and whenever a creature you can see enters the Emanation [Area of Effect] or ends its turn there, you can force that creature to make a Wisdom saving throw. The creature takes 5d8 Force damage on a failed save or half as much damage on a successful one. A creature makes this save only once per turn.\nIn addition, you can take the Disengage action as a Bonus Action for the spell's duration.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 5d8 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 4.",
     damage: {
       dice: "5d8",
       type: "force",
@@ -5737,7 +5737,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "A 20-foot-radius sphere of crushing force forms at a point you can see within range and tugs at the creatures there. Each creature in the sphere must make a Constitution saving throw. On a failed save, the creature takes 5d10 force damage and is pulled in a straight line toward the center of the sphere, ending in an unoccupied space as close to the center as possible (even if that space is in the air). On a successful save, the creature takes half as much damage and isn't pulled.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 5th level or higher, the damage increases by 5d10 for each slot level above 4th.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 5th level or higher, the damage increases by 1d10 for each slot level above 4th.",
     damage: {
       dice: "5d10",
       type: "force",
@@ -5819,7 +5819,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "Hail falls in a 20-foot-radius, 40-foot-high Cylinder [Area of Effect] centered on a point within range. Each creature in the Cylinder [Area of Effect] makes a Dexterity saving throw. A creature takes 2d10 Bludgeoning damage and 4d6 Cold damage on a failed save or half as much damage on a successful one.\nHailstones turn ground in the Cylinder [Area of Effect] into Difficult Terrain until the end of your next turn.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe Bludgeoning damage increases by 2d8 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe Bludgeoning damage increases by 1d10 for each spell slot level above 4.",
     damage: {
       dice: "2d10",
       type: "bludgeoning",
@@ -5921,7 +5921,7 @@ export const spellData: Spell[] = [
     ],
     description: "You tap into the nightmares of a creature you can see within range and create an illusion of its deepest fears, visible only to that creature. The target makes a Wisdom saving throw. On a failed save, the target takes 4d10 Psychic damage and has Disadvantage on ability checks and attack rolls for the duration. On a successful save, the target takes half as much damage, and the spell ends.\nFor the duration, the target makes a Wisdom saving throw at the end of each of its turns. On a failed save, it takes the Psychic damage again. On a successful save, the spell ends.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 4d10 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 4.",
     damage: {
       dice: "4d10",
       type: "psychic",
@@ -5955,7 +5955,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You unleash a shimmering lance of psychic power from your forehead at a creature that you can see within range. Alternatively, you can utter a creature's name. If the named target is within range, it becomes the spell's target even if you can't see it. If the named target isn't within range, the lance dissipates without effect.\nThe target must make an Intelligence saving throw. On a failed save, the target takes 7d6 psychic damage and is incapacitated until the start of your next turn. On a successful save, the creature takes half as much damage and isn't incapacitated.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 5th level or higher, the damage increases by 7d6 for each slot level above 4th.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 5th level or higher, the damage increases by 1d6 for each slot level above 4th.",
     damage: {
       dice: "7d6",
       type: "psychic",
@@ -6008,7 +6008,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure a pillar of spellfire in a 20-foot-radius, 20-foot-high Cylinder [Area of Effect] centered on a point within range. The area of the Cylinder [Area of Effect] is Bright Light, and each creature in it when it appears makes a Constitution saving throw, taking 4d10 Radiant damage on a failed save or half as much damage on a successful one. A creature also makes this save when it enters the spell's area for the first time on a turn or ends its turn there. A creature makes this save only once per turn.\nIn addition, whenever a creature in the Cylinder [Area of Effect] casts a spell, that creature makes a Constitution saving throw. On a failed save, the spell dissipates with no effect, and the action, Bonus Action, or Reaction used to cast it is wasted. If that spell was cast with a spell slot, the slot isn't expended.\nWhen you cast this spell, you can designate creatures to be unaffected by it.\nCasting as a Circle Spell:\nIn addition to the spell's usual components, you must provide a special component (a blue star sapphire worth 25,000+ GP), which the spell consumes. The spell's range increases to 1 mile, and it no longer requires Concentration. When the spell is cast, each secondary caster must expend a level 3+ spell slot; otherwise, the spell fails.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 4d10 for every spell slot level above 4.\nThe number of secondary casters determines the spell's area of effect and duration, as shown in the table below. The spell ends early if any caster who participated in this casting contributes to another casting of Spellfire Storm as a Circle spell.\n1-3 | 40-foot-radius, 40-foot-high Cylinder [Area of Effect] | 1 Hour\n4-6 | 60-foot-radius, 60-foot-high Cylinder [Area of Effect] | 8 Hours\n7+ | 100-foot-radius, 100-foot-high Cylinder [Area of Effect] | 24 Hours",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for every spell slot level above 4.\nThe number of secondary casters determines the spell's area of effect and duration, as shown in the table below. The spell ends early if any caster who participated in this casting contributes to another casting of Spellfire Storm as a Circle spell.\n1-3 | 40-foot-radius, 40-foot-high Cylinder [Area of Effect] | 1 Hour\n4-6 | 60-foot-radius, 60-foot-high Cylinder [Area of Effect] | 8 Hours\n7+ | 100-foot-radius, 100-foot-high Cylinder [Area of Effect] | 24 Hours",
     damage: {
       dice: "4d10",
       type: "radiant",
@@ -6040,7 +6040,7 @@ export const spellData: Spell[] = [
       "Paladin",
     ],
     description: "The target takes an extra 4d6 Psychic damage from the attack, and the target must succeed on a Wisdom saving throw or have the Stunned condition until the end of your next turn.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe extra damage increases by 4d6 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe extra damage increases by 1d6 for each spell slot level above 4.",
     damage: {
       dice: "4d6",
       type: "psychic",
@@ -6092,7 +6092,7 @@ export const spellData: Spell[] = [
     classes: [],
     description: "A 20-foot-radius sphere of whirling air springs into existence, centered on a point you choose within range. The sphere remains for the spell's duration. Each creature in the sphere when it appears or that ends its turn there must succeed on a Strength saving throw or take 2d6 bludgeoning damage. The sphere's space is difficult terrain.\nUntil the spell ends, you can use a bonus action on each of your turns to cause a bolt of lightning to leap from the center of the sphere toward one creature you choose within 60 feet of the center. Make a ranged spell attack. You have advantage on the attack roll if the target is in the sphere. On a hit, the target takes 4d6 lightning damage.\nCreatures within 30 feet of the sphere have disadvantage on Wisdom (Perception) checks made to listen.",
     concentration: true,
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 5th level or higher, the damage for each of its effects increases by 2d6;4d6 for each slot level above 4th.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 5th level or higher, the damage for each of its effects increases by 1d6 for each slot level above 4th.",
     damage: {
       dice: "2d6",
       type: "bludgeoning",
@@ -6174,7 +6174,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You point at a location within range, and a glowing, 1-foot-diameter ball of acid streaks there and explodes in a 20-foot-radius Sphere [Area of Effect]. Each creature in that area makes a Dexterity saving throw. On a failed save, a creature takes 10d4 Acid damage and another 5d4 Acid damage at the end of its next turn. On a successful save, a creature takes half the initial damage only.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe initial damage increases by 10d4 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe initial damage increases by 2d4 for each spell slot level above 4.",
     damage: {
       dice: "10d4",
       type: "acid",
@@ -6196,7 +6196,7 @@ export const spellData: Spell[] = [
     ],
     description: "You create a wall of fire on a solid surface within range. You can make the wall up to 60 feet long, 20 feet high, and 1 foot thick, or a ringed wall up to 20 feet in diameter, 20 feet high, and 1 foot thick. The wall is opaque and lasts for the duration.\nWhen the wall appears, each creature in its area makes a Dexterity saving throw, taking 5d8 Fire damage on a failed save or half as much damage on a successful one.\nOne side of the wall, selected by you when you cast this spell, deals 5d8 Fire damage to each creature that ends its turn within 10 feet of that side or inside the wall. A creature takes the same damage when it enters the wall for the first time on a turn or ends its turn there. The other side of the wall deals no damage.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 5d8 for each spell slot level above 4.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 4.",
     damage: {
       dice: "5d8",
       type: "fire",
@@ -6314,7 +6314,7 @@ export const spellData: Spell[] = [
     ],
     description: "You create a Large hand of shimmering magical energy in an unoccupied space that you can see within range. The hand lasts for the duration, and it moves at your command, mimicking the movements of your own hand.\nThe hand is an object that has AC 20 and Hit Points equal to your Hit Points maximum. If it drops to 0 Hit Points, the spell ends. The hand doesn't occupy its space.\nWhen you cast the spell and as a Bonus Action on your later turns, you can move the hand up to 60 feet and then cause one of the following effects:\n• Clenched Fist:\nThe hand strikes a target within 5 feet of it. Make a melee spell attack. On a hit, the target takes 5d8 Force damage.\n• Forceful Hand:\nThe hand attempts to push a Huge or smaller creature within 5 feet of it. The target must succeed on a Strength saving throw, or the hand pushes the target up to 5 feet plus a number of feet equal to five times your spellcasting ability modifier. The hand moves with the target, remaining within 5 feet of it.\n• Grasping Hand:\nThe hand attempts to grapple a Huge or smaller creature within 5 feet of it. The target must succeed on a Dexterity saving throw, or the target has the Grappled condition, with an escape DC equal to your spell save DC. While the hand grapples the target, you can take a Bonus Action to cause the hand to crush it, dealing Bludgeoning damage to the target equal to 4d6 plus your spellcasting ability modifier.\n• Interposing Hand:\nThe hand grants you Half Cover against attacks and other effects that originate from its space or that pass through it. In addition, its space counts as Difficult Terrain for your enemies.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage of the Clenched Fist increases by 5d8 and the damage of the Grasping Hand increases by 4d6 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage of the Clenched Fist increases by 2d8 and the damage of the Grasping Hand increases by 2d6 for each spell slot level above 5.",
     damage: {
       dice: "5d8",
       type: "bludgeoning",
@@ -6352,7 +6352,7 @@ export const spellData: Spell[] = [
     ],
     description: "You create a 20-foot-radius Sphere [Area of Effect] of yellow-green fog centered on a point within range. The fog lasts for the duration or until strong wind (such as the one created by Gust of Wind) disperses it, ending the spell. Its area is Heavily Obscured.\nEach creature in the Sphere [Area of Effect] makes a Constitution saving throw, taking 5d8 Poison damage on a failed save or half as much damage on a successful one. A creature must also make this save when the Sphere [Area of Effect] moves into its space and when it enters the Sphere [Area of Effect] or ends its turn there. A creature makes this save only once per turn.\nThe Sphere [Area of Effect] moves 10 feet away from you at the start of each of your turns.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 5d8 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 5.",
     damage: {
       dice: "5d8",
       type: "poison",
@@ -6402,7 +6402,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You unleash a blast of cold air. Each creature in a 60-foot Cone [Area of Effect] originating from you makes a Constitution saving throw, taking 8d8 Cold damage on a failed save or half as much damage on a successful one. A creature killed by this spell becomes a frozen statue until it thaws.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 8d8 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 5.",
     damage: {
       dice: "8d8",
       type: "cold",
@@ -6423,7 +6423,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure a Large, intangible spirit from the Elemental Planes that appears in an unoccupied space within range. Choose the spirit's element, which determines its damage type: air (Lightning), earth (Thunder), fire (Fire), or water (Cold). The spirit lasts for the duration.\nWhenever a creature you can see enters the spirit's space or starts its turn within 5 feet of the spirit, you can force that creature to make a Dexterity saving throw if the spirit has no creature Restrained. On failed save, the target takes 8d8 damage of the spirit's type, and the target has the Restrained condition until the spell ends. At the start of each of its turns, the Restrained target repeats the save. On a failed save, the target takes 4d8 damage of the spirit's type. On a successful save, the target isn't Restrained by the spirit.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 8d8;4d8 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d8 for each spell slot level above 5.",
     damage: {
       dice: "8d8",
       type: "lightning",
@@ -6634,7 +6634,7 @@ export const spellData: Spell[] = [
     classes: [],
     description: "A tendril of inky darkness reaches out from you, touching a creature you can see within range to drain life from it. The target must make a Dexterity saving throw. On a successful save, the target takes 2d8 necrotic damage, and the spell ends. On a failed save, the target takes 4d8 necrotic damage, and until the spell ends, you can use your action on each of your turns to automatically deal 4d8 necrotic damage to the target. The spell ends if you use your action to do anything else, if the target is ever outside the spell's range, or if the target has Cover from you.\nWhenever the spell deals damage to a target, you regain hit points equal to half the amount of necrotic damage the target takes.",
     concentration: true,
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 6th level or higher, the damage increases by 4d8;2d8 for each slot level above 5th.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 6th level or higher, the damage increases by 1d8 for each slot level above 5th.",
     damage: {
       dice: "2d8",
       type: "necrotic",
@@ -6665,7 +6665,7 @@ export const spellData: Spell[] = [
       "Cleric",
     ],
     description: "A vertical column of brilliant fire roars down from above. Each creature in a 10-foot-radius, 40-foot-high Cylinder [Area of Effect] centered on a point within range makes a Dexterity saving throw, taking 5d6 Fire damage and 5d6 Radiant damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe Fire damage and the Radiant damage increase by 5d6 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe Fire damage and the Radiant damage increase by 1d6 for each spell slot level above 5.",
     damage: {
       dice: "5d6",
       type: "fire",
@@ -6803,7 +6803,7 @@ export const spellData: Spell[] = [
     ],
     description: "Swarming locusts fill a 20-foot-radius Sphere [Area of Effect] centered on a point you choose within range. The Sphere [Area of Effect] remains for the duration, and its area is Lightly Obscured and Difficult Terrain.\nWhen the swarm appears, each creature in it makes a Constitution saving throw, taking 4d10 Piercing damage on a failed save or half as much damage on a successful one. A creature also makes this save when it enters the spell's area for the first time on a turn or ends its turn there. A creature makes this save only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 4d10 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d10 for each spell slot level above 5.",
     damage: {
       dice: "4d10",
       type: "piercing",
@@ -6824,7 +6824,7 @@ export const spellData: Spell[] = [
     ],
     description: "You unleash a storm of flashing light and raging thunder in a 10-foot-radius, 40-foot-high Cylinder [Area of Effect] centered on a point you can see within range. While in this area, creatures have the Blinded and Deafened conditions, and they can't cast spells with a Verbal component.\nWhen the storm appears, each creature in it makes a Constitution saving throw, taking 2d10 Radiant damage and 2d10 Thunder damage on a failed save or half as much damage on a successful one. A creature also makes this save when it enters the spell's area for the first time on a turn or ends its turn there. A creature makes this save only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe Radiant and Thunder damage increase by 2d10 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe Radiant and Thunder damage increase by 1d10 for each spell slot level above 5.",
     damage: {
       dice: "2d10",
       type: "radiant",
@@ -6876,7 +6876,7 @@ export const spellData: Spell[] = [
       "Druid",
     ],
     description: "A wave of healing energy washes out from a point you can see within range. Choose up to six creatures in a 30-foot-radius Sphere [Area of Effect] centered on that point. Each target regains Hit Points equal to 5d8 plus your spellcasting ability modifier.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 5d8 for each spell slot level above 5.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 1d8 for each spell slot level above 5.",
     healing: {
       dice: "5d8",
       scaling: "+1d8 per slot above 5",
@@ -7265,7 +7265,7 @@ export const spellData: Spell[] = [
     classes: [],
     description: "A shimmering wall of bright light appears at a point you choose within range. The wall appears in any orientation you choose: horizontally, vertically, or diagonally. It can be free floating, or it can rest on a solid surface. The wall can be up to 60 feet long, 10 feet high, and 5 feet thick. The wall blocks line of sight, but creatures and objects can pass through it. It emits bright light out to 120 feet and dim light for an additional 120 feet.\nWhen the wall appears, each creature in its area must make a Constitution saving throw. On a failed save, a creature takes 4d8 radiant damage, and it is blinded for 1 minute. On a successful save, it takes half as much damage and isn't blinded. A blinded creature can make a Constitution saving throw at the end of each of its turns, ending the effect on itself on a success.\nA creature that ends its turn in the wall's area takes 4d8 radiant damage.\nUntil the spell ends, you can use an action to launch a beam of radiance from the wall at one creature you can see within 60 feet of it. Make a ranged spell attack. On a hit, the target takes 4d8 radiant damage. Whether you hit or miss, reduce the length of the wall by 10 feet. If the wall's length drops to 0 feet, the spell ends.",
     concentration: true,
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 6th level or higher, the damage increases by 4d8 for each slot level above 5th.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 6th level or higher, the damage increases by 1d8 for each slot level above 5th.",
     damage: {
       dice: "4d8",
       type: "radiant",
@@ -7407,7 +7407,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "Negative energy ripples out in a 60-foot-radius Sphere [Area of Effect] from a point you choose within range. Each creature in that area makes a Constitution saving throw, taking 8d8 Necrotic damage on a failed save or half as much damage on a successful one.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 8d8 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 2d8 for each spell slot level above 6.",
     damage: {
       dice: "8d8",
       type: "necrotic",
@@ -7427,7 +7427,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure a Medium spirit from the Feywild in an unoccupied space you can see within range. The spirit lasts for the duration, and it looks like a Fey creature of your choice. When the spirit appears, you can make one melee spell attack against a creature within 5 feet of it. On a hit, the target takes Psychic damage equal to 3d12 plus your spellcasting ability modifier, and the target has the Frightened condition until the start of your next turn, with both you and the spirit as the source of the fear.\nAs a Bonus Action on your later turns, you can teleport the spirit to an unoccupied space you can see within 30 feet of the space it left and make the attack against a creature within 5 feet of it.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d12 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d12 for each spell slot level above 6.",
     damage: {
       dice: "3d12",
       type: "psychic",
@@ -7506,7 +7506,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "You launch a green ray at a target you can see within range. The target can be a creature, a nonmagical object, or a creation of magical force, such as the wall created by Wall of Force.\nA creature targeted by this spell makes a Dexterity saving throw. On a failed save, the target takes 10d6 + 40 Force damage. If this damage reduces it to 0 Hit Points, it and everything nonmagical it is wearing and carrying are disintegrated into gray dust. The target can be revived only by a True Resurrection or a Wish spell.\nThis spell automatically disintegrates a Large or smaller nonmagical object or a creation of magical force. If such a target is Huge or larger, this spell disintegrates a 10-foot-Cube [Area of Effect] portion of it.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 10d6 + 40 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 3d6 for each spell slot level above 6.",
     damage: {
       dice: "10d6 + 40",
       type: "force",
@@ -7663,7 +7663,7 @@ export const spellData: Spell[] = [
     duration: "Instantaneous",
     classes: [],
     description: "You manifest a ravine of gravitational energy in a line originating from you that is 100 feet long and 5 feet wide. Each creature in that line must make a Constitution saving throw, taking 8d8 force damage on a failed save, or half as much damage on a successful one.\nEach creature within 10 feet of the line but not in it must succeed on a Constitution saving throw or take 8d8 force damage and be pulled toward the line until the creature is in its area.",
-    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 7th level or higher, the damage increases by 8d8 for each slot level above 6th.",
+    upcast: "At Higher Levels:\nWhen you cast this spell using a spell slot of 7th level or higher, the damage increases by 1d8 for each slot level above 6th.",
     damage: {
       dice: "8d8",
       type: "force",
@@ -7714,7 +7714,7 @@ export const spellData: Spell[] = [
       "Druid",
     ],
     description: "Choose a creature that you can see within range. Positive energy washes through the target, restoring 70 Hit Points. This spell also ends the Blinded, Deafened, and Poisoned conditions on the target.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 70 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe healing increases by 10 for each spell slot level above 6.",
     healing: {
       dice: "70",
       scaling: "+10 per slot above 6",
@@ -7872,7 +7872,7 @@ export const spellData: Spell[] = [
       "Wizard",
     ],
     description: "A frigid globe streaks from you to a point of your choice within range, where it explodes in a 60-foot-radius Sphere [Area of Effect]. Each creature in that area makes a Constitution saving throw, taking 10d6 Cold damage on failed save or half as much damage on a successful one.\nIf the globe strikes a body of water, it freezes the water to a depth of 6 inches over an area 30 feet square. This ice lasts for 1 minute. Creatures that were swimming on the surface of frozen water are trapped in the ice and have the Restrained condition. A trapped creature can take an action to make a Strength (Athletics) check against your spell save DC to break free.\nYou can refrain from firing the globe after completing the spell's casting. If you do so, a globe about the size of a sling bullet, cool to the touch, appears in your hand. At any time, you or a creature you give the globe to can throw the globe (to a range of 40 feet) or hurl it with a sling (to the sling's normal range). It shatters on impact, with the same effect as a normal casting of the spell. You can also set the globe down without shattering it. After 1 minute, if the globe hasn't already shattered, it explodes.",
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 10d6 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage increases by 1d6 for each spell slot level above 6.",
     damage: {
       dice: "10d6",
       type: "cold",
@@ -8080,7 +8080,7 @@ export const spellData: Spell[] = [
     ],
     description: "You create a wall of ice on a solid surface within range. You can form it into a hemispherical dome or a globe with a radius of up to 10 feet, or you can shape a flat surface made up of ten 10-foot-square panels. Each panel must be contiguous with another panel. In any form, the wall is 1 foot thick and lasts for the duration.\nIf the wall cuts through a creature's space when it appears, the creature is pushed to one side of the wall (you choose which side) and makes a Dexterity saving throw, taking 10d6 Cold damage on a failed save or half as much damage on a successful one.\nThe wall is an object that can be damaged and thus breached. It has AC 12 and 30 Hit Points per 10-foot section, and it has Immunity to Cold, Poison, and Psychic damage and Vulnerability to Fire damage. Reducing a 10-foot section of wall to 0 Hit Points destroys it and leaves behind a sheet of frigid air in the space the wall occupied.\nA creature moving through the sheet of frigid air for the first time on a turn makes a Constitution saving throw, taking 5d6 Cold damage on a failed save or half as much damage on a successful one.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe damage the wall deals when it appears increases by 10d6 and the damage from passing through the sheet of frigid air increases by 5d6 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe damage the wall deals when it appears increases by 2d6 and the damage from passing through the sheet of frigid air increases by 1d6 for each spell slot level above 6.",
     damage: {
       dice: "10d6",
       type: "cold",
@@ -8100,7 +8100,7 @@ export const spellData: Spell[] = [
     ],
     description: "You create a wall of tangled brush bristling with needle-sharp thorns. The wall appears within range on a solid surface and lasts for the duration. You choose to make the wall up to 60 feet long, 10 feet high, and 5 feet thick or a circle that has a 20-foot diameter and is up to 20 feet high and 5 feet thick. The wall blocks line of sight.\nWhen the wall appears, each creature in its area makes a Dexterity saving throw, taking 7d8 Piercing damage on a failed save or half as much damage on a successful one.\nA creature can move through the wall, albeit slowly and painfully. For every 1 foot a creature moves through the wall, it must spend 4 feet of movement. Furthermore, the first time a creature enters a space in the wall on a turn or ends its turn there, the creature makes a Dexterity saving throw, taking 7d8 Slashing damage on a failed save or half as much damage on a successful one. A creature makes this save only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nBoth types of damage increase by 7d8 for each spell slot level above 6.",
+    upcast: "Using a Higher-Level Spell Slot:\nBoth types of damage increase by 1d8 for each spell slot level above 6.",
     damage: {
       dice: "7d8",
       type: "piercing",
@@ -8146,7 +8146,7 @@ export const spellData: Spell[] = [
     ],
     description: "You conjure a spirit from the Upper Planes, which manifests as a pillar of light in a 10-foot-radius, 40-foot-high Cylinder [Area of Effect] centered on a point within range. For each creature you can see in the Cylinder [Area of Effect], choose which of these lights shines on it:\n• Healing Light:\nThe target regains Hit Points equal to 4d12 plus your spellcasting ability modifier.\n• Searing Light:\nThe target makes a Dexterity saving throw, taking 6d12 Radiant damage on a failed save or half as much damage on a successful one.\nUntil the spell ends, Bright Light fills the Cylinder [Area of Effect], and when you move on your turn, you can also move the Cylinder [Area of Effect] up to 30 feet.\nWhenever the Cylinder [Area of Effect] moves into the space of a creature you can see and whenever a creature you can see enters the Cylinder [Area of Effect] or ends its turn there, you can bathe it in one of the lights. A creature can be affected by this spell only once per turn.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe healing and damage increase by 6d12 for each spell slot level above 7.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe healing and damage increase by 1d12 for each spell slot level above 7.",
     damage: {
       dice: "6d12",
       type: "radiant",
@@ -8199,7 +8199,7 @@ export const spellData: Spell[] = [
     ],
     description: "A beam of yellow light flashes from you, then condenses at a chosen point within range as a glowing bead for the duration. When the spell ends, the bead explodes, and each creature in a 20-foot-radius Sphere [Area of Effect] centered on that point makes a Dexterity saving throw. A creature takes Fire damage equal to the total accumulated damage on a failed save or half as much damage on a successful one.\nThe spell's base damage is 12d6, and the damage increases by 1d6 whenever your turn ends and the spell hasn't ended.\nIf a creature touches the glowing bead before the spell ends, that creature makes a Dexterity saving throw. On a failed save, the spell ends, causing the bead to explode. On a successful save, the creature can throw the bead up to 40 feet. If the thrown bead enters a creature's space or collides with a solid object, the spell ends, and the bead explodes.\nWhen the bead explodes, flammable objects in the explosion that aren't being worn or carried start burning.",
     concentration: true,
-    upcast: "Using a Higher-Level Spell Slot:\nThe base damage increases by 12d6 for each spell slot level above 7.",
+    upcast: "Using a Higher-Level Spell Slot:\nThe base damage increases by 1d6 for each spell slot level above 7.",
     damage: {
       dice: "12d6",
       type: "fire",
