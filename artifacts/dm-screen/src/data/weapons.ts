@@ -89,7 +89,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -174,7 +173,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d10",
     ],
@@ -190,7 +188,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -205,7 +202,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -237,7 +233,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: "10 gp",
@@ -267,7 +262,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -282,7 +276,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -316,7 +309,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -378,7 +370,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -435,7 +426,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -565,7 +555,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Finesse",
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -581,7 +570,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -624,7 +612,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -639,7 +626,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -669,7 +655,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -685,7 +670,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -718,7 +702,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -734,7 +717,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Radiant",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -750,7 +732,6 @@ export const weaponsData: Weapon[] = [
     weight: "2 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d10",
     ],
@@ -781,7 +762,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -796,7 +776,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -812,7 +791,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -828,7 +806,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -843,7 +820,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -858,7 +834,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -873,7 +848,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -888,7 +862,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -903,7 +876,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -918,7 +890,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -933,7 +904,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -948,7 +918,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -979,7 +948,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -1203,7 +1171,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Vst",
       "Versatile 1d10",
     ],
@@ -1219,7 +1186,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -1265,7 +1231,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -1361,7 +1326,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -1376,7 +1340,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -1391,7 +1354,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -1547,7 +1509,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -1770,7 +1731,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: "15 gp",
@@ -1888,7 +1848,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -1918,7 +1877,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Range 20/60",
       "Versatile 1d10",
     ],
@@ -1964,7 +1922,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -2025,7 +1982,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -2224,7 +2180,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: "2 sp",
@@ -2240,7 +2195,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 30/120",
       "Versatile 1d8",
     ],
@@ -2366,7 +2320,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2382,7 +2335,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Vst",
       "Range 20/60",
       "Versatile 1d8",
@@ -2516,7 +2468,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -2531,7 +2482,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -2639,7 +2589,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2700,7 +2649,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -2717,7 +2665,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 50/90",
       "Versatile 1d8",
     ],
@@ -2733,7 +2680,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "6 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2748,7 +2694,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: "5 gp",
@@ -2763,7 +2708,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2778,7 +2722,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2793,7 +2736,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2808,7 +2750,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2823,7 +2764,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2838,7 +2778,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2853,7 +2792,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2868,7 +2806,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2883,7 +2820,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2898,7 +2834,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2913,7 +2848,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2928,7 +2862,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2943,7 +2876,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2958,7 +2890,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2973,7 +2904,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -2988,7 +2918,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3003,7 +2932,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3018,7 +2946,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3033,7 +2960,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3048,7 +2974,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3063,7 +2988,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3078,7 +3002,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3093,7 +3016,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3108,7 +3030,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3150,7 +3071,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Finesse",
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3165,7 +3085,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3180,7 +3099,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3196,7 +3114,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Finesse",
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3211,7 +3128,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3226,7 +3142,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3241,7 +3156,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3256,7 +3170,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3271,7 +3184,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3286,7 +3198,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3301,7 +3212,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3316,7 +3226,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3331,7 +3240,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3346,7 +3254,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3361,7 +3268,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3376,7 +3282,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3391,7 +3296,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3406,7 +3310,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "3 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3464,7 +3367,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -3497,7 +3399,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3528,7 +3429,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d10",
     ],
@@ -3545,7 +3445,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -3607,7 +3506,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: null,
@@ -3634,7 +3532,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Piercing",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: "5 gp",
@@ -3649,7 +3546,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "5 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: "15 gp",
@@ -3665,7 +3561,6 @@ export const weaponsData: Weapon[] = [
     weight: "4 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d8",
     ],
@@ -3697,7 +3592,6 @@ export const weaponsData: Weapon[] = [
     weight: "2 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Range 20/60",
       "Versatile 1d10",
     ],
@@ -3743,7 +3637,6 @@ export const weaponsData: Weapon[] = [
     weight: "3 lb.",
     properties: [
       "Thrown",
-      "Versatile",
       "Finesse",
       "Range 20/60",
       "Versatile 1d8",
@@ -3790,7 +3683,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "4 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d8",
     ],
     cost: "5 gp",
@@ -3805,7 +3697,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Bludgeoning",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,
@@ -3820,7 +3711,6 @@ export const weaponsData: Weapon[] = [
     damage_type: "Slashing",
     weight: "2 lb.",
     properties: [
-      "Versatile",
       "Versatile 1d10",
     ],
     cost: null,

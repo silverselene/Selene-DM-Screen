@@ -105,6 +105,21 @@ function migrateTurnIndexToActiveId(): void {
   }
 }
 
+// The Oracle widget moved from a single `dm-oracle-result-v1` string + a
+// flat `dm-oracle-history-v1` array to a per-tab `dm-oracle-history-v2` map
+// (so switching tabs no longer wipes another tab's history). The two old
+// keys are never read again; drop them so they don't linger in every full
+// backup. Pure deletion — nothing to migrate, the new shape starts empty.
+function dropLegacyOracleKeys(): void {
+  for (const key of ["dm-oracle-result-v1", "dm-oracle-history-v1"]) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // storage unavailable — harmless; the key just stays put.
+    }
+  }
+}
+
 // Guarded so any future SSR / test import of this module doesn't blow
 // up at parse time. In a real browser this runs exactly once on app
 // boot from `main.tsx`.
@@ -112,4 +127,5 @@ export function runMigrationsOnce(): void {
   if (typeof window === "undefined") return;
   migrateLegacyInitiativeKeys();
   migrateTurnIndexToActiveId();
+  dropLegacyOracleKeys();
 }

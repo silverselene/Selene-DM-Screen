@@ -66,6 +66,20 @@ function expandAtkArg(arg: string): string {
     .join(" or ");
 }
 
+// Unknown zero-arg tags are dropped silently so stray noise doesn't leak into
+// prose — but a future 5etools release adding a new label tag would then lose
+// its label with no signal. Set STRICT_TAGS=1 on a regen to log each unknown
+// tag (once) to stderr so a maintainer can decide whether to map it in
+// ZERO_ARG_TAGS. Off by default to keep normal regens quiet.
+const STRICT_TAGS = process.env["STRICT_TAGS"] === "1";
+const warnedUnknownTags = new Set<string>();
+function noteUnknownZeroArgTag(tag: string): void {
+  if (!STRICT_TAGS || warnedUnknownTags.has(tag)) return;
+  warnedUnknownTags.add(tag);
+  // eslint-disable-next-line no-console
+  console.warn(`[stripTags] unknown zero-arg tag {@${tag}} dropped — map it in ZERO_ARG_TAGS if it carries meaning`);
+}
+
 export function stripTags(str: unknown): string {
   if (typeof str !== "string") return "";
   return (
@@ -75,6 +89,7 @@ export function stripTags(str: unknown): string {
         if (Object.prototype.hasOwnProperty.call(ZERO_ARG_TAGS, tag)) {
           return ZERO_ARG_TAGS[tag]!;
         }
+        noteUnknownZeroArgTag(tag);
         return ""; // unknown zero-arg tag — drop noise
       })
       // {@atk …} / {@atkr …} → expand attack-type codes.

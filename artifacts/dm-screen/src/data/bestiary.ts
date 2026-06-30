@@ -60,7 +60,11 @@ export function crToNumber(cr: string): number {
   if (cr === "1/8") return 0.125;
   if (cr === "1/4") return 0.25;
   if (cr === "1/2") return 0.5;
-  return parseFloat(cr) || 0;
+  // Whole-number CRs (0–30) plus the thin index's decimal fractions
+  // ("0.5", "0.25", "0.125"). Anything else — an empty string, "Unknown",
+  // or a malformed "11/2" that parseFloat would silently misread as 11 — is
+  // treated as ungraded: sorted to the end and coloured neutrally by callers.
+  return /^\d+(\.\d+)?$/.test(cr) ? parseFloat(cr) : Number.POSITIVE_INFINITY;
 }
 
 export const bestiaryData: Monster[] = [

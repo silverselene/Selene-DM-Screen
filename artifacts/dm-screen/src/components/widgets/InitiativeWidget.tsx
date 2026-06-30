@@ -557,7 +557,8 @@ export function InitiativeWidget() {
       <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
         {sorted.length === 0 && (
           <div className="text-center py-4 text-gray-500 text-xs flex flex-col items-center gap-2">
-            <Swords className="w-6 h-6 opacity-30" />No combatants yet
+            <Swords className="w-6 h-6 opacity-30" />
+            No combatants yet — click + to add a player, party member, or monster.
           </div>
         )}
         {sorted.map((c) => {

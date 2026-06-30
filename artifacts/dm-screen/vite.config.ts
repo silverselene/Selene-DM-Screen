@@ -78,8 +78,14 @@ export default defineConfig({
         // one shot rather than being split across separate runtime caches.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         cleanupOutdatedCaches: true,
+        // clientsClaim + skipWaiting are the coherent pair for the
+        // `registerType: "autoUpdate"` strategy above: a freshly installed SW
+        // skips the "waiting" phase and claims open clients, so the new build
+        // takes over on the next page reload instead of stranding a tab on a
+        // half-swapped cache. (A previous `skipWaiting: false` here fought the
+        // autoUpdate intent and the "activates on reload" comment.)
         clientsClaim: true,
-        skipWaiting: false,
+        skipWaiting: true,
         navigateFallback: "index.html",
         runtimeCaching: [
           {

@@ -33,7 +33,9 @@ packages:
 
 catalog:
   '@tailwindcss/vite': ^4.1.14
-  '@types/node': ^25.3.3
+  # Pinned to ^24 to match the documented Node 24+ runtime (Dockerfile build
+  # stage + README); ^25 types drift ahead of the runtime we actually ship on.
+  '@types/node': ^24
   '@types/react': ^19.2.0
   '@types/react-dom': ^19.2.0
   '@vitejs/plugin-react': ^5.0.4

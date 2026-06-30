@@ -280,7 +280,12 @@ export function useParty(): PlayerCharacter[] {
   useEffect(() => {
     const refresh = () => setParty(readRaw());
     window.addEventListener(CHANGED_EVENT, refresh);
-    window.addEventListener("storage", refresh); // cross-tab safety net
+    // Cross-tab safety net: the native `storage` event fires in *other* tabs
+    // after a write commits, so a second tab re-reads. This is a refresh, not
+    // conflict resolution — there's no merge or version check, so two tabs
+    // editing near-simultaneously is last-write-wins (documented as "use one
+    // tab at a time" in the README). Don't mistake this listener for sync.
+    window.addEventListener("storage", refresh);
     return () => {
       window.removeEventListener(CHANGED_EVENT, refresh);
       window.removeEventListener("storage", refresh);

@@ -92,7 +92,12 @@ function parseProperties(item: FiveToolsItem): string[] {
   }
   if (item.range) props.push(`Range ${item.range}`);
   if (item.reload != null) props.push(`Reload ${item.reload}`);
-  if (item.dmg2) props.push(`Versatile ${item.dmg2}`);
+  if (item.dmg2) {
+    // The "V" property code already expanded to a bare "Versatile" above;
+    // replace it with the dice-bearing form rather than listing both
+    // "Versatile" and "Versatile 1d10".
+    return [...new Set(props.filter(p => p !== "Versatile")), `Versatile ${item.dmg2}`];
+  }
   return [...new Set(props)];
 }
 

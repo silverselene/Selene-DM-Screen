@@ -32,9 +32,18 @@ export function AnchoredDropdown({
     // capture: catch scrolls in any ancestor, not just window.
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
+    // The anchor can also move for reasons that fire neither scroll nor
+    // resize: a sidebar collapse, a tile/grid resize, or an async webfont
+    // landing all reflow layout in place. Observe the anchor itself and the
+    // document root so the dropdown re-measures instead of sticking to a
+    // stale rect.
+    const ro = new ResizeObserver(update);
+    ro.observe(anchor);
+    ro.observe(document.documentElement);
     return () => {
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
+      ro.disconnect();
     };
   }, [open, anchor]);
 

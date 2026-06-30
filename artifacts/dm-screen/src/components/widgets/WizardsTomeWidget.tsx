@@ -6,6 +6,13 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const levelLabels = ["Cantrip", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
+// Precomputed lowercased name+description per spell, built once at module load.
+// The free-text filter runs on every keystroke; lowercasing all 557 spell
+// descriptions each time was the only non-trivial allocation in the path.
+const SPELL_SEARCH_INDEX = new Map<Spell, string>(
+  spellData.map((s) => [s, `${s.name}\n${s.description}`.toLowerCase()]),
+);
+
 const schoolColors: Record<string, string> = {
   Abjuration: "text-blue-400",
   Conjuration: "text-yellow-400",
@@ -108,7 +115,7 @@ export function WizardsTomeWidget() {
     const q = query.toLowerCase();
     return spellData
       .filter((s) => {
-        const matchQ = !q || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q);
+        const matchQ = !q || (SPELL_SEARCH_INDEX.get(s)?.includes(q) ?? false);
         const matchLv = filterLevel < 0 || s.level === filterLevel;
         const matchCl = !filterClass || s.classes.includes(filterClass);
         const matchSch = !filterSchool || s.school === filterSchool;
@@ -131,7 +138,7 @@ export function WizardsTomeWidget() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search spells..."
+          placeholder="Search spells…"
           className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-cyan-900/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-600"
         />
       </div>

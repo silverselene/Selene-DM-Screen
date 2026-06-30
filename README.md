@@ -65,6 +65,12 @@ sessions via `localStorage`.
 > - **Stay on one origin.** Running in dev (`http://localhost:5173`) and in
 >   Docker (`http://localhost:5173`) on the same port and host shares state.
 >   Switching ports starts a fresh, separate store.
+> - **Use one tab at a time.** State is plain `localStorage` with no
+>   cross-tab conflict resolution — last write wins. If you open the screen
+>   in two tabs and edit in both, whichever tab saves last silently clobbers
+>   the other's change (and a backup *import* in one tab wipes `dm-*` for the
+>   origin, affecting the other tab on its next write). Keep a single tab open
+>   during a session.
 
 ## Getting started
 
@@ -97,8 +103,9 @@ docker compose up --build
 # → http://localhost:5173
 ```
 
-The compose file builds a multi-stage image (Node 24 build → `nginx:alpine`
-runtime) and publishes container port 80 on host port 5173. Change the host
+The compose file builds a multi-stage image (Node 24 build →
+`nginxinc/nginx-unprivileged:alpine` runtime, so nginx runs as a non-root
+user) and publishes container port 8080 on host port 5173. Change the host
 side of the port mapping in `docker-compose.yml` if 5173 is taken.
 
 > Building on ARM64 hosts (Apple Silicon, Raspberry Pi, AWS Graviton) works

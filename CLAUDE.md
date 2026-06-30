@@ -38,7 +38,7 @@ pnpm --filter @workspace/scripts run generate:monster-index
 pnpm --filter @workspace/scripts run generate:weapons
 
 # Docker
-docker compose up --build                            # http://localhost:5173 (host) → 80 (nginx container)
+docker compose up --build                            # http://localhost:5173 (host) → 8080 (non-root nginx container)
 ```
 
 There is no test runner configured in this repo. Verification is manual + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero).
@@ -116,8 +116,8 @@ The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control:
 
 ## Docker
 
-- Multi-stage `Dockerfile`: build on `node:24-bookworm-slim` (glibc — must match the `linux-{x64,arm64}-gnu` native binaries), runtime on `nginx:alpine`. **Don't switch the build stage to `node:24-alpine`** — `pnpm-workspace.yaml`'s `overrides:` block still excludes the `-musl` rollup/esbuild/lightningcss/oxide variants.
-- `docker-compose.yml`: single service, no DB, publishes `5173:80`. Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host).
+- Multi-stage `Dockerfile`: build on `node:24-bookworm-slim` (glibc — must match the `linux-{x64,arm64}-gnu` native binaries), runtime on `nginxinc/nginx-unprivileged:alpine` (nginx runs as the non-root `nginx` user, so it listens on **8080**, not the privileged port 80). **Don't switch the build stage to `node:24-alpine`** — `pnpm-workspace.yaml`'s `overrides:` block still excludes the `-musl` rollup/esbuild/lightningcss/oxide variants. If you change the container port, update `nginx.conf`'s `listen`, the Dockerfile `EXPOSE`/`HEALTHCHECK`, and the compose `ports`/healthcheck together.
+- `docker-compose.yml`: single service, no DB, publishes `5173:8080` (container listens on 8080). Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host).
 - `.dockerignore` is an allowlist style for build inputs; never ship `node_modules`, `dist`, `.git`, or the intake docs into the image.
 - Builds on ARM64 (Apple Silicon, Pi, Graviton) — the `linux-arm64-gnu` variants are explicitly **not** excluded.
 

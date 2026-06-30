@@ -67,6 +67,15 @@ for (const m of monsterIndex) {
   if (!THIN_BY_NAME.has(key)) THIN_BY_NAME.set(key, m);
 }
 
+// Count of distinct searchable monsters across both datasets (rich entries
+// that also appear in the thin index aren't double-counted). Computed so the
+// search placeholder never drifts from the data the way a hardcoded number
+// does on every regen.
+const MONSTER_COUNT = new Set<string>([
+  ...RICH_BY_NAME.keys(),
+  ...THIN_BY_NAME.keys(),
+]).size;
+
 function lookupByName(name: string): UnifiedMonster | null {
   const key = name.toLowerCase();
   const rich = RICH_BY_NAME.get(key);
@@ -79,6 +88,7 @@ function lookupByName(name: string): UnifiedMonster | null {
 // ── CR colour ────────────────────────────────────────────────────────────────
 function crColor(cr: string) {
   const n = crToNumber(cr);
+  if (!Number.isFinite(n)) return "text-gray-400"; // ungraded / unknown CR
   if (n === 0) return "text-gray-400";
   if (n <= 1) return "text-green-400";
   if (n <= 4) return "text-yellow-400";
@@ -87,6 +97,17 @@ function crColor(cr: string) {
   if (n <= 16) return "text-purple-400";
   if (n <= 20) return "text-pink-400";
   return "text-white";
+}
+
+// Sort comparator by CR. Equal values (including two ungraded CRs, both
+// POSITIVE_INFINITY) short-circuit to 0 so the subtraction can never produce
+// NaN — an inconsistent comparator would otherwise leave such pairs in an
+// undefined order. Current data has no ungraded CRs, but this keeps the sort
+// well-defined if a future regen reintroduces one.
+function crCompare(a: string, b: string): number {
+  const na = crToNumber(a);
+  const nb = crToNumber(b);
+  return na === nb ? 0 : na - nb;
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
@@ -274,7 +295,6 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
     "dm-bestiary-cr-v1",
     "All",
   );
-  const [loadingTarget, setLoadingTarget] = useState(false);
 
   // Resolve the persisted name back to a UnifiedMonster.
   const selected: UnifiedMonster | null = useMemo(
@@ -287,10 +307,8 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   // ── When a target name arrives from Initiative Tracker ───────────────────
   useEffect(() => {
     if (!target) return;
-    setLoadingTarget(true);
     const match = lookupByName(target);
     if (match) setSelected(match);
-    setLoadingTarget(false);
   }, [target]);
 
   // ── Local list (from the 40-monster SRD seed + DB search results) ────────
@@ -310,7 +328,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         }
         return matchQ && matchCr;
       })
-      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr));
+      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
   }, [query, sortMode, crFilter]);
 
   // ── Broader thin-index results when searching ────────────────────────────
@@ -335,7 +353,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   const displayList: UnifiedMonster[] = useMemo(() => {
     if (!query.trim()) return localFiltered.map(fromLocal);
     return [...localFiltered.map(fromLocal), ...thinResults.map(fromIndex)]
-      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr));
+      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
   }, [query, localFiltered, thinResults, sortMode]);
 
   const handleBack = () => {
@@ -344,14 +362,6 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   };
 
   // ── Detail view ──────────────────────────────────────────────────────────
-  if (loadingTarget) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-xs text-purple-400 animate-pulse">Loading monster…</p>
-      </div>
-    );
-  }
-
   if (selected) {
     return (
       <div className="h-full min-h-0 flex flex-col">
@@ -382,7 +392,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search 2,160 monsters…"
+            placeholder={`Search ${MONSTER_COUNT.toLocaleString()} monsters…`}
             className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
           />
         </div>

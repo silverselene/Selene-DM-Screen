@@ -10,6 +10,20 @@ interface EnvelopeHead {
 
 const CURRENT_VERSION = 1;
 
+// Human-readable name + "where it belongs" pointer for each known schema, so
+// a mismatch can tell the user what they picked and where to load it instead
+// of leaking the raw envelope-schema string.
+const KNOWN_SCHEMAS: Record<string, { label: string; where: string }> = {
+  "selene-dm-full": {
+    label: "full backup",
+    where: "the BACKUP panel in the sidebar",
+  },
+  "selene-dm-party": {
+    label: "Party export",
+    where: "the Import button in the Party widget",
+  },
+};
+
 /** Parse `text` as JSON, verify the envelope's `schema` matches and that
  *  its `version` is compatible with the current build. Returns the
  *  parsed object so the caller can read its payload field. Throws a
@@ -36,9 +50,13 @@ export function parseEnvelopeHead(
   }
   const env = parsed as EnvelopeHead;
   if (env.schema !== expectedSchema) {
-    throw new Error(
-      `Unexpected schema "${String(env.schema ?? "?")}" — looking for "${expectedSchema}".`,
-    );
+    // If it's the *other* known Selene file, say so and point at the right
+    // surface; otherwise just say it isn't the kind we expected.
+    const got = typeof env.schema === "string" ? KNOWN_SCHEMAS[env.schema] : undefined;
+    const hint = got
+      ? ` This looks like a ${got.label} file — load it from ${got.where}.`
+      : "";
+    throw new Error(`This file isn't a ${kind}.${hint}`);
   }
   const v = env.version;
   // Missing / non-numeric `version` → treat as v1 (legacy lenient

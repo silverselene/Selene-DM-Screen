@@ -88,6 +88,11 @@
   --dm-placeholder:  #6b7280;
   --dm-scrollbar:    #4a1080;
   --dm-scrollbar-h:  #6b1eba;
+  /* Amethyst accent. Dark mode keeps the Tailwind purple-300/400/500 look;
+     these tokens centralize it so light mode can swap in an AA-contrast
+     shade (see the .light-mode block + the purple utility overrides below). */
+  --dm-accent:        #c084fc;
+  --dm-accent-strong: #a855f7;
 }
 
 .light-mode {
@@ -110,6 +115,9 @@
   --dm-placeholder:  #7a6494;
   --dm-scrollbar:    #b49ad0;
   --dm-scrollbar-h:  #8a5cba;
+  /* Darker amethyst so accent text clears WCAG AA on the near-white page. */
+  --dm-accent:        #7e22ce;
+  --dm-accent-strong: #6b21a8;
 }
 
 /* ── Semantic helpers used across widgets ───────────────── */
@@ -184,6 +192,16 @@
 .light-mode [class~="border-gray-800\/50"],
 .light-mode [class~="border-gray-800"]  { border-color: rgba(189,178,210,0.50); }
 .light-mode [class~="divide-gray-800"]  { border-color: rgba(189,178,210,0.40); }
+
+/* Accent (amethyst) — the brand purple is hardcoded as Tailwind purple-*
+ * utilities across the Sidebar and widgets; on the near-white light page
+ * purple-300/400/500 fail AA, so remap the base (non-hover) accent text
+ * utilities to the darker --dm-accent token. Hover variants are left to
+ * Tailwind so they only apply on :hover. */
+.light-mode [class~="text-purple-300"],
+.light-mode [class~="text-purple-400"],
+.light-mode [class~="text-purple-500"] { color: var(--dm-accent); }
+.light-mode [class~="text-purple-700"] { color: var(--dm-accent-strong); }
 
 /* Placeholder */
 .light-mode [class~="placeholder-gray-500"]::placeholder,

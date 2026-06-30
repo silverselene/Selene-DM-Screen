@@ -40,7 +40,7 @@ export function CompendiumWidget() {
             type="text"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedEntry(null); }}
-            placeholder="Search 5.5e rules..."
+            placeholder="Search 5.5e rules…"
             className="w-full pl-7 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
           />
         </div>

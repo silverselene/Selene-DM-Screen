@@ -11,10 +11,11 @@ services:
     container_name: selene-dm-screen
     restart: unless-stopped
     ports:
-      # host:container. Change the host side if 5173 is already taken.
-      - "5173:80"
+      # host:container. Container listens on 8080 (non-root nginx). Change the
+      # host side (left of the colon) if 5173 is already taken.
+      - "5173:8080"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 3s
       retries: 3

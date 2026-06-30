@@ -38,10 +38,13 @@ ENV BASE_PATH=${BASE_PATH}
 RUN pnpm run build
 
 # ─── Runtime stage ────────────────────────────────────────────────────────
-# nginx:alpine is the smallest battle-tested static server. The runtime
-# stage has no node deps so musl is fine here even though the build stage
-# couldn't use it.
-FROM nginx:alpine AS runtime
+# nginxinc/nginx-unprivileged:alpine is the official non-root nginx: the
+# master process runs as the `nginx` user (uid 101), not root, and the cache
+# / pid paths are pre-configured writable for that user. It listens on 8080
+# (a non-root user can't bind the privileged port 80), so nginx.conf listens
+# on 8080 and compose maps the host port to 8080. The runtime stage has no
+# node deps so musl is fine here even though the build stage couldn't use it.
+FROM nginxinc/nginx-unprivileged:alpine AS runtime
 
 # Drop the default site and install a SPA-aware one. The security-headers
 # snippet is included from inside nginx.conf via a relative path, so it
@@ -52,11 +55,11 @@ COPY artifacts/dm-screen/docker/security-headers.conf /etc/nginx/conf.d/security
 # Copy the built assets. dm-screen builds into dist/public/.
 COPY --from=build /app/artifacts/dm-screen/dist/public /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 
 # Healthcheck verifies the SPA shell was actually copied into /usr/share/
 # nginx/html — a zero-byte or missing index.html still returns 200, so a
 # raw `wget /` would falsely report healthy. Pipe the response body to
 # grep for the React mount point that lives in index.html.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q -O - http://127.0.0.1/index.html | grep -q 'id="root"' || exit 1
+  CMD wget -q -O - http://127.0.0.1:8080/index.html | grep -q 'id="root"' || exit 1

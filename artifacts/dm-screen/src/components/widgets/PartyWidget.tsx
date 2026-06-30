@@ -428,6 +428,7 @@ const SPELL_STATS_BY_NAME: Map<string, SpellInfo> = new Map(
 export function PartyWidget() {
   const characters = useParty();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm());
@@ -437,6 +438,13 @@ export function PartyWidget() {
 
   const weaponStats = useMemo(() => WEAPON_STATS_BY_NAME, []);
   const spellStats = useMemo(() => SPELL_STATS_BY_NAME, []);
+
+  // Auto-dismiss the transient success banner so it doesn't linger.
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   // Per-row initiative
   const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
@@ -528,9 +536,14 @@ export function PartyWidget() {
     if (!window.confirm(prompt)) return;
     try {
       const count = commit();
+      // A successful import replaces the whole roster — drop any in-progress
+      // add/edit so a stale form (e.g. editing an id the import dropped) can't
+      // silently no-op on save. See QAREPORT #40.
+      setEditingId(null);
+      setShowAdd(false);
+      setForm(emptyForm());
       setError(null);
-      // eslint-disable-next-line no-alert
-      window.alert(`Imported ${count} ${charWord(count)}.`);
+      setNotice(`Imported ${count} ${charWord(count)}.`);
     } catch (e) {
       setError(`Import failed: ${(e as Error).message}`);
     }
@@ -571,7 +584,7 @@ export function PartyWidget() {
             <Upload className="w-3 h-3" />
           </button>
           <button
-            onClick={() => { setShowAdd(v => !v); setForm(emptyForm()); }}
+            onClick={() => setShowAdd(v => !v)}
             className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
           >
             <Plus className="w-3 h-3" />Add Character
@@ -585,6 +598,12 @@ export function PartyWidget() {
         </div>
       )}
 
+      {notice && (
+        <div className="text-xs text-emerald-300 bg-emerald-900/20 border border-emerald-800/40 rounded px-2 py-1 mb-2 shrink-0">
+          {notice}
+        </div>
+      )}
+
       {/* Add form */}
       {showAdd && (
         <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded shrink-0">
@@ -595,7 +614,7 @@ export function PartyWidget() {
               className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
               Save Character
             </button>
-            <button onClick={() => setShowAdd(false)}
+            <button onClick={() => { setShowAdd(false); setForm(emptyForm()); }}
               className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">
               Cancel
             </button>

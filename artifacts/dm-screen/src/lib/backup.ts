@@ -478,11 +478,17 @@ export function downloadJsonFile(filename: string, contents: string): void {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  // Revoke as soon as the click has been dispatched rather than on a fixed
+  // 1s timer: rapid repeat exports of large backups would otherwise pin
+  // multiple multi-MB blob URLs alive at once. The rAF fires after the
+  // browser has captured the blob for the download but within ~one frame,
+  // so the URL is still valid when the download starts and freed right after.
+  a.addEventListener("click", () => {
+    requestAnimationFrame(() => URL.revokeObjectURL(url));
+  });
   document.body.appendChild(a);
   a.click();
   a.remove();
-  // Defer revoke so the click has time to fire in all browsers.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Open a native file picker and resolve with the text contents. Rejects
