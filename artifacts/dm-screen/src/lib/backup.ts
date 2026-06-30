@@ -18,12 +18,13 @@
 import type { PlayerCharacter, TileEntry } from "@/types";
 import { WIDGET_TYPES, type WidgetType } from "@/types";
 import { normalizePartyBatch } from "@/lib/partyStore";
-import { validateCombatants } from "@/lib/combatant";
+import { validateCombatants, validateInitiativeActiveId } from "@/lib/combatant";
+import { parseEnvelopeHead } from "@/lib/envelope";
 
 // Re-export so call sites that already import widget constants /
 // validators from `@/lib/backup` keep working unchanged.
 export { WIDGET_TYPES };
-export { validateCombatants };
+export { validateCombatants, validateInitiativeActiveId };
 
 const KEY_PREFIX = "dm-";
 
@@ -75,25 +76,11 @@ function byteSize(map: Record<string, string>): number {
 /** Parse + validate an envelope without touching storage. Throws on a
  *  malformed file using the same error messages as the importer. */
 function parseEnvelope(text: string): FullBackupEnvelope {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("File isn't valid JSON.");
-  }
-  if (!parsed || typeof parsed !== "object") {
-    throw new Error("File isn't a full backup.");
-  }
-  const env = parsed as Partial<FullBackupEnvelope>;
-  if (env.schema !== "selene-dm-full") {
-    throw new Error(
-      `Unexpected schema "${env.schema ?? "?"}" — looking for "selene-dm-full".`,
-    );
-  }
+  const env = parseEnvelopeHead(text, "selene-dm-full", "full backup");
   if (!env.keys || typeof env.keys !== "object") {
     throw new Error("Envelope is missing a `keys` map.");
   }
-  return env as FullBackupEnvelope;
+  return env as unknown as FullBackupEnvelope;
 }
 
 // ── Core shape validators (operate on already-parsed values) ─────────────
@@ -103,10 +90,13 @@ function parseEnvelope(text: string): FullBackupEnvelope {
 // DevTools edits, service-worker cache mismatches, and future write bugs
 // can't strand a widget on a malformed value.
 //
-// Convention: return the cleaned value if salvageable, or `null` to mean
-// "fall back to default." Cores never throw.
+// Convention: return the cleaned value if salvageable, or `undefined` to
+// mean "fall back to default." `undefined` (not `null`) is the sentinel
+// so validators of nullable types (e.g. `validateInitiativeActiveId`,
+// `T = string | null`) can return `null` as a legitimate cleaned value
+// without colliding with the rejection signal. Cores never throw.
 
-export type ShapeValidator<T> = (parsed: unknown) => T | null;
+export type ShapeValidator<T> = (parsed: unknown) => T | undefined;
 
 export const MAX_TILES = 16; // grid is 2-4 × 2-4
 export const MAX_PARTY = 50;
@@ -116,9 +106,9 @@ export function validateBoundedInt(
   max: number,
 ): ShapeValidator<number> {
   return (parsed) => {
-    if (typeof parsed !== "number") return null;
-    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return null;
-    if (parsed < min || parsed > max) return null;
+    if (typeof parsed !== "number") return undefined;
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return undefined;
+    if (parsed < min || parsed > max) return undefined;
     return parsed;
   };
 }
@@ -127,8 +117,8 @@ export function validateEnum<T extends string>(
   allowed: readonly T[],
 ): ShapeValidator<T> {
   return (parsed) => {
-    if (typeof parsed !== "string") return null;
-    if (!(allowed as readonly string[]).includes(parsed)) return null;
+    if (typeof parsed !== "string") return undefined;
+    if (!(allowed as readonly string[]).includes(parsed)) return undefined;
     return parsed as T;
   };
 }
@@ -138,7 +128,7 @@ export function validateArrayOfEnum<T extends string>(
   maxLen: number,
 ): ShapeValidator<T[]> {
   return (parsed) => {
-    if (!Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed)) return undefined;
     return parsed
       .filter(
         (x): x is T =>
@@ -150,13 +140,13 @@ export function validateArrayOfEnum<T extends string>(
 
 function validateStringMax(maxLen: number): ShapeValidator<string> {
   return (parsed) => {
-    if (typeof parsed !== "string" || parsed.length > maxLen) return null;
+    if (typeof parsed !== "string" || parsed.length > maxLen) return undefined;
     return parsed;
   };
 }
 
-export function validateTiles(parsed: unknown): TileEntry[] | null {
-  if (!Array.isArray(parsed) || parsed.length > MAX_TILES) return null;
+export function validateTiles(parsed: unknown): TileEntry[] | undefined {
+  if (!Array.isArray(parsed) || parsed.length > MAX_TILES) return undefined;
   return parsed.map((entry: unknown): TileEntry => {
     if (entry === null) return null;
     if (!entry || typeof entry !== "object") {
@@ -174,26 +164,26 @@ export function validateTiles(parsed: unknown): TileEntry[] | null {
   });
 }
 
-export function validateParty(parsed: unknown): PlayerCharacter[] | null {
-  if (!Array.isArray(parsed)) return null;
+export function validateParty(parsed: unknown): PlayerCharacter[] | undefined {
+  if (!Array.isArray(parsed)) return undefined;
   return normalizePartyBatch(parsed.slice(0, MAX_PARTY));
 }
 
 // ── Per-key import-path validators ───────────────────────────────────────
 // `KeyValidator` is the import-path signature: raw stored string in → raw
-// stored string out (or null to skip). Each one wraps a `ShapeValidator`
-// from above with JSON.parse + JSON.stringify so backup-import and
-// localStorage-read share the same shape-check logic.
+// stored string out (or `undefined` to skip). Each one wraps a
+// `ShapeValidator` from above with JSON.parse + JSON.stringify so
+// backup-import and localStorage-read share the same shape-check logic.
 
-type KeyValidator = (raw: string) => string | null;
+type KeyValidator = (raw: string) => string | undefined;
 
 function lift<T>(core: ShapeValidator<T>): KeyValidator {
   return (raw) => {
     try {
       const validated = core(JSON.parse(raw));
-      return validated === null ? null : JSON.stringify(validated);
+      return validated === undefined ? undefined : JSON.stringify(validated);
     } catch {
-      return null;
+      return undefined;
     }
   };
 }
@@ -202,19 +192,19 @@ function lift<T>(core: ShapeValidator<T>): KeyValidator {
 // written via direct `localStorage.setItem` rather than through
 // `useLocalStorage` / `JSON.stringify`.
 function bareEnum(allowed: readonly string[]): KeyValidator {
-  return (raw) => (allowed.includes(raw) ? raw : null);
+  return (raw) => (allowed.includes(raw) ? raw : undefined);
 }
 
 // Generic forward-compat validator for `dm-*` keys not in the registry.
 // Accepts any JSON-parseable value under the per-value byte cap so that a
 // backup taken from a future version round-trips through this importer
 // (the future widget can read its own data; today's widgets don't see it).
-function unknownKeyValidator(raw: string): string | null {
-  if (raw.length > MAX_PER_VALUE_BYTES) return null;
+function unknownKeyValidator(raw: string): string | undefined {
+  if (raw.length > MAX_PER_VALUE_BYTES) return undefined;
   try {
     JSON.parse(raw);
   } catch {
-    return null;
+    return undefined;
   }
   return raw;
 }
@@ -243,7 +233,12 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
   // Party + Initiative (the keys whose contents flow into stat-block math)
   "dm-party-v1": lift(validateParty),
   "dm-initiative-v1": lift(validateCombatants),
+  // Legacy turn-index key — kept in the registry so backups written by
+  // older builds still shape-check on import. The runtime no longer
+  // reads it; `migrateTurnIndexToActiveId` (InitiativeWidget) converts
+  // it to `dm-initiative-active-id-v1` on next page load.
   "dm-initiative-turn-v1": lift(validateBoundedInt(0, 999)),
+  "dm-initiative-active-id-v1": lift(validateInitiativeActiveId),
   "dm-round-v1": lift(validateBoundedInt(1, 9999)),
   "dm-initiative-mode-v1": lift(validateEnum(INITIATIVE_MODES)),
 };
@@ -312,7 +307,7 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
     }
     const validate = validatorFor(key);
     const cleaned = validate(rawValue);
-    if (cleaned === null) {
+    if (cleaned === undefined) {
       skipped.push(key);
       continue;
     }
@@ -396,7 +391,14 @@ export interface PreparedImport {
  *  ids) are captured in closure so the commit can't drift from what the
  *  user agreed to. Throws on a malformed envelope or hard-cap
  *  violation; bad individual values are reported via `summary.skipped`,
- *  not thrown. */
+ *  not thrown.
+ *
+ *  Caveat — multi-tab: the snapshot is read at `prepareImport` time.
+ *  Any `dm-*` mutations another tab makes between prepare and commit
+ *  will be wiped on the commit's `removeItem` sweep AND, on the
+ *  rollback path, will not be restored (rollback uses the same
+ *  prepare-time snapshot). DMs are assumed to run a single tab; cross-
+ *  tab last-write-wins is already documented in the per-key model. */
 export function prepareImport(text: string): PreparedImport {
   const env = parseEnvelope(text);
   const { pairs, skipped, bytes } = validateEnvelope(env);

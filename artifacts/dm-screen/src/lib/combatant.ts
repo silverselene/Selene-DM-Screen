@@ -11,6 +11,34 @@
 import type { Combatant } from "@/types";
 
 export const MAX_COMBATANTS = 100;
+export const MAX_COMBATANT_ID_LENGTH = 64;
+
+/**
+ * Validate the persisted "active combatant id" — the id of the combatant
+ * whose turn it currently is in the Initiative tracker. Persisted as the
+ * id rather than as a sort-list index so removing the active combatant
+ * doesn't silently re-point the turn pointer to whoever sort-shifts into
+ * that index.
+ *
+ * Returns `null` for the legitimate "no combatant active yet" state, the
+ * cleaned string id for a valid stored id, or `undefined` for malformed
+ * input. The `ShapeValidator` contract uses `undefined` as the rejection
+ * sentinel specifically so this validator (`T = string | null`) can
+ * return `null` as a real value without colliding with rejection.
+ */
+export function validateInitiativeActiveId(
+  parsed: unknown,
+): string | null | undefined {
+  if (parsed === null) return null;
+  if (
+    typeof parsed === "string" &&
+    parsed.length > 0 &&
+    parsed.length <= MAX_COMBATANT_ID_LENGTH
+  ) {
+    return parsed;
+  }
+  return undefined;
+}
 
 function isPlainObject(x: unknown): x is Record<string, unknown> {
   return x !== null && typeof x === "object" && !Array.isArray(x);
@@ -28,12 +56,12 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
  *   ids are preserved.
  * - Truncates to `MAX_COMBATANTS` to defend against pathological inputs.
  *
- * Returns `null` for anything that isn't an array (the only "totally
+ * Returns `undefined` for anything that isn't an array (the only "totally
  * unrecoverable" case); otherwise returns a salvaged `Combatant[]` that
  * may be empty.
  */
-export function validateCombatants(parsed: unknown): Combatant[] | null {
-  if (!Array.isArray(parsed)) return null;
+export function validateCombatants(parsed: unknown): Combatant[] | undefined {
+  if (!Array.isArray(parsed)) return undefined;
   const finiteNum = (v: unknown, def: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : def;
   return parsed

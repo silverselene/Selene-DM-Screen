@@ -26,7 +26,10 @@ export default defineConfig({
       // strand the DM on an old build — Workbox cleanupOutdatedCaches drops
       // anything not in the new precache manifest.
       registerType: "autoUpdate",
-      injectRegister: "auto",
+      // Pinned to "script" (external /registerSW.js) rather than "auto"
+      // so the CSP can lock script-src to 'self' — an "auto" mode swap
+      // to an inline registration would otherwise force `'unsafe-inline'`.
+      injectRegister: "script",
       includeAssets: ["favicon.svg", "pwa-icon.svg"],
       manifest: {
         name: "Legendary DM Screen",

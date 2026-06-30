@@ -37,13 +37,20 @@ RUN pnpm run build
 # couldn't use it.
 FROM nginx:alpine AS runtime
 
-# Drop the default site and install a SPA-aware one.
+# Drop the default site and install a SPA-aware one. The security-headers
+# snippet is included from inside nginx.conf via a relative path, so it
+# has to land next to default.conf in /etc/nginx/conf.d/.
 COPY artifacts/dm-screen/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY artifacts/dm-screen/docker/security-headers.conf /etc/nginx/conf.d/security-headers.conf
 
 # Copy the built assets. dm-screen builds into dist/public/.
 COPY --from=build /app/artifacts/dm-screen/dist/public /usr/share/nginx/html
 
 EXPOSE 80
 
+# Healthcheck verifies the SPA shell was actually copied into /usr/share/
+# nginx/html — a zero-byte or missing index.html still returns 200, so a
+# raw `wget /` would falsely report healthy. Pipe the response body to
+# grep for the React mount point that lives in index.html.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
+  CMD wget -q -O - http://127.0.0.1/index.html | grep -q 'id="root"' || exit 1

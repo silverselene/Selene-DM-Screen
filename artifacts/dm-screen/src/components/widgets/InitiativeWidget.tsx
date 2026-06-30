@@ -12,13 +12,15 @@ import {
   validateBoundedInt,
   validateCombatants,
   validateEnum,
+  validateInitiativeActiveId,
+  type ShapeValidator,
 } from "@/lib/backup";
+import { isV1Empty } from "@/lib/migrations";
 
 // Validators paired with each persistent key. Same shape checks the
 // backup-import path runs — so a malformed stored value (DevTools edit,
 // SW cache mismatch, future write bug) falls back to defaults instead of
 // crashing render or producing NaN-poisoned HP.
-const validateTurn = validateBoundedInt(0, 999);
 const validateRound = validateBoundedInt(1, 9999);
 const validateAddMode = validateEnum(INITIATIVE_MODES);
 
@@ -62,38 +64,56 @@ function parseMaxHp(hpStr: string): number {
   return m ? parseInt(m[1]) : 10;
 }
 
-// Read an older unversioned key once, so a DM with an encounter in progress
-// at upgrade time keeps the in-flight combat state across the version bump.
-function readLegacy<T>(legacyKey: string, fallback: T): T {
-  try {
-    const raw = window.localStorage.getItem(legacyKey);
-    if (raw == null) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
+// Initial-value factory for `useLocalStorage` that falls back to the
+// pre-v1 legacy key when the v1 key is absent. The boot-time migration
+// (`runMigrationsOnce` in `main.tsx`) normally copies legacy → v1 and
+// deletes legacy, so this fallback only kicks in if that copy's
+// `setItem` threw (quota / private mode): the v1 key is still empty but
+// the legacy value is intact, so the DM's in-progress encounter remains
+// visible to the UI instead of being silently hidden behind a default
+// `[]`/`0`/`1`.
+function legacyInitialValue<T>(
+  legacyKey: string,
+  validator: ShapeValidator<T>,
+  fallback: T,
+): () => T {
+  return () => {
+    try {
+      const raw = window.localStorage.getItem(legacyKey);
+      if (isV1Empty(raw)) return fallback;
+      const validated = validator(JSON.parse(raw as string));
+      return validated === undefined ? fallback : validated;
+    } catch {
+      return fallback;
+    }
+  };
 }
 
 type AddMode = (typeof INITIATIVE_MODES)[number];
 
 export function InitiativeWidget() {
   // Versioned per phase 2 ("Persist live combat state to a versioned key").
-  // Older unversioned keys (dm-initiative / dm-initiative-turn / dm-round)
-  // are read once for backward compatibility if the user already had an
-  // encounter in progress before this migration.
+  // Migration from the older unversioned keys (dm-initiative /
+  // dm-initiative-turn / dm-round) is handled once at module load — see
+  // migrateLegacyInitiativeKeys() above.
   const [combatants, setCombatants] = useLocalStorage<Combatant[]>(
     "dm-initiative-v1",
-    () => readLegacy<Combatant[]>("dm-initiative", []),
+    legacyInitialValue("dm-initiative", validateCombatants, []),
     validateCombatants,
   );
-  const [currentIndex, setCurrentIndex] = useLocalStorage<number>(
-    "dm-initiative-turn-v1",
-    () => readLegacy<number>("dm-initiative-turn", 0),
-    validateTurn,
+  // Active combatant tracked by id, not by sort-list index — so removing
+  // the active combatant (or any initiative tie re-sort) doesn't silently
+  // re-point the turn highlight to whoever shifts into that index. The
+  // pre-existing `dm-initiative-turn-v1` key is migrated to this one once
+  // at module load (see `migrateTurnIndexToActiveId` above).
+  const [activeId, setActiveId] = useLocalStorage<string | null>(
+    "dm-initiative-active-id-v1",
+    null,
+    validateInitiativeActiveId,
   );
   const [round, setRound] = useLocalStorage<number>(
     "dm-round-v1",
-    () => readLegacy<number>("dm-round", 1),
+    legacyInitialValue("dm-round", validateRound, 1),
     validateRound,
   );
   const [showForm, setShowForm] = useState(false);
@@ -136,6 +156,9 @@ export function InitiativeWidget() {
   const [pcInitiative, setPcInitiative] = useState("");
 
   const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative);
+  const currentIndex = activeId
+    ? sorted.findIndex((c) => c.id === activeId)
+    : -1;
 
   // ── Listen for dm-add-to-initiative events from PartyWidget ──
   useEffect(() => {
@@ -229,9 +252,29 @@ export function InitiativeWidget() {
   };
 
   const removeCombatant = (id: string) => {
-    const next = combatants.filter((c) => c.id !== id);
-    setCombatants(next.sort((a, b) => b.initiative - a.initiative));
-    if (currentIndex >= next.length && next.length > 0) setCurrentIndex(next.length - 1);
+    // `Array.prototype.sort` is in-place — `next` is now the sorted list
+    // we hand to both `setCombatants` and the active-id re-point logic.
+    const next = combatants
+      .filter((c) => c.id !== id)
+      .sort((a, b) => b.initiative - a.initiative);
+    setCombatants(next);
+    if (id !== activeId) return;
+    if (next.length === 0) {
+      setActiveId(null);
+      return;
+    }
+    // The active combatant was just removed — advance the turn pointer to
+    // whoever sorts into the same slot in the new list. If the removed
+    // combatant was last in initiative order, wrap to the top and bump
+    // `round` so the encounter doesn't silently regress to the previous
+    // combatant without a round increment.
+    const oldIdx = sorted.findIndex((c) => c.id === id);
+    if (oldIdx >= next.length) {
+      setActiveId(next[0].id);
+      setRound((r) => r + 1);
+      return;
+    }
+    setActiveId(next[oldIdx].id);
   };
 
   const updateHp = (id: string, delta: number) => {
@@ -240,12 +283,19 @@ export function InitiativeWidget() {
 
   const nextTurn = () => {
     if (sorted.length === 0) return;
+    // If nobody is active yet (or the previously-active combatant is no
+    // longer in the list), Next starts at the top of the order without
+    // bumping the round counter.
+    if (currentIndex < 0) {
+      setActiveId(sorted[0].id);
+      return;
+    }
     const next = (currentIndex + 1) % sorted.length;
     if (next === 0) setRound((r) => r + 1);
-    setCurrentIndex(next);
+    setActiveId(sorted[next].id);
   };
 
-  const reset = () => { setCombatants([]); setCurrentIndex(0); setRound(1); };
+  const reset = () => { setCombatants([]); setActiveId(null); setRound(1); };
 
   const inputCls = "px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
 
@@ -475,8 +525,8 @@ export function InitiativeWidget() {
             <Swords className="w-6 h-6 opacity-30" />No combatants yet
           </div>
         )}
-        {sorted.map((c, i) => {
-          const isActive = i === currentIndex;
+        {sorted.map((c) => {
+          const isActive = c.id === activeId;
           const isDead = c.hp === 0;
           return (
             <div key={c.id}
