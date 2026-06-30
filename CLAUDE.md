@@ -105,10 +105,12 @@ All datasets are **bundled at build time** — no network at runtime. Generators
 
 The app is a PWA via `vite-plugin-pwa` configured in `vite.config.ts`:
 
-- `registerType: "autoUpdate"` + `clientsClaim: true` + `skipWaiting` (implicit) — new SW takes over open tabs on next page load.
+- `registerType: "autoUpdate"` + `clientsClaim: true` + `skipWaiting: true` — the coherent pair for `autoUpdate`: a freshly installed SW takes over open tabs on next page load.
+- `injectRegister: "script"` — pinned (not `"auto"`) so a future plugin default-change can't reintroduce an inline registration and force the CSP `script-src` back open.
 - `cleanupOutdatedCaches: true` + Vite's hashed asset filenames = stale caches can't strand the DM.
 - `navigateFallback: "index.html"` for SPA routing.
-- `maximumFileSizeToCacheInBytes: 4 MiB` (the JS bundle is ~1.6 MiB raw; default 2 MiB cap was uncomfortably close).
+- `build.rollupOptions.output.manualChunks` splits the four big datasets into stable `data-spells` / `data-monster-index` / `data-bestiary` / `data-weapons` chunks, and widgets are `React.lazy`-loaded per tile, so the main `index` chunk is ~233 kB and a widget edit no longer busts the dataset precache.
+- `maximumFileSizeToCacheInBytes: 4 MiB` (headroom for the largest dataset chunk; default 2 MiB cap was uncomfortably close).
 - `globPatterns` precaches `js, css, html, svg, png, ico, webp, woff, woff2`.
 - Two `runtimeCaching` rules for Google Fonts (stylesheet StaleWhileRevalidate, woff2 CacheFirst).
 
@@ -129,5 +131,5 @@ The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control:
 
 Two surfaces in `src/lib/`:
 
-- `partyStore.ts` — `exportPartyAsJson` / `importPartyFromJson` (envelope `schema: "selene-dm-party"`, version 1). Wired into the Party widget header.
-- `backup.ts` — `exportFullBackupAsJson` / `importFullBackupFromJson` (envelope `schema: "selene-dm-full"`, version 1). Sweeps every `dm-*` localStorage key — no registry to maintain. Wired into the sidebar BACKUP panel. Import wipes existing `dm-*` keys first then reloads the page so every widget initializes from the restored state cleanly.
+- `partyStore.ts` — `exportPartyAsJson` / `preparePartyImport` (envelope `schema: "selene-dm-party"`, version 1). Wired into the Party widget header. Import is **two-phase**: `preparePartyImport(text)` validates + returns `{ summary, commit }`; the widget shows a count-aware confirm before calling `commit()`.
+- `backup.ts` — `exportFullBackupAsJson` / `prepareImport` (envelope `schema: "selene-dm-full"`, version 1). Sweeps every `dm-*` localStorage key — no registry to maintain. Wired into the sidebar BACKUP panel. Import is **two-phase**: `prepareImport(text)` snapshots existing state + validates each value through a per-key validator registry and returns `{ summary, commit }`; `commit()` wipes existing `dm-*` keys, writes the validated pairs (restoring the snapshot on any throw — atomic), then reloads the page so every widget initializes from the restored state cleanly.
