@@ -12,7 +12,11 @@ export function NotepadWidget() {
           Session Scratches
         </div>
         <button
-          onClick={() => setNotes("")}
+          onClick={() => {
+            if (notes.length && !window.confirm("Clear all notes? This can't be undone.")) return;
+            setNotes("");
+          }}
+          title="Clear all notes"
           className="flex items-center gap-1 text-xs text-gray-600 hover:text-red-400 transition-colors"
         >
           <Trash2 className="w-3 h-3" />

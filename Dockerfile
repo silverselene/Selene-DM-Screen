@@ -27,8 +27,14 @@ RUN pnpm install --frozen-lockfile
 # data files). .dockerignore keeps node_modules / .git / dist out.
 COPY . .
 
-# Default PORT/BASE_PATH are fine; the build step is environment-free since
-# Phase 4 made those env vars optional.
+# Sub-path deploys (behind a reverse proxy at e.g. /dm/) need the bundle, the
+# PWA service-worker scope, and the manifest start_url rebuilt under that base.
+# BASE_PATH defaults to "/" so the plain build is unchanged; override it via
+# docker-compose's build.args or `docker build --build-arg BASE_PATH=/dm/`.
+# vite.config.ts reads process.env.BASE_PATH, so expose the ARG as an env var
+# for the build step.
+ARG BASE_PATH=/
+ENV BASE_PATH=${BASE_PATH}
 RUN pnpm run build
 
 # ─── Runtime stage ────────────────────────────────────────────────────────

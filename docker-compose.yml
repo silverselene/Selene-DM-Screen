@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Sub-path deploys behind a reverse proxy: set to e.g. "/dm/" (keep the
+        # trailing slash) to serve the app under that base. Defaults to "/".
+        BASE_PATH: ${BASE_PATH:-/}
     image: selene-dm-screen:latest
     container_name: selene-dm-screen
     restart: unless-stopped

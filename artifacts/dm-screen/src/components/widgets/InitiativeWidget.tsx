@@ -325,7 +325,10 @@ export function InitiativeWidget() {
     setActiveId(sorted[next].id);
   };
 
-  const reset = () => { setCombatants([]); setActiveId(null); setRound(1); };
+  const reset = () => {
+    if (combatants.length && !window.confirm("Reset the encounter? This clears all combatants and resets to round 1.")) return;
+    setCombatants([]); setActiveId(null); setRound(1);
+  };
 
   const inputCls = "px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
 
@@ -357,10 +360,12 @@ export function InitiativeWidget() {
                 return !v;
               });
             }}
+            title="Add a combatant"
             className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-700/60 hover:bg-gray-600/60 rounded transition-colors text-gray-300">
             <Plus className="w-3 h-3" />
           </button>
           <button onClick={reset}
+            title="Reset encounter"
             className="flex items-center gap-1 text-xs px-2 py-1 bg-red-900/40 hover:bg-red-800/50 rounded transition-colors text-red-400">
             <RotateCcw className="w-3 h-3" />
           </button>

@@ -33,8 +33,7 @@ sessions via `localStorage`.
   2,158-entry thin index for quick reference. Shows stat blocks, traits,
   actions, and CR-coloured badges.
 - **Wizard's Tome** — searchable spell compendium (557 spells). Filter by
-  level, class, school, or Party spells — one click shows only spells your
-  characters know, with character-name pills on every matching row.
+  level, class, or school.
 - **Party** — full CRUD for player characters. Tracks name, race, class,
   level, AC, HP, weapons (with live autocomplete against 251 weapons), and
   spells. One-click dispatch to the Initiative Tracker.
@@ -105,6 +104,20 @@ side of the port mapping in `docker-compose.yml` if 5173 is taken.
 > Building on ARM64 hosts (Apple Silicon, Raspberry Pi, AWS Graviton) works
 > out of the box. The image is glibc-based on the build stage to match the
 > platform-binary `gnu` variants of rollup/esbuild/lightningcss.
+
+**Deploying under a sub-path.** To serve the app from a sub-path behind a
+reverse proxy (e.g. `https://example.com/dm/`), build with the `BASE_PATH`
+build arg — it's baked into the bundle, the PWA service-worker scope, and the
+manifest `start_url`, so it must be set at build time (keep the trailing
+slash):
+
+```bash
+BASE_PATH=/dm/ docker compose build   # compose forwards it via build.args
+# or, plain docker:
+docker build --build-arg BASE_PATH=/dm/ -t selene-dm-screen .
+```
+
+Then proxy `/dm/` to the container. Leaving `BASE_PATH` unset serves at `/`.
 
 ## Architecture
 

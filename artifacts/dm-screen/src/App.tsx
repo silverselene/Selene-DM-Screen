@@ -156,14 +156,75 @@ function AppContent() {
 
   const handleGridResize = (newCols: number, newRows: number) => {
     const newCount = newCols * newRows;
-    const existing: WidgetType[] = tiles
-      .filter((t): t is NonNullable<TileEntry> => t !== null)
-      .map((t) => (t as { widget: WidgetType; colSpan: number; rowSpan: number }).widget);
-    const next: TileEntry[] = Array.from({ length: newCount }, (_, i) => ({
-      widget: existing[i] ?? "empty",
-      colSpan: 1 as const,
-      rowSpan: 1 as const,
-    }));
+
+    // Real (non-empty) widgets currently placed, in order. `null` entries are
+    // span placeholders, not content, so they're skipped here.
+    const placed = tiles
+      .filter((t): t is NonNullable<TileEntry> => t !== null && t.widget !== "empty")
+      .map((t) => ({ widget: t.widget, colSpan: t.colSpan, rowSpan: t.rowSpan }));
+
+    // Re-pack into the new grid, preserving each widget's span where it still
+    // fits. occupied[] tracks cells already claimed by an earlier widget's
+    // span so a later one can't overlap it.
+    const next: TileEntry[] = Array.from({ length: newCount }, () => empty());
+    const occupied = new Array<boolean>(newCount).fill(false);
+
+    const fits = (start: number, cSpan: number, rSpan: number): boolean => {
+      const startCol = start % newCols;
+      const startRow = Math.floor(start / newCols);
+      if (startCol + cSpan > newCols || startRow + rSpan > newRows) return false;
+      for (let r = 0; r < rSpan; r++)
+        for (let c = 0; c < cSpan; c++)
+          if (occupied[start + r * newCols + c]) return false;
+      return true;
+    };
+
+    const droppedWidgets: WidgetType[] = [];
+    for (const w of placed) {
+      // Try the widget at its current span first, then fall back to 1×1 so a
+      // spanned widget is only discarded when the grid is genuinely full.
+      let slot = -1;
+      let cSpan: 1 | 2 = w.colSpan;
+      let rSpan: 1 | 2 = w.rowSpan;
+      const attempts: [1 | 2, 1 | 2][] =
+        w.colSpan === 1 && w.rowSpan === 1
+          ? [[1, 1]]
+          : [[w.colSpan, w.rowSpan], [1, 1]];
+      for (const [cs, rs] of attempts) {
+        for (let i = 0; i < newCount; i++) {
+          if (!occupied[i] && fits(i, cs, rs)) {
+            slot = i;
+            cSpan = cs;
+            rSpan = rs;
+            break;
+          }
+        }
+        if (slot !== -1) break;
+      }
+      if (slot === -1) {
+        droppedWidgets.push(w.widget);
+        continue;
+      }
+      next[slot] = { widget: w.widget, colSpan: cSpan, rowSpan: rSpan };
+      for (let r = 0; r < rSpan; r++)
+        for (let c = 0; c < cSpan; c++) {
+          const idx = slot + r * newCols + c;
+          occupied[idx] = true;
+          if (idx !== slot) next[idx] = null;
+        }
+    }
+
+    if (droppedWidgets.length > 0) {
+      const ok = window.confirm(
+        `Resizing to ${newCols}×${newRows} doesn't leave room for ${droppedWidgets.length} widget${droppedWidgets.length === 1 ? "" : "s"}, which will be discarded. Continue?`,
+      );
+      if (!ok) return;
+      // Past the early-return guard: the resize is committing, so leave each
+      // discarded widget in the "recently removed" list (mirrors handleClear)
+      // for one-click restore. Skipped on Cancel so no state mutates there.
+      droppedWidgets.forEach(pushRecent);
+    }
+
     setCols(newCols);
     setRows(newRows);
     setTiles(next);
