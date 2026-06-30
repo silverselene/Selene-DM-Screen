@@ -16,6 +16,26 @@ import {
   type ShapeValidator,
 } from "@/lib/backup";
 import { isV1Empty } from "@/lib/migrations";
+import { isImeComposing } from "@/lib/keyboard";
+
+// Parse a numeric input string and clamp it to a sane range. The `<input
+// type="number" min max>` attributes are only UI hints — a DM can still type
+// (or paste) "200" or "-3", which would otherwise flow straight through
+// `parseInt` and sort the combatant to the wrong end of the order. Empty /
+// unparseable input falls back to `fallback`.
+const clampInt = (raw: string, min: number, max: number, fallback = 0): number => {
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+};
+
+// Bounds. Initiative allows a wide range (high-DEX + bonuses can exceed 20, and
+// penalties can go negative) but is still capped so a stray "200" can't break
+// the sort. HP/AC are non-negative; AC tops out at the same 99 the party store
+// uses, HP at 9999.
+const INIT_MIN = -99;
+const INIT_MAX = 999;
+const HP_MAX = 9999;
+const AC_MAX = 99;
 
 // Validators paired with each persistent key. Same shape checks the
 // backup-import path runs — so a malformed stored value (DevTools edit,
@@ -201,22 +221,29 @@ export function InitiativeWidget() {
   // automatically. Manual edits to the initiative field after this still
   // win (this only fires on d20 changes).
   const updateD20 = (v: string) => {
-    setMonsterD20Roll(v);
-    const roll = parseInt(v);
-    if (Number.isFinite(roll)) {
-      const mod = selectedMonster?.initiative_modifier ?? 0;
-      setMonsterInitiative(String(roll + mod));
+    const roll = parseInt(v, 10);
+    if (!Number.isFinite(roll)) {
+      // Allow an empty / mid-edit field; don't force a value while typing.
+      setMonsterD20Roll(v);
+      return;
     }
+    // A d20 is 1–20 — clamp so the derived initiative can't be poisoned by a
+    // typo'd "200" (the input's min/max attrs don't enforce this).
+    const d20 = Math.max(1, Math.min(20, roll));
+    setMonsterD20Roll(String(d20));
+    const mod = selectedMonster?.initiative_modifier ?? 0;
+    setMonsterInitiative(String(d20 + mod));
   };
 
   // ── Add combatant helpers ──
   const addPlayer = () => {
     if (!form.name.trim()) return;
+    const hp = clampInt(form.hp, 0, HP_MAX);
     const newC: Combatant = {
       id: nextId(), name: form.name.trim(),
-      initiative: parseInt(form.initiative) || 0,
-      hp: parseInt(form.hp) || 0, maxHp: parseInt(form.hp) || 0,
-      ac: form.ac ? parseInt(form.ac) : undefined,
+      initiative: clampInt(form.initiative, INIT_MIN, INIT_MAX),
+      hp, maxHp: hp,
+      ac: form.ac ? clampInt(form.ac, 0, AC_MAX) : undefined,
       isPlayer: form.isPlayer,
     };
     setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
@@ -226,10 +253,13 @@ export function InitiativeWidget() {
 
   const addMonster = () => {
     if (!selectedMonster) return;
-    const hp = parseInt(monsterHpOverride) || parseMaxHp(selectedMonster.hp);
+    const overrideHp = parseInt(monsterHpOverride, 10);
+    const hp = Number.isFinite(overrideHp)
+      ? Math.max(0, Math.min(HP_MAX, overrideHp))
+      : parseMaxHp(selectedMonster.hp);
     const newC: Combatant = {
       id: nextId(), name: selectedMonster.name,
-      initiative: parseInt(monsterInitiative) || 0,
+      initiative: clampInt(monsterInitiative, INIT_MIN, INIT_MAX),
       hp, maxHp: hp, ac: selectedMonster.ac, isPlayer: false,
     };
     setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
@@ -242,7 +272,7 @@ export function InitiativeWidget() {
     if (!selectedPc) return;
     const newC: Combatant = {
       id: nextId(), name: selectedPc.name,
-      initiative: parseInt(pcInitiative) || 0,
+      initiative: clampInt(pcInitiative, INIT_MIN, INIT_MAX),
       hp: selectedPc.hp || 0, maxHp: selectedPc.hp || 0,
       ac: selectedPc.ac ?? undefined, isPlayer: true,
     };
@@ -363,7 +393,7 @@ export function InitiativeWidget() {
             <div className="space-y-1.5">
               <input placeholder="Name" value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && addPlayer()}
+                onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addPlayer(); }}
                 className={`w-full ${inputCls}`} />
               <div className="flex gap-1">
                 <div className="w-1/3">
@@ -373,12 +403,12 @@ export function InitiativeWidget() {
                 </div>
                 <div className="w-1/3">
                   <label className="text-[10px] text-gray-500 block mb-0.5">HP</label>
-                  <input type="number" value={form.hp}
+                  <input type="number" min="0" value={form.hp}
                     onChange={(e) => setForm({ ...form, hp: e.target.value })} className={`w-full ${inputCls}`} />
                 </div>
                 <div className="w-1/3">
                   <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
-                  <input type="number" value={form.ac}
+                  <input type="number" min="0" value={form.ac}
                     onChange={(e) => setForm({ ...form, ac: e.target.value })} className={`w-full ${inputCls}`} />
                 </div>
               </div>
@@ -428,7 +458,7 @@ export function InitiativeWidget() {
                   <span className="text-xs text-emerald-400 shrink-0">Initiative for {selectedPc.name}:</span>
                   <input autoFocus placeholder="Roll" type="number" value={pcInitiative}
                     onChange={(e) => setPcInitiative(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addFromParty()}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addFromParty(); }}
                     className={`w-20 ${inputCls}`} />
                 </div>
               )}
@@ -505,7 +535,7 @@ export function InitiativeWidget() {
                 </div>
                 <div className="w-1/3">
                   <label className="text-[10px] text-gray-500 block mb-0.5">HP override</label>
-                  <input type="number" value={monsterHpOverride}
+                  <input type="number" min="0" value={monsterHpOverride}
                     onChange={(e) => setMonsterHpOverride(e.target.value)} className={`w-full ${inputCls}`} />
                 </div>
               </div>

@@ -9,10 +9,16 @@ export function AnchoredDropdown({
   anchor,
   open,
   children,
+  role,
+  id,
 }: {
   anchor: HTMLElement | null;
   open: boolean;
   children: ReactNode;
+  /** ARIA role for the floating container (e.g. "listbox"). Optional — tag
+   *  inputs leave it unset; the Combobox sets it for combobox semantics. */
+  role?: string;
+  id?: string;
 }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
@@ -35,6 +41,8 @@ export function AnchoredDropdown({
   if (!open || !rect) return null;
   return createPortal(
     <div
+      role={role}
+      id={id}
       style={{
         position: "fixed",
         top: rect.bottom + 2,

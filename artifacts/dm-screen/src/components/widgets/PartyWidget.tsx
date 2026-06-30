@@ -17,6 +17,7 @@ import {
 import { downloadJsonFile, promptForJsonFile } from "@/lib/backup";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { Combobox } from "@/lib/Combobox";
+import { isImeComposing } from "@/lib/keyboard";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
 
 let idCounter = Date.now();
@@ -105,6 +106,7 @@ function WeaponTagInput({
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => {
+            if (isImeComposing(e)) return;
             if (e.key === "Enter") { e.preventDefault(); if (query.trim()) add(query.trim()); }
             if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
             if (e.key === "Escape") { setOpen(false); setQuery(""); }
@@ -285,6 +287,7 @@ function SpellTagInput({
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => {
+            if (isImeComposing(e)) return;
             if (e.key === "Enter") { e.preventDefault(); if (query.trim()) add(query.trim()); }
             if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
             if (e.key === "Escape") { setOpen(false); setQuery(""); }
@@ -681,7 +684,7 @@ export function PartyWidget() {
                     <span className="text-[10px] text-purple-400 shrink-0">Initiative roll:</span>
                     <input type="number" autoFocus value={initiativeVal}
                       onChange={e => setInitiativeVal(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && addToInitiative(c)}
+                      onKeyDown={e => { if (e.key === "Enter" && !isImeComposing(e)) addToInitiative(c); }}
                       placeholder="e.g. 14"
                       className="w-16 px-1.5 py-0.5 bg-gray-900 border border-purple-700 rounded text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500" />
                     <button onClick={() => addToInitiative(c)}

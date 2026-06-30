@@ -15,6 +15,17 @@ if (!Number.isFinite(port) || port <= 0) {
 }
 const basePath = process.env["BASE_PATH"] ?? "/";
 
+// Dev/preview servers bind to loopback by default. Running `pnpm dev` on an
+// untrusted network (a café, a shared office) shouldn't expose the app — and
+// its localStorage origin — to everyone on the LAN, nor disable Vite's
+// Host-header check. Set VITE_PUBLIC_HOST=1 to bind 0.0.0.0 and accept any
+// Host header (needed behind a reverse proxy, or to reach the dev server from
+// another device on a trusted network). The Docker runtime serves via nginx,
+// not these servers, so it's unaffected either way.
+const publicHost = process.env["VITE_PUBLIC_HOST"] === "1";
+const devHost = publicHost ? "0.0.0.0" : "127.0.0.1";
+const devAllowedHosts = publicHost ? true : undefined;
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -102,11 +113,29 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split the large bundled reference datasets into their own stable
+        // chunks. They're the bulk of the bundle and rarely change, so
+        // editing a widget no longer invalidates them in the PWA precache —
+        // and each dataset is independent, so regenerating spells doesn't
+        // bust the monster-index cache. Combined with the per-widget
+        // `React.lazy` chunks (see DMTile), a widget edit only re-downloads
+        // that one widget's code.
+        manualChunks(id) {
+          if (id.includes("/src/data/spells.")) return "data-spells";
+          if (id.includes("/src/data/monsterIndex.")) return "data-monster-index";
+          if (id.includes("/src/data/bestiary.")) return "data-bestiary";
+          if (id.includes("/src/data/weapons.")) return "data-weapons";
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     port,
-    host: "0.0.0.0",
-    allowedHosts: true,
+    host: devHost,
+    allowedHosts: devAllowedHosts,
     fs: {
       strict: true,
       deny: ["**/.*"],
@@ -114,7 +143,7 @@ export default defineConfig({
   },
   preview: {
     port,
-    host: "0.0.0.0",
-    allowedHosts: true,
+    host: devHost,
+    allowedHosts: devAllowedHosts,
   },
 });

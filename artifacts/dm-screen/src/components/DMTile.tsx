@@ -1,15 +1,37 @@
+import { lazy, Suspense } from "react";
 import {
   Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users,
   ArrowRight, ArrowDown, Minimize2,
 } from "lucide-react";
 import type { TileEntry, WidgetType } from "@/types";
-import { CompendiumWidget } from "./widgets/CompendiumWidget";
-import { InitiativeWidget } from "./widgets/InitiativeWidget";
-import { NotepadWidget } from "./widgets/NotepadWidget";
-import { OracleWidget } from "./widgets/OracleWidget";
-import { BestiaryWidget } from "./widgets/BestiaryWidget";
-import { WizardsTomeWidget } from "./widgets/WizardsTomeWidget";
-import { PartyWidget } from "./widgets/PartyWidget";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
+
+// Lazy-load each widget so its code (and the big reference datasets it pulls
+// in) downloads on first mount, not at app boot. The widgets are named exports,
+// hence the `.then(...)` default-mapping. Migrations already run pre-render in
+// main.tsx (`runMigrationsOnce`), so deferring widget evaluation is safe.
+const CompendiumWidget = lazy(() =>
+  import("./widgets/CompendiumWidget").then((m) => ({ default: m.CompendiumWidget })));
+const InitiativeWidget = lazy(() =>
+  import("./widgets/InitiativeWidget").then((m) => ({ default: m.InitiativeWidget })));
+const NotepadWidget = lazy(() =>
+  import("./widgets/NotepadWidget").then((m) => ({ default: m.NotepadWidget })));
+const OracleWidget = lazy(() =>
+  import("./widgets/OracleWidget").then((m) => ({ default: m.OracleWidget })));
+const BestiaryWidget = lazy(() =>
+  import("./widgets/BestiaryWidget").then((m) => ({ default: m.BestiaryWidget })));
+const WizardsTomeWidget = lazy(() =>
+  import("./widgets/WizardsTomeWidget").then((m) => ({ default: m.WizardsTomeWidget })));
+const PartyWidget = lazy(() =>
+  import("./widgets/PartyWidget").then((m) => ({ default: m.PartyWidget })));
+
+function WidgetLoading() {
+  return (
+    <div className="h-full flex items-center justify-center text-gray-600 text-xs">
+      <span className="animate-pulse">Loading…</span>
+    </div>
+  );
+}
 
 interface Props {
   index: number;
@@ -74,14 +96,25 @@ function WidgetContent({
   bestiaryTarget?: string | null;
   onBestiaryTargetClear?: () => void;
 }) {
-  if (widget === "compendium") return <CompendiumWidget />;
-  if (widget === "initiative") return <InitiativeWidget />;
-  if (widget === "notepad") return <NotepadWidget />;
-  if (widget === "oracle") return <OracleWidget />;
-  if (widget === "bestiary") return <BestiaryWidget target={bestiaryTarget} onTargetClear={onBestiaryTargetClear} />;
-  if (widget === "wizard-tome") return <WizardsTomeWidget />;
-  if (widget === "party") return <PartyWidget />;
-  return null;
+  // ErrorBoundary catches a rejected lazy import (Suspense only covers the
+  // pending case) so a failed chunk fetch degrades to a per-tile error instead
+  // of blanking the whole dashboard. Keyed by `widget` so switching the tile's
+  // type resets a previously-errored boundary.
+  return (
+    <ErrorBoundary key={widget} label="This widget">
+      <Suspense fallback={<WidgetLoading />}>
+        {widget === "compendium" && <CompendiumWidget />}
+        {widget === "initiative" && <InitiativeWidget />}
+        {widget === "notepad" && <NotepadWidget />}
+        {widget === "oracle" && <OracleWidget />}
+        {widget === "bestiary" && (
+          <BestiaryWidget target={bestiaryTarget} onTargetClear={onBestiaryTargetClear} />
+        )}
+        {widget === "wizard-tome" && <WizardsTomeWidget />}
+        {widget === "party" && <PartyWidget />}
+      </Suspense>
+    </ErrorBoundary>
+  );
 }
 
 export function DMTile({
