@@ -305,10 +305,17 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   const crOptions = ["All", "0–1", "2–4", "5–10", "11–16", "17+"];
 
   // ── When a target name arrives from Initiative Tracker ───────────────────
+  // `target` is a one-shot signal. Consume it immediately (clear it back to
+  // null in App) so re-opening the SAME monster from Initiative re-fires this
+  // effect — otherwise a repeat dispatch sets an identical value, React bails
+  // the state update, the effect never re-runs, and the click is a silent
+  // no-op. The open monster is driven by the persisted `selectedName`, not by
+  // `target`, so clearing the signal here does not close the detail view.
   useEffect(() => {
     if (!target) return;
     const match = lookupByName(target);
     if (match) setSelected(match);
+    onTargetClear?.();
   }, [target]);
 
   // ── Local list (from the 40-monster SRD seed + DB search results) ────────

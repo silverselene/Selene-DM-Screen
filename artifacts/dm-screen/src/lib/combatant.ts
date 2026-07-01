@@ -44,6 +44,11 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
   return x !== null && typeof x === "object" && !Array.isArray(x);
 }
 
+/** Mint a fresh, collision-resistant combatant id. */
+function mintCombatantId(): string {
+  return `c-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /**
  * Validate a parsed-but-untrusted array as a `Combatant[]`.
  *
@@ -54,6 +59,13 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
  *   HP +/- handlers (`Math.max(0, NaN+1) = NaN`).
  * - Generates a fresh random `id` when missing/malformed; existing valid
  *   ids are preserved.
+ * - Renumbers DUPLICATE ids in a post-pass (mirrors `normalizePartyBatch`).
+ *   Two combatants sharing an `id` — reachable via a hand-edited/hostile
+ *   backup, a DevTools edit of `dm-initiative-v1`, or a same-millisecond
+ *   mint across the Party→Initiative widget boundary — would otherwise
+ *   render with identical React keys, and every per-row action
+ *   (`updateHp`/`removeCombatant` keys on `c.id === id`) would hit BOTH
+ *   rows: a single HP click or delete silently corrupts two combatants.
  * - Truncates to `MAX_COMBATANTS` to defend against pathological inputs.
  *
  * Returns `undefined` for anything that isn't an array (the only "totally
@@ -64,7 +76,7 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
   if (!Array.isArray(parsed)) return undefined;
   const finiteNum = (v: unknown, def: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : def;
-  return parsed
+  const normalized = parsed
     .slice(0, MAX_COMBATANTS)
     .filter(isPlainObject)
     .map((c) => {
@@ -73,7 +85,7 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
         id:
           typeof o.id === "string" && o.id.length > 0 && o.id.length <= 64
             ? o.id
-            : `c-${Math.random().toString(36).slice(2, 10)}`,
+            : mintCombatantId(),
         name: typeof o.name === "string" ? o.name.slice(0, 200) : "",
         initiative: finiteNum(o.initiative, 0),
         hp: finiteNum(o.hp, 0),
@@ -83,4 +95,17 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
         isPlayer: typeof o.isPlayer === "boolean" ? o.isPlayer : false,
       };
     });
+  // Dedupe pass: renumber any id collisions with fresh ids. The fresh-mint
+  // loop guards against the (astronomically unlikely) case of a random id
+  // colliding with one already in the set.
+  const seen = new Set<string>();
+  for (const combatant of normalized) {
+    if (seen.has(combatant.id)) {
+      let fresh = mintCombatantId();
+      while (seen.has(fresh)) fresh = mintCombatantId();
+      combatant.id = fresh;
+    }
+    seen.add(combatant.id);
+  }
+  return normalized;
 }

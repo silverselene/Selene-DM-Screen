@@ -124,7 +124,28 @@ BASE_PATH=/dm/ docker compose build   # compose forwards it via build.args
 docker build --build-arg BASE_PATH=/dm/ -t selene-dm-screen .
 ```
 
-Then proxy `/dm/` to the container. Leaving `BASE_PATH` unset serves at `/`.
+The container always serves at its own root (`/`), so the reverse proxy **must
+strip the `/dm/` prefix** before forwarding. A plain pass-through that forwards
+`/dm/` unchanged will serve `index.html` for every `/dm/assets/*.js` request and
+the app will fail to boot (MIME error under the strict CSP), and the PWA
+no-cache headers on `sw.js` / `manifest.webmanifest` won't apply. Strip the
+prefix like so:
+
+```nginx
+# nginx — the trailing slash on proxy_pass strips the matched /dm/ prefix
+location /dm/ {
+    proxy_pass http://selene-dm-screen:8080/;
+}
+```
+
+```yaml
+# Traefik — StripPrefix middleware
+labels:
+  - "traefik.http.middlewares.dm-strip.stripprefix.prefixes=/dm"
+  - "traefik.http.routers.dm.middlewares=dm-strip"
+```
+
+Leaving `BASE_PATH` unset serves at `/` with no proxy prefix to strip.
 
 ## Architecture
 
