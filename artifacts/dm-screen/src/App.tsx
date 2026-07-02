@@ -6,13 +6,12 @@ import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   MAX_TILES,
-  WIDGET_TYPES,
   validateArrayOfEnum,
   validateBoundedInt,
   validateTiles,
 } from "@/lib/backup";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
-import type { TileEntry, WidgetType } from "@/types";
+import { PLACEABLE_WIDGET_TYPES, type TileEntry, type WidgetType } from "@/types";
 
 const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
 
@@ -24,7 +23,7 @@ const getDefaultTiles = (cols: number, rows: number): TileEntry[] =>
 // SW cache mismatch, future write bug) falls back to defaults instead of
 // crashing render.
 const validateGridDim = validateBoundedInt(2, 4);
-const validateRecentWidgets = validateArrayOfEnum(WIDGET_TYPES, MAX_TILES);
+const validateRecentWidgets = validateArrayOfEnum(PLACEABLE_WIDGET_TYPES, MAX_TILES);
 
 function AppContent() {
   const { isDark } = useTheme();

@@ -7,7 +7,7 @@ import path from "path";
 // PORT and BASE_PATH are both optional. Useful overrides for self-hosters
 // behind a reverse proxy or sub-path, but the defaults are sane for a clean
 // `pnpm install && pnpm dev` checkout with no environment set.
-const DEFAULT_PORT = 5173;
+const DEFAULT_PORT = 38080;
 const portEnv = process.env["PORT"];
 const port = portEnv ? Number(portEnv) : DEFAULT_PORT;
 if (!Number.isFinite(port) || port <= 0) {

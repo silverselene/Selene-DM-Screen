@@ -16,15 +16,19 @@
 // proceeds and the caller is told which keys were dropped.
 
 import type { PlayerCharacter, TileEntry } from "@/types";
-import { WIDGET_TYPES, type WidgetType } from "@/types";
+import { PLACEABLE_WIDGET_TYPES, WIDGET_TYPES, type WidgetType } from "@/types";
 import { normalizePartyBatch } from "@/lib/partyStore";
-import { validateCombatants, validateInitiativeActiveId } from "@/lib/combatant";
+import {
+  mintCombatantId,
+  validateCombatants,
+  validateInitiativeActiveId,
+} from "@/lib/combatant";
 import { parseEnvelopeHead } from "@/lib/envelope";
 
 // Re-export so call sites that already import widget constants /
 // validators from `@/lib/backup` keep working unchanged.
 export { WIDGET_TYPES };
-export { validateCombatants, validateInitiativeActiveId };
+export { mintCombatantId, validateCombatants, validateInitiativeActiveId };
 
 const KEY_PREFIX = "dm-";
 
@@ -33,6 +37,16 @@ const KEY_PREFIX = "dm-";
 // capped at ~5 MB per origin (iOS Safari is the floor); these stay well
 // under that with headroom for the existing state we're replacing.
 const MAX_PER_VALUE_BYTES = 1_000_000; // 1 MB — Notepad at 1 MB is ~150k words
+// Cap for the RAW stored string (the JSON-wrapped form), which is always
+// longer than the inner value it holds: `JSON.stringify` adds surrounding
+// quotes plus per-character escapes (`\n`, `\"`, `\uXXXX`, …). A fixed +100 KB
+// headroom only covered notes where <10% of characters escape; a session log
+// that is mostly short/blank lines (each `\n` doubles to `\n`) can escape far
+// more, pushing the wrapped form past the cap so a legit ~1 MB Notepad exports
+// fine but is dropped on import. Allow 2× the inner cap — enough for a note
+// that is 100% two-char escapes (all newlines/quotes), which no real prose
+// approaches — while staying comfortably under `MAX_TOTAL_BYTES`.
+const MAX_RAW_VALUE_BYTES = MAX_PER_VALUE_BYTES * 2;
 const MAX_TOTAL_BYTES = 4_000_000;     // 4 MB
 const MAX_KEYS = 200;                  // current key count is ~33
 const MAX_KEY_LENGTH = 200;
@@ -73,12 +87,53 @@ function byteSize(map: Record<string, string>): number {
   return total;
 }
 
+const IMPORT_PROBE_KEY = "dm-__import_probe__";
+
+/**
+ * Prove the validated payload can be written BEFORE the commit wipes the
+ * current state, so an over-quota import fails without touching the DM's
+ * data instead of half-restoring it.
+ *
+ * Storage currently holds `currentBytes` of `dm-*` data that, by
+ * definition, fits. The commit frees all of it, then writes `newBytes`.
+ * If `newBytes <= currentBytes` the write is guaranteed to fit — we free
+ * at least what we write, so no probe is needed. If the import is larger,
+ * probe only the DELTA: write one temporary key of that extra size
+ * alongside the existing state; if `currentBytes + delta` fits, then
+ * `newBytes` fits after the wipe. `byteSize` counts UTF-16 code units
+ * (`k.length + v.length`), which is how browsers meter the quota, so a
+ * one-char-per-unit probe string matches the accounting.
+ *
+ * localStorage has no real transaction, so this pre-flight plus the
+ * snapshot rollback in `commit`/`rollback` is best-effort, not a hard
+ * atomicity guarantee — but it closes the common quota-failure window.
+ */
+function preflightQuota(currentBytes: number, newBytes: number): void {
+  const delta = newBytes - currentBytes;
+  if (delta <= 0) return;
+  try {
+    // +1 char of headroom; the probe key name itself is negligible next to
+    // the multi-hundred-KB payloads this guards.
+    window.localStorage.setItem(IMPORT_PROBE_KEY, "x".repeat(delta + 1));
+  } catch {
+    throw new Error(
+      "Not enough browser storage to import this backup. Free up space " +
+        "(or clear other sites' data) and try again — your current data " +
+        "has been left untouched.",
+    );
+  } finally {
+    window.localStorage.removeItem(IMPORT_PROBE_KEY);
+  }
+}
+
 /** Parse + validate an envelope without touching storage. Throws on a
  *  malformed file using the same error messages as the importer. */
 function parseEnvelope(text: string): FullBackupEnvelope {
   const env = parseEnvelopeHead(text, "selene-dm-full", "full backup");
   if (!env.keys || typeof env.keys !== "object") {
-    throw new Error("Envelope is missing a `keys` map.");
+    throw new Error(
+      "This backup file is incomplete or corrupted. Try exporting a fresh backup.",
+    );
   }
   return env as unknown as FullBackupEnvelope;
 }
@@ -138,12 +193,16 @@ export function validateArrayOfEnum<T extends string>(
   };
 }
 
-function validateStringMax(maxLen: number): ShapeValidator<string> {
+export function validateStringMax(maxLen: number): ShapeValidator<string> {
   return (parsed) => {
     if (typeof parsed !== "string" || parsed.length > maxLen) return undefined;
     return parsed;
   };
 }
+
+// The per-value byte cap, exported so widgets (e.g. Notepad) can defend
+// their READ path with the same limit the import path enforces.
+export const NOTEPAD_MAX_CHARS = MAX_PER_VALUE_BYTES;
 
 export function validateTiles(parsed: unknown): TileEntry[] | undefined {
   if (!Array.isArray(parsed) || parsed.length > MAX_TILES) return undefined;
@@ -200,7 +259,7 @@ function bareEnum(allowed: readonly string[]): KeyValidator {
 // backup taken from a future version round-trips through this importer
 // (the future widget can read its own data; today's widgets don't see it).
 function unknownKeyValidator(raw: string): string | undefined {
-  if (raw.length > MAX_PER_VALUE_BYTES) return undefined;
+  if (raw.length > MAX_RAW_VALUE_BYTES) return undefined;
   try {
     JSON.parse(raw);
   } catch {
@@ -221,7 +280,7 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
   "dm-grid-cols": lift(validateBoundedInt(2, 4)),
   "dm-grid-rows": lift(validateBoundedInt(2, 4)),
   "dm-tiles-v3": lift(validateTiles),
-  "dm-recent-widgets": lift(validateArrayOfEnum(WIDGET_TYPES, MAX_TILES)),
+  "dm-recent-widgets": lift(validateArrayOfEnum(PLACEABLE_WIDGET_TYPES, MAX_TILES)),
 
   // Theme — bare string, NOT JSON-stringified (written via direct setItem
   // by ThemeContext)
@@ -287,7 +346,7 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
   );
   if (dmEntries.length > MAX_KEYS) {
     throw new Error(
-      `Backup contains ${dmEntries.length} dm-* keys (max ${MAX_KEYS}). Refusing to import.`,
+      `This backup has too many items to import (${dmEntries.length}; max ${MAX_KEYS}). It may be corrupted.`,
     );
   }
   const pairs: ValidatedPair[] = [];
@@ -301,7 +360,7 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
       skipped.push(key);
       continue;
     }
-    if (rawValue.length > MAX_PER_VALUE_BYTES) {
+    if (rawValue.length > MAX_RAW_VALUE_BYTES) {
       skipped.push(key);
       continue;
     }
@@ -314,18 +373,44 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
     pairs.push({ key, value: cleaned });
   }
 
-  // Enforce atomic-group invariants. If any group member is in `skipped`
-  // (failed validation), evict any surviving members from `pairs` so the
-  // consumer doesn't see half-applied state.
-  for (const group of ATOMIC_KEY_GROUPS) {
-    const anyFailed = group.some((k) => skipped.includes(k));
-    if (!anyFailed) continue;
+  // Evict every member of a group from `pairs` and mark it skipped, so the
+  // consumer never sees a half-applied group.
+  const evictGroup = (group: readonly string[]) => {
     for (const k of group) {
       const idx = pairs.findIndex((p) => p.key === k);
-      if (idx >= 0) {
-        pairs.splice(idx, 1);
-        if (!skipped.includes(k)) skipped.push(k);
+      if (idx >= 0) pairs.splice(idx, 1);
+      if (!skipped.includes(k)) skipped.push(k);
+    }
+  };
+
+  // Enforce atomic-group invariants. If any group member is in `skipped`
+  // (failed validation), evict the surviving members too.
+  for (const group of ATOMIC_KEY_GROUPS) {
+    if (group.some((k) => skipped.includes(k))) evictGroup(group);
+  }
+
+  // Cross-field consistency for the grid triple: each member can be
+  // individually valid yet mutually inconsistent (a hand-edited backup with
+  // `cols: 4, rows: 4` but a 9-element `tiles` array). App's `dm-tiles-v3`
+  // default is a fixed 3×3, so dropping only `tiles` would leave it mismatched
+  // against the imported cols/rows — evict the whole triple so all three fall
+  // back to their consistent defaults instead of rendering blank/overrun cells.
+  const gridPair = (key: string) => pairs.find((p) => p.key === key)?.value;
+  const colsRaw = gridPair("dm-grid-cols");
+  const rowsRaw = gridPair("dm-grid-rows");
+  const tilesRaw = gridPair("dm-tiles-v3");
+  if (colsRaw !== undefined && rowsRaw !== undefined && tilesRaw !== undefined) {
+    try {
+      const cols = JSON.parse(colsRaw) as number;
+      const rows = JSON.parse(rowsRaw) as number;
+      const tiles = JSON.parse(tilesRaw) as unknown[];
+      if (Array.isArray(tiles) && tiles.length !== cols * rows) {
+        evictGroup(["dm-grid-cols", "dm-grid-rows", "dm-tiles-v3"]);
       }
+    } catch {
+      // Values already passed their per-key validators, so a parse throw here
+      // is not expected; evict the triple defensively if it somehow happens.
+      evictGroup(["dm-grid-cols", "dm-grid-rows", "dm-tiles-v3"]);
     }
   }
 
@@ -333,7 +418,7 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
   for (const { key, value } of pairs) bytes += key.length + value.length;
   if (bytes > MAX_TOTAL_BYTES) {
     throw new Error(
-      `Backup totals ${(bytes / 1_000_000).toFixed(2)} MB (max ${MAX_TOTAL_BYTES / 1_000_000} MB). Refusing to import.`,
+      `This backup is too large to import (${(bytes / 1_000_000).toFixed(2)} MB; max ${MAX_TOTAL_BYTES / 1_000_000} MB). It may be corrupted.`,
     );
   }
   return { pairs, skipped, bytes };
@@ -377,10 +462,14 @@ export interface ImportResult {
 export interface PreparedImport {
   /** What the commit will do, computed once at prepare time. */
   summary: BackupSummary;
-  /** Apply the import. Wipes exactly the `dm-*` keys present at
-   *  `prepareImport` time, then writes the validated pairs. Atomic:
-   *  rolls back the snapshot if any write throws. Caller reloads the
-   *  page after success so widgets pick up the restored state. */
+  /** Apply the import. Pre-flights the payload against the storage quota
+   *  (so an over-quota import aborts before touching anything), then wipes
+   *  exactly the `dm-*` keys present at `prepareImport` time and writes the
+   *  validated pairs. Best-effort atomic: rolls back to the pre-import
+   *  snapshot if a write throws (localStorage has no true transaction, so
+   *  a failure that also defeats the rollback re-write is surfaced as an
+   *  explicit unrecoverable error). Caller reloads the page after success
+   *  so widgets pick up the restored state. */
   commit: () => ImportResult;
 }
 
@@ -419,6 +508,9 @@ export function prepareImport(text: string): PreparedImport {
   };
 
   const commit = (): ImportResult => {
+    // Prove the payload fits before wiping anything. Throws (leaving the
+    // current state untouched) if it can't — no wipe, no partial write.
+    preflightQuota(currentBytes, bytes);
     try {
       for (const k of Object.keys(snapshot)) {
         window.localStorage.removeItem(k);
@@ -502,30 +594,56 @@ export function promptForJsonFile(): Promise<string> {
     input.accept = "application/json,.json";
     input.style.display = "none";
     document.body.appendChild(input);
-    const cleanup = () => input.remove();
+
+    // Settle exactly once. Every exit path (file read, read error, explicit
+    // cancel, or the focus fallback below) funnels through here so the
+    // Promise can't be left forever-pending and the hidden <input> can't leak.
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("focus", onFocus);
+      input.remove();
+      fn();
+    };
+    const cancel = () =>
+      settle(() => reject(new DOMException("Cancelled", "AbortError")));
+
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) {
-        cleanup();
-        reject(new DOMException("Cancelled", "AbortError"));
+        cancel();
         return;
       }
       const reader = new FileReader();
-      reader.onload = () => {
-        cleanup();
-        resolve(String(reader.result ?? ""));
-      };
-      reader.onerror = () => {
-        const err = reader.error ?? new Error("Read failed.");
-        cleanup();
-        reject(err);
-      };
+      reader.onload = () => settle(() => resolve(String(reader.result ?? "")));
+      reader.onerror = () =>
+        settle(() => reject(reader.error ?? new Error("Read failed.")));
       reader.readAsText(file);
     };
-    input.oncancel = () => {
-      cleanup();
-      reject(new DOMException("Cancelled", "AbortError"));
+    input.oncancel = cancel;
+
+    // Fallback for browsers that fire NEITHER `change` nor `cancel` when the
+    // picker is dismissed (a known gap on some engines): the window regains
+    // focus as the dialog closes. Defer past the `change` event — which fires
+    // first when a file WAS chosen — so a real selection isn't clobbered as a
+    // cancel. If a file is present, the `change` handler owns the outcome.
+    //
+    // Guard against a spurious `focus` that arrives while the picker is STILL
+    // open (some engines deliver one when the user alt-tabs back to the
+    // browser mid-dialog). While a native file dialog owns focus the page's
+    // `document.hasFocus()` is false; only treat this as a dismissal once the
+    // page has genuinely regained focus AND no file was chosen — otherwise a
+    // later selection would be silently dropped by the premature cancel.
+    const onFocus = () => {
+      setTimeout(() => {
+        if (input.files && input.files.length > 0) return;
+        if (!document.hasFocus()) return;
+        cancel();
+      }, 300);
     };
+    window.addEventListener("focus", onFocus);
+
     input.click();
   });
 }

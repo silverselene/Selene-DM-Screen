@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { bestiaryData, mod, crToNumber, type Monster } from "@/data/bestiary";
 import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
@@ -287,6 +287,11 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
     null,
   );
   const [query, setQuery] = useLocalStorage<string>("dm-bestiary-query-v1", "");
+  // The input stays driven by `query` (instant echo); the heavier filters over
+  // the 2,158-row index run off the deferred value, so a fast typist doesn't
+  // re-scan the whole index on every keystroke. Matches the debounce the
+  // Initiative/Party search inputs already use.
+  const deferredQuery = useDeferredValue(query);
   const [sortMode, setSortMode] = useLocalStorage<SortMode>(
     "dm-bestiary-sort-v1",
     "alpha",
@@ -320,7 +325,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
 
   // ── Local list (from the 40-monster SRD seed + DB search results) ────────
   const localFiltered = useMemo(() => {
-    const q = query.toLowerCase();
+    const q = deferredQuery.toLowerCase();
     return bestiaryData
       .filter((m) => {
         const matchQ = !q || m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q);
@@ -336,32 +341,34 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         return matchQ && matchCr;
       })
       .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
-  }, [query, sortMode, crFilter]);
+  }, [deferredQuery, sortMode, crFilter]);
 
   // ── Broader thin-index results when searching ────────────────────────────
   // Local filter over the 2,158-row monsterIndex; rich entries are excluded
   // (they already appear via localFiltered). Capped to keep the list short.
   const thinResults = useMemo(() => {
-    if (!query.trim()) return [] as MonsterIndexEntry[];
-    const q = query.toLowerCase();
-    const richNames = new Set(bestiaryData.map(m => m.name.toLowerCase()));
+    if (!deferredQuery.trim()) return [] as MonsterIndexEntry[];
+    const q = deferredQuery.toLowerCase();
     const hits: MonsterIndexEntry[] = [];
     for (const m of monsterIndex) {
-      if (richNames.has(m.name.toLowerCase())) continue;
+      // Skip names already surfaced as rich entries via `localFiltered`.
+      // Reuse the module-scope `RICH_BY_NAME` map instead of rebuilding a
+      // Set of rich names on every keystroke.
+      if (RICH_BY_NAME.has(m.name.toLowerCase())) continue;
       if (m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q)) {
         hits.push(m);
         if (hits.length >= 200) break;
       }
     }
     return hits;
-  }, [query]);
+  }, [deferredQuery]);
 
   // Merge rich + thin for display when searching.
   const displayList: UnifiedMonster[] = useMemo(() => {
-    if (!query.trim()) return localFiltered.map(fromLocal);
+    if (!deferredQuery.trim()) return localFiltered.map(fromLocal);
     return [...localFiltered.map(fromLocal), ...thinResults.map(fromIndex)]
       .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
-  }, [query, localFiltered, thinResults, sortMode]);
+  }, [deferredQuery, localFiltered, thinResults, sortMode]);
 
   const handleBack = () => {
     setSelected(null);
@@ -387,7 +394,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   }
 
   // ── List view ────────────────────────────────────────────────────────────
-  const isFiltered = query.trim() !== "" || crFilter !== "All";
+  const isFiltered = deferredQuery.trim() !== "" || crFilter !== "All";
   const visibleList = isFiltered ? displayList : displayList.slice(0, 7);
 
   return (

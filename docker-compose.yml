@@ -11,11 +11,21 @@ services:
     container_name: selene-dm-screen
     restart: unless-stopped
     ports:
-      # host:container. Container listens on 8080 (non-root nginx). Change the
-      # host side (left of the colon) if 5173 is already taken.
-      - "5173:8080"
+      # host:container. Container listens on 8080 (non-root nginx). 38080 is
+      # deliberately outside the common dev-tool default range (3000, 5173,
+      # 8080, ...) to avoid collisions when another local project's container
+      # is also bound to one of those. Change the host side (left of the
+      # colon) if 38080 is already taken.
+      - "38080:8080"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      # Mirror the Dockerfile's HEALTHCHECK: a compose `healthcheck:` fully
+      # OVERRIDES the image's, so a plain `wget /` here would silently discard
+      # the image-level integrity check. A zero-byte/missing index.html still
+      # returns 200, so grep the response body for the React mount point to
+      # confirm the SPA shell was actually shipped, not just that nginx is up.
+      test:
+        - CMD-SHELL
+        - wget -q -O - http://127.0.0.1:8080/index.html | grep -q 'id="root"'
       interval: 30s
       timeout: 3s
       retries: 3

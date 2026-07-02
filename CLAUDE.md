@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required.
 
-History: this used to be a three-tier app (React + Express + PostgreSQL on Replit). The migration to a fully static, self-hostable SPA is documented in [HANDOVER-self-hosting.md](HANDOVER-self-hosting.md) — that file is the source of truth for *why* things are the way they are. Anything pre-migration (the API server, Drizzle, the OpenAPI/Orval codegen, the mockup sandbox, Replit infra) has been deleted; if you find references to them in old commits or comments, they're historical.
+History: this used to be a three-tier app (React + Express + PostgreSQL on Replit), migrated to a fully static, self-hostable SPA. Anything pre-migration (the API server, Drizzle, the OpenAPI/Orval codegen, the mockup sandbox, Replit infra) has been deleted; if you find references to them in old commits or comments, they're historical.
 
 ## No required environment variables
 
-The app runs from a clean clone with `pnpm install && pnpm dev` and zero env vars. `vite.config.ts` defaults `PORT` to `5173` and `base` to `'/'`.
+The app runs from a clean clone with `pnpm install && pnpm dev` and zero env vars. `vite.config.ts` defaults `PORT` to `38080` and `base` to `'/'`.
 
 ## Commands
 
@@ -21,13 +21,18 @@ Always use `pnpm` — the root `preinstall` script rejects npm/yarn.
 pnpm install
 
 # Dev / build / preview (all from the repo root)
-pnpm dev          # Vite dev server on http://localhost:5173
+pnpm dev          # Vite dev server on http://localhost:38080
 pnpm build        # typecheck + vite build → artifacts/dm-screen/dist/public/
 pnpm preview      # vite preview of the built bundle
 
 # Typecheck only
 pnpm typecheck                                       # whole workspace, project-references-aware
 pnpm --filter @workspace/dm-screen run typecheck     # single package
+
+# Tests (Vitest — dm-screen pure logic; Node env, no jsdom)
+pnpm test                                            # all packages that define a test script
+pnpm --filter @workspace/dm-screen run test          # single package (vitest run)
+pnpm --filter @workspace/dm-screen run test:watch    # watch mode
 
 # Regenerate bundled reference data from the local ../5etools-src clone (tag v2.31.0)
 pnpm --filter @workspace/scripts run generate:all
@@ -38,10 +43,10 @@ pnpm --filter @workspace/scripts run generate:monster-index
 pnpm --filter @workspace/scripts run generate:weapons
 
 # Docker
-docker compose up --build                            # http://localhost:5173 (host) → 8080 (non-root nginx container)
+docker compose up --build                            # http://localhost:38080 (host) → 8080 (non-root nginx container)
 ```
 
-There is no test runner configured in this repo. Verification is manual + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero).
+**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts), Node environment — no jsdom). Tier-1 coverage targets the **pure logic** in `src/lib` (validators, id minting, backup/restore import flow); tests live beside the code as `*.test.ts` (excluded from the build via `tsconfig.json`). Storage-dependent tests install a fake `window.localStorage` per-test rather than pulling in jsdom. **There are no component/DOM tests yet** — testing widgets, the anchored-dropdown flip, or the file-picker fallback would need `@testing-library/react` + a jsdom/happy-dom env (flip `test.environment` to `"jsdom"`); real browser behavior (localStorage quota, service-worker updates, file-picker dismissal) still needs manual verification or Playwright. Full verification is `pnpm test` + `pnpm typecheck` + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero). New deps are subject to the `minimumReleaseAge: 1440` gate.
 
 ## Repository layout
 
@@ -56,7 +61,6 @@ artifacts/
 scripts/                      Standalone tsx data generators (offline, read from ../5etools-src)
 attached_assets/              Source CSV for the 2,158-row monster index
 Dockerfile, docker-compose.yml, .dockerignore
-HANDOVER-self-hosting.md      Migration log + per-phase deviations
 ```
 
 ## TypeScript / project references
@@ -119,7 +123,7 @@ The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control:
 ## Docker
 
 - Multi-stage `Dockerfile`: build on `node:24-bookworm-slim` (glibc — must match the `linux-{x64,arm64}-gnu` native binaries), runtime on `nginxinc/nginx-unprivileged:alpine` (nginx runs as the non-root `nginx` user, so it listens on **8080**, not the privileged port 80). **Don't switch the build stage to `node:24-alpine`** — `pnpm-workspace.yaml`'s `overrides:` block still excludes the `-musl` rollup/esbuild/lightningcss/oxide variants. If you change the container port, update `nginx.conf`'s `listen`, the Dockerfile `EXPOSE`/`HEALTHCHECK`, and the compose `ports`/healthcheck together.
-- `docker-compose.yml`: single service, no DB, publishes `5173:8080` (container listens on 8080). Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host).
+- `docker-compose.yml`: single service, no DB, publishes `38080:8080` (container listens on 8080). Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host). 38080 was chosen over Vite's default 5173 specifically because 5173 (and other common dev-tool defaults like 3000/8080) collide with other local projects' containers, causing the browser to serve a stale cached SPA from the wrong origin's service worker.
 - `.dockerignore` is an allowlist style for build inputs; never ship `node_modules`, `dist`, `.git`, or the intake docs into the image.
 - Builds on ARM64 (Apple Silicon, Pi, Graviton) — the `linux-arm64-gnu` variants are explicitly **not** excluded.
 

@@ -9,6 +9,7 @@ import { useParty } from "@/lib/partyStore";
 import { searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
 import {
   INITIATIVE_MODES,
+  mintCombatantId,
   validateBoundedInt,
   validateCombatants,
   validateEnum,
@@ -44,8 +45,9 @@ const AC_MAX = 99;
 const validateRound = validateBoundedInt(1, 9999);
 const validateAddMode = validateEnum(INITIATIVE_MODES);
 
-let idCounter = Date.now();
-const nextId = () => String(++idCounter);
+// Combatant ids come from the shared `mintCombatantId()` (random suffix) so
+// live adds here and party dispatches from `PartyWidget` — which feed the
+// same list — can't collide on a same-millisecond mint.
 
 // Display shape for monster search results. Same fields the old API row had
 // (keeps the rendering JSX untouched), now sourced from the local index.
@@ -180,6 +182,17 @@ export function InitiativeWidget() {
     ? sorted.findIndex((c) => c.id === activeId)
     : -1;
 
+  // Reconcile a dangling active-id. `activeId` and the combatant list live
+  // under separate localStorage keys and validate independently, so a load
+  // that renumbered a duplicate id (`validateCombatants`) — or a hand-edited
+  // backup — can leave `activeId` pointing at a combatant that no longer
+  // exists. Clear it so the persisted pointer always references a real
+  // combatant or null, and `nextTurn` starts cleanly from the top instead of
+  // silently restarting the order without anyone noticing.
+  useEffect(() => {
+    if (activeId !== null && currentIndex < 0) setActiveId(null);
+  }, [activeId, currentIndex, setActiveId]);
+
   // ── Listen for dm-add-to-initiative events from PartyWidget ──
   useEffect(() => {
     const handler = (e: Event) => {
@@ -240,7 +253,7 @@ export function InitiativeWidget() {
     if (!form.name.trim()) return;
     const hp = clampInt(form.hp, 0, HP_MAX);
     const newC: Combatant = {
-      id: nextId(), name: form.name.trim(),
+      id: mintCombatantId(), name: form.name.trim(),
       initiative: clampInt(form.initiative, INIT_MIN, INIT_MAX),
       hp, maxHp: hp,
       ac: form.ac ? clampInt(form.ac, 0, AC_MAX) : undefined,
@@ -258,7 +271,7 @@ export function InitiativeWidget() {
       ? Math.max(0, Math.min(HP_MAX, overrideHp))
       : parseMaxHp(selectedMonster.hp);
     const newC: Combatant = {
-      id: nextId(), name: selectedMonster.name,
+      id: mintCombatantId(), name: selectedMonster.name,
       initiative: clampInt(monsterInitiative, INIT_MIN, INIT_MAX),
       hp, maxHp: hp, ac: selectedMonster.ac, isPlayer: false,
     };
@@ -271,7 +284,7 @@ export function InitiativeWidget() {
   const addFromParty = () => {
     if (!selectedPc) return;
     const newC: Combatant = {
-      id: nextId(), name: selectedPc.name,
+      id: mintCombatantId(), name: selectedPc.name,
       initiative: clampInt(pcInitiative, INIT_MIN, INIT_MAX),
       hp: selectedPc.hp || 0, maxHp: selectedPc.hp || 0,
       ac: selectedPc.ac ?? undefined, isPlayer: true,
@@ -282,13 +295,18 @@ export function InitiativeWidget() {
   };
 
   const removeCombatant = (id: string) => {
-    // `Array.prototype.sort` is in-place — `next` is now the sorted list
-    // we hand to both `setCombatants` and the active-id re-point logic.
+    // Persist from the freshest state (functional updater) so a combatant
+    // added via `dm-add-to-initiative` in the same render tick isn't dropped
+    // by a stale `combatants` closure.
+    setCombatants((prev) =>
+      prev.filter((c) => c.id !== id).sort((a, b) => b.initiative - a.initiative),
+    );
+    // Active-id repoint is best-effort — derived from the in-scope snapshot,
+    // it only decides whose turn is highlighted, never combatant data.
+    if (id !== activeId) return;
     const next = combatants
       .filter((c) => c.id !== id)
       .sort((a, b) => b.initiative - a.initiative);
-    setCombatants(next);
-    if (id !== activeId) return;
     if (next.length === 0) {
       setActiveId(null);
       return;
@@ -308,7 +326,9 @@ export function InitiativeWidget() {
   };
 
   const updateHp = (id: string, delta: number) => {
-    setCombatants(combatants.map((c) => c.id === id ? { ...c, hp: Math.max(0, c.hp + delta) } : c));
+    setCombatants((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, hp: Math.max(0, c.hp + delta) } : c)),
+    );
   };
 
   const nextTurn = () => {

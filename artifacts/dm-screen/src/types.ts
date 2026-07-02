@@ -14,6 +14,15 @@ export const WIDGET_TYPES = [
 
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 
+// Real, placeable widgets — `WIDGET_TYPES` minus the `"empty"` placeholder.
+// Used to validate the recent-widgets list, which only ever holds widgets a
+// DM actually opened (see `pushRecent`, which filters `"empty"` out). Keeping
+// `"empty"` out of the validator stops a hand-edited/backup value from
+// rendering a dead "empty" chip or a redundant-tile restore action.
+export const PLACEABLE_WIDGET_TYPES = WIDGET_TYPES.filter(
+  (w): w is Exclude<WidgetType, "empty"> => w !== "empty",
+);
+
 export type TileEntry = {
   widget: WidgetType;
   colSpan: 1 | 2;

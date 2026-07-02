@@ -250,7 +250,9 @@ export interface PreparedPartyImport {
 export function preparePartyImport(text: string): PreparedPartyImport {
   const env = parseEnvelopeHead(text, "selene-dm-party", "Party export");
   if (!Array.isArray(env.party)) {
-    throw new Error("Envelope is missing a `party` array.");
+    throw new Error(
+      "This Party file is incomplete or corrupted. Try exporting it again.",
+    );
   }
   const normalized = normalizePartyBatch(env.party);
   const summary: PartyImportSummary = {

@@ -14,6 +14,40 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
+// Map internal `dm-*` storage keys to the widget names a DM recognizes, so a
+// skipped-items warning during restore reads "Party, Notes" rather than
+// "dm-party-v1, dm-notepad". Unknown keys fall back to a de-prefixed label.
+const KEY_LABELS: Record<string, string> = {
+  "dm-grid-cols": "Layout",
+  "dm-grid-rows": "Layout",
+  "dm-tiles-v3": "Layout",
+  "dm-recent-widgets": "Recent widgets",
+  "dm-theme": "Theme",
+  "dm-notepad": "Notes",
+  "dm-party-v1": "Party",
+  "dm-initiative-v1": "Initiative",
+  "dm-initiative-turn-v1": "Initiative",
+  "dm-initiative-active-id-v1": "Initiative",
+  "dm-round-v1": "Initiative",
+  "dm-initiative-mode-v1": "Initiative",
+  "dm-bestiary-query-v1": "Bestiary",
+  "dm-bestiary-selected-v1": "Bestiary",
+  "dm-bestiary-sort-v1": "Bestiary",
+  "dm-bestiary-cr-v1": "Bestiary",
+};
+
+function friendlyKeyLabels(keys: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const k of keys) {
+    const label = KEY_LABELS[k] ?? k.replace(/^dm-/, "").replace(/-v\d+$/, "");
+    if (seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out;
+}
+
 async function runFullImport() {
   let text: string;
   try {
@@ -35,12 +69,12 @@ async function runFullImport() {
       `This will REPLACE all current widget state — party, notes, layout, in-progress combat ` +
       `(currently ${formatBytes(summary.currentBytes)}).`;
     if (summary.skipped.length > 0) {
-      const sample = summary.skipped.slice(0, 3).join(", ");
-      const more = summary.skipped.length > 3 ? ` (+${summary.skipped.length - 3} more)` : "";
+      const labels = friendlyKeyLabels(summary.skipped);
+      const sample = labels.slice(0, 4).join(", ");
+      const more = labels.length > 4 ? ` (+${labels.length - 4} more)` : "";
       prompt +=
-        `\n\n⚠ ${summary.skipped.length} item${summary.skipped.length === 1 ? "" : "s"} ` +
-        `will be skipped — malformed or unrecognized values — and those widgets will reset to default:\n` +
-        `${sample}${more}`;
+        `\n\n⚠ Some data couldn't be read (it's damaged or from an unsupported version) ` +
+        `and will reset to default:\n${sample}${more}`;
     }
     if (!window.confirm(prompt)) return;
     const { skipped } = commit();

@@ -1,8 +1,14 @@
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { NOTEPAD_MAX_CHARS, validateStringMax } from "@/lib/backup";
 import { FileText, Trash2 } from "lucide-react";
 
+// Defend the read path with the same cap the backup-import path enforces:
+// a non-string or oversized stored value (DevTools edit, future write bug)
+// heals to "" on load instead of poisoning `notes.length` / the textarea.
+const validateNotes = validateStringMax(NOTEPAD_MAX_CHARS);
+
 export function NotepadWidget() {
-  const [notes, setNotes] = useLocalStorage<string>("dm-notepad", "");
+  const [notes, setNotes] = useLocalStorage<string>("dm-notepad", "", validateNotes);
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -25,6 +31,11 @@ export function NotepadWidget() {
       </div>
       <textarea
         value={notes}
+        // Cap the WRITE path at the same limit the read validator and backup
+        // import enforce, so a note can never grow past the point where it
+        // would silently heal to "" on the next reload. Beyond this the read
+        // validator only fires on genuinely corrupt/external values.
+        maxLength={NOTEPAD_MAX_CHARS}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Jot down anything — monster HP, NPC names, plot hooks, treasure deals…"
         className="flex-1 resize-none bg-gray-900/80 border border-purple-800/30 rounded p-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60 leading-relaxed font-mono"

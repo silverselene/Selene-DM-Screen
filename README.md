@@ -62,8 +62,8 @@ sessions via `localStorage`.
 > - **Use the Backup buttons** in the sidebar before clearing data or
 >   migrating to a new machine. The full backup round-trips every `dm-*` key
 >   verbatim and reloads the tab on import.
-> - **Stay on one origin.** Running in dev (`http://localhost:5173`) and in
->   Docker (`http://localhost:5173`) on the same port and host shares state.
+> - **Stay on one origin.** Running in dev (`http://localhost:38080`) and in
+>   Docker (`http://localhost:38080`) on the same port and host shares state.
 >   Switching ports starts a fresh, separate store.
 > - **Use one tab at a time.** State is plain `localStorage` with no
 >   cross-tab conflict resolution — last write wins. If you open the screen
@@ -85,7 +85,7 @@ sessions via `localStorage`.
 
 ```bash
 pnpm install
-pnpm dev        # http://localhost:5173 (dev server with HMR)
+pnpm dev        # http://localhost:38080 (dev server with HMR)
 ```
 
 ### Production build
@@ -93,20 +93,23 @@ pnpm dev        # http://localhost:5173 (dev server with HMR)
 ```bash
 pnpm typecheck  # project-references-aware tsc across the workspace
 pnpm build      # typechecks, then builds the SPA to artifacts/dm-screen/dist/public/
-pnpm preview    # serves the built bundle on http://localhost:5173
+pnpm preview    # serves the built bundle on http://localhost:38080
 ```
 
 ### Run in Docker
 
 ```bash
 docker compose up --build
-# → http://localhost:5173
+# → http://localhost:38080
 ```
 
 The compose file builds a multi-stage image (Node 24 build →
 `nginxinc/nginx-unprivileged:alpine` runtime, so nginx runs as a non-root
-user) and publishes container port 8080 on host port 5173. Change the host
-side of the port mapping in `docker-compose.yml` if 5173 is taken.
+user) and publishes container port 8080 on host port 38080 — deliberately
+outside the common dev-tool default range (3000, 5173, 8080, ...) to avoid
+collisions when another local project's container is also bound to one of
+those. Change the host side of the port mapping in `docker-compose.yml` if
+38080 is taken.
 
 > Building on ARM64 hosts (Apple Silicon, Raspberry Pi, AWS Graviton) works
 > out of the box. The image is glibc-based on the build stage to match the
@@ -114,9 +117,10 @@ side of the port mapping in `docker-compose.yml` if 5173 is taken.
 
 **Deploying under a sub-path.** To serve the app from a sub-path behind a
 reverse proxy (e.g. `https://example.com/dm/`), build with the `BASE_PATH`
-build arg — it's baked into the bundle, the PWA service-worker scope, and the
-manifest `start_url`, so it must be set at build time (keep the trailing
-slash):
+build arg — it's baked into the bundle's asset URLs and the PWA
+service-worker scope/registration, so it must be set at build time (the
+manifest's `start_url`/`scope` are relative and follow the base
+automatically). Keep the trailing slash:
 
 ```bash
 BASE_PATH=/dm/ docker compose build   # compose forwards it via build.args

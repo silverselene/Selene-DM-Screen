@@ -44,8 +44,17 @@ function isPlainObject(x: unknown): x is Record<string, unknown> {
   return x !== null && typeof x === "object" && !Array.isArray(x);
 }
 
-/** Mint a fresh, collision-resistant combatant id. */
-function mintCombatantId(): string {
+/**
+ * Mint a fresh, collision-resistant combatant id.
+ *
+ * Used both by the dedupe pass below and by the live add paths in
+ * `InitiativeWidget`/`PartyWidget`. Those two widgets feed the SAME combat
+ * list, so they must share one minter — a per-widget `Date.now()`-seeded
+ * counter would produce overlapping id sequences and collide on a
+ * same-millisecond mint across the Party→Initiative boundary (see the
+ * `validateCombatants` doc comment). A random suffix removes that window.
+ */
+export function mintCombatantId(): string {
   return `c-${Math.random().toString(36).slice(2, 10)}`;
 }
 

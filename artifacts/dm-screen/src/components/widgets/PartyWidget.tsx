@@ -14,14 +14,11 @@ import {
   updateCharacter,
   useParty,
 } from "@/lib/partyStore";
-import { downloadJsonFile, promptForJsonFile } from "@/lib/backup";
+import { downloadJsonFile, mintCombatantId, promptForJsonFile } from "@/lib/backup";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { Combobox } from "@/lib/Combobox";
 import { isImeComposing } from "@/lib/keyboard";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
-
-let idCounter = Date.now();
-const nextId = () => String(++idCounter);
 
 // ── Weapon summary used by the tag-input and pill components ─────────────
 type WeaponInfo = Pick<
@@ -118,7 +115,11 @@ function WeaponTagInput({
         {loading && <Search className="w-3 h-3 text-gray-600 self-center animate-pulse" />}
       </div>
 
-      <AnchoredDropdown anchor={wrapperRef.current} open={open && suggestions.length > 0}>
+      <AnchoredDropdown
+        anchor={wrapperRef.current}
+        open={open && suggestions.length > 0}
+        onRequestClose={() => setOpen(false)}
+      >
         {suggestions.map(w => (
           <button
             key={w.id}
@@ -297,7 +298,11 @@ function SpellTagInput({
         />
       </div>
 
-      <AnchoredDropdown anchor={wrapperRef.current} open={open && suggestions.length > 0}>
+      <AnchoredDropdown
+        anchor={wrapperRef.current}
+        open={open && suggestions.length > 0}
+        onRequestClose={() => setOpen(false)}
+      >
         {suggestions.map(s => (
           <button
             key={s.name}
@@ -538,7 +543,7 @@ export function PartyWidget() {
       const count = commit();
       // A successful import replaces the whole roster — drop any in-progress
       // add/edit so a stale form (e.g. editing an id the import dropped) can't
-      // silently no-op on save. See QAREPORT #40.
+      // silently no-op on save.
       setEditingId(null);
       setShowAdd(false);
       setForm(emptyForm());
@@ -551,7 +556,7 @@ export function PartyWidget() {
 
   const addToInitiative = (c: PlayerCharacter) => {
     const combatant: Combatant = {
-      id: nextId(), name: c.name,
+      id: mintCombatantId(), name: c.name,
       initiative: parseInt(initiativeVal) || 0,
       hp: c.hp || 0, maxHp: c.hp || 0,
       ac: c.ac ?? undefined, isPlayer: true,
@@ -607,7 +612,7 @@ export function PartyWidget() {
       {/* Add form */}
       {showAdd && (
         <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded shrink-0">
-          <p className="text-xs font-semibold text-emerald-400 mb-2">New Character</p>
+          <p className="text-xs font-semibold text-emerald-400 mb-2">New character</p>
           <FormFields f={form} setF={setForm} />
           <div className="flex gap-1 mt-2">
             <button onClick={save} disabled={!form.name.trim()}
