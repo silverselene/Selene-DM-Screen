@@ -170,6 +170,8 @@ artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only dep
   src/components/widgets/    The seven widgets
   public/                    PWA icons + static assets
   docker/nginx.conf          SPA-aware nginx config (used by the Docker image)
+  scripts/verify-precache.mjs  Post-build guard: fails the build if a dataset
+                             chunk grows past the PWA precache size cap
 scripts/                     Standalone tsx data-generators (run offline)
 attached_assets/             Source CSV for the thin monster index
 Dockerfile, docker-compose.yml, .dockerignore
