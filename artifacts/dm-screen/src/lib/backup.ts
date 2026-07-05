@@ -17,18 +17,21 @@
 
 import type { PlayerCharacter, TileEntry } from "@/types";
 import { PLACEABLE_WIDGET_TYPES, WIDGET_TYPES, type WidgetType } from "@/types";
-import { normalizePartyBatch } from "@/lib/partyStore";
+import { MAX_PARTY, normalizePartyBatch } from "@/lib/partyStore";
 import {
+  MAX_COMBATANTS,
   mintCombatantId,
   validateCombatants,
   validateInitiativeActiveId,
 } from "@/lib/combatant";
 import { parseEnvelopeHead } from "@/lib/envelope";
+import { flushPendingWrites } from "@/lib/pendingWrites";
 
 // Re-export so call sites that already import widget constants /
 // validators from `@/lib/backup` keep working unchanged.
 export { WIDGET_TYPES };
 export { mintCombatantId, validateCombatants, validateInitiativeActiveId };
+export { MAX_COMBATANTS, MAX_PARTY };
 
 const KEY_PREFIX = "dm-";
 
@@ -154,7 +157,8 @@ function parseEnvelope(text: string): FullBackupEnvelope {
 export type ShapeValidator<T> = (parsed: unknown) => T | undefined;
 
 export const MAX_TILES = 16; // grid is 2-4 × 2-4
-export const MAX_PARTY = 50;
+// MAX_PARTY lives in partyStore.ts (re-exported above) so the store's own
+// write paths can enforce the same cap this importer validates against.
 
 export function validateBoundedInt(
   min: number,
@@ -200,6 +204,20 @@ export function validateStringMax(maxLen: number): ShapeValidator<string> {
   };
 }
 
+// For nullable-string keys ("selected entry" persistence, where `null`
+// means nothing selected). `null` is a legitimate cleaned value here —
+// `undefined` stays the rejection sentinel, per the ShapeValidator
+// convention above.
+export function validateNullableStringMax(
+  maxLen: number,
+): ShapeValidator<string | null> {
+  return (parsed) => {
+    if (parsed === null) return null;
+    if (typeof parsed !== "string" || parsed.length > maxLen) return undefined;
+    return parsed;
+  };
+}
+
 // The per-value byte cap, exported so widgets (e.g. Notepad) can defend
 // their READ path with the same limit the import path enforces.
 export const NOTEPAD_MAX_CHARS = MAX_PER_VALUE_BYTES;
@@ -225,6 +243,15 @@ export function validateTiles(parsed: unknown): TileEntry[] | undefined {
 
 export function validateParty(parsed: unknown): PlayerCharacter[] | undefined {
   if (!Array.isArray(parsed)) return undefined;
+  if (parsed.length > MAX_PARTY) {
+    // Hostile-input defense that would otherwise silently eat legitimate
+    // rows: `addCharacter` refuses at MAX_PARTY so stored state should
+    // never exceed it, but warn if an oversized roster reaches us (old
+    // pre-cap state, hand-edited backup) so the drop is diagnosable.
+    console.warn(
+      `validateParty: dropping ${parsed.length - MAX_PARTY} characters beyond the ${MAX_PARTY} cap`,
+    );
+  }
   return normalizePartyBatch(parsed.slice(0, MAX_PARTY));
 }
 
@@ -255,16 +282,17 @@ function bareEnum(allowed: readonly string[]): KeyValidator {
 }
 
 // Generic forward-compat validator for `dm-*` keys not in the registry.
-// Accepts any JSON-parseable value under the per-value byte cap so that a
-// backup taken from a future version round-trips through this importer
-// (the future widget can read its own data; today's widgets don't see it).
+// Accepts any value under the per-value byte cap so that a backup taken
+// from a future version round-trips through this importer (the future
+// widget can read its own data; today's widgets don't see it). This
+// deliberately does NOT require JSON-parseability: `dm-theme` set a
+// precedent for bare-string values (written via direct `setItem`, not
+// `useLocalStorage`), so a future key that copies that pattern must
+// still round-trip — a JSON gate here would silently drop it on import.
+// The size cap is the real defense; these values only ever go back into
+// localStorage, never into object merges or render paths.
 function unknownKeyValidator(raw: string): string | undefined {
   if (raw.length > MAX_RAW_VALUE_BYTES) return undefined;
-  try {
-    JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
   return raw;
 }
 
@@ -272,6 +300,51 @@ function unknownKeyValidator(raw: string): string | undefined {
 // validate its own reads against the same allowlist.
 export const INITIATIVE_MODES = ["player", "monster", "party"] as const;
 export type InitiativeMode = (typeof INITIATIVE_MODES)[number];
+
+// Widget enum allowlists. Defined here (not in the widgets) for the same
+// reason as INITIATIVE_MODES: the import path below and each widget's
+// read path must validate against the SAME list, and the widgets already
+// import from this module.
+export const ORACLE_TABS = ["names", "loot", "items", "places"] as const;
+export type OracleTab = (typeof ORACLE_TABS)[number];
+export const BESTIARY_SORT_MODES = ["alpha", "cr"] as const;
+export type BestiarySortMode = (typeof BESTIARY_SORT_MODES)[number];
+export const BESTIARY_CR_FILTERS = [
+  "All", "0–1", "2–4", "5–10", "11–16", "17+",
+] as const;
+export type BestiaryCrFilter = (typeof BESTIARY_CR_FILTERS)[number];
+
+// Caps for widget UI-state strings. Search queries / combobox picks /
+// selected-entry names are all short in practice; these are generous
+// ceilings so a hand-edited or hostile value can't smuggle megabytes
+// into a key every widget mount re-reads.
+export const WIDGET_QUERY_MAX = 200;
+
+// Oracle roll history: 5 entries kept per tab today; validate with
+// headroom so a future "keep more history" bump doesn't invalidate
+// existing stored state.
+const ORACLE_HISTORY_MAX_ENTRIES = 10;
+const ORACLE_HISTORY_MAX_CHARS = 1_000;
+
+export function validateOracleHistory(
+  parsed: unknown,
+): Record<OracleTab, string[]> | undefined {
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return undefined;
+  }
+  const obj = parsed as Record<string, unknown>;
+  const out = {} as Record<OracleTab, string[]>;
+  for (const tab of ORACLE_TABS) {
+    const entries = obj[tab];
+    out[tab] = Array.isArray(entries)
+      ? entries
+          .filter((x): x is string => typeof x === "string")
+          .map((s) => s.slice(0, ORACLE_HISTORY_MAX_CHARS))
+          .slice(0, ORACLE_HISTORY_MAX_ENTRIES)
+      : [];
+  }
+  return out;
+}
 
 // Registry of known keys with strict validators. Everything else with the
 // `dm-` prefix falls through to `unknownKeyValidator`.
@@ -294,12 +367,38 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
   "dm-initiative-v1": lift(validateCombatants),
   // Legacy turn-index key — kept in the registry so backups written by
   // older builds still shape-check on import. The runtime no longer
-  // reads it; `migrateTurnIndexToActiveId` (InitiativeWidget) converts
-  // it to `dm-initiative-active-id-v1` on next page load.
+  // reads it; `migrateTurnIndexToActiveId` (src/lib/migrations.ts, run
+  // at boot from main.tsx) converts it to `dm-initiative-active-id-v1`
+  // on next page load.
   "dm-initiative-turn-v1": lift(validateBoundedInt(0, 999)),
   "dm-initiative-active-id-v1": lift(validateInitiativeActiveId),
   "dm-round-v1": lift(validateBoundedInt(1, 9999)),
   "dm-initiative-mode-v1": lift(validateEnum(INITIATIVE_MODES)),
+
+  // Per-widget UI state (queries, filters, selections, roll history).
+  // These never feed stat-block math, but they DO feed unguarded
+  // expressions on the read path (`query.toLowerCase()`, `history[tab]`),
+  // so an unvalidated import could plant a value that throws on every
+  // render — a permanently crash-looping tile the ErrorBoundary's
+  // "Reload app" can't heal. Each entry pairs with the same validator at
+  // the widget's `useLocalStorage` call site.
+  "dm-bestiary-query-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-bestiary-selected-v1": lift(validateNullableStringMax(WIDGET_QUERY_MAX)),
+  "dm-bestiary-sort-v1": lift(validateEnum(BESTIARY_SORT_MODES)),
+  "dm-bestiary-cr-v1": lift(validateEnum(BESTIARY_CR_FILTERS)),
+  "dm-tome-query-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-tome-level-v1": lift(validateBoundedInt(-1, 9)), // -1 = "all levels"
+  "dm-tome-class-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-tome-school-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-tome-selected-v1": lift(validateNullableStringMax(WIDGET_QUERY_MAX)),
+  "dm-compendium-query-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-compendium-category-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-compendium-entry-v1": lift(validateNullableStringMax(WIDGET_QUERY_MAX)),
+  "dm-oracle-tab-v1": lift(validateEnum(ORACLE_TABS)),
+  "dm-oracle-race-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-oracle-cr-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-oracle-settlement-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  "dm-oracle-history-v2": lift(validateOracleHistory),
 };
 
 function validatorFor(key: string): KeyValidator {
@@ -425,6 +524,10 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
 }
 
 export function exportFullBackupAsJson(): string {
+  // Land any debounced widget writes (e.g. the Notepad's 300 ms-deferred
+  // note) before sweeping: this function reads localStorage directly, so
+  // a pending write would otherwise be silently absent from the backup.
+  flushPendingWrites();
   const env: FullBackupEnvelope = {
     schema: "selene-dm-full",
     version: 1,
@@ -491,6 +594,14 @@ export interface PreparedImport {
 export function prepareImport(text: string): PreparedImport {
   const env = parseEnvelope(text);
   const { pairs, skipped, bytes } = validateEnvelope(env);
+
+  // Land any debounced widget writes before snapshotting, for two
+  // reasons: (a) the rollback path restores THIS snapshot, so a pending
+  // write missing from it would be lost even when the import is safely
+  // rolled back; (b) flushing now clears `writePending`, so the reload
+  // after commit can't fire a pagehide flush that re-writes a stale
+  // in-memory value over the freshly imported one.
+  flushPendingWrites();
 
   // Snapshot existing state in memory NOW so the commit (a) wipes exactly
   // what the summary measured, and (b) can roll back to it if a write
@@ -570,14 +681,22 @@ export function downloadJsonFile(filename: string, contents: string): void {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
-  // Revoke as soon as the click has been dispatched rather than on a fixed
-  // 1s timer: rapid repeat exports of large backups would otherwise pin
-  // multiple multi-MB blob URLs alive at once. The rAF fires after the
-  // browser has captured the blob for the download but within ~one frame,
-  // so the URL is still valid when the download starts and freed right after.
-  a.addEventListener("click", () => {
-    requestAnimationFrame(() => URL.revokeObjectURL(url));
-  });
+  // Revoke on a generous timer, NOT on the next animation frame: engines
+  // may start a blob download asynchronously (Safari historically), and a
+  // one-frame revoke can race it into a zero-byte or failed file — the
+  // worst possible failure for a *backup*, and invisible until the DM
+  // tries to restore. The cost of the wait is a few MB of blob memory
+  // pinned for a minute per export; the pre-revoke pagehide sweep keeps a
+  // quickly-closed tab from leaking it. `revoke` also detaches itself
+  // from `pagehide`: `{ once: true }` only auto-removes when pagehide
+  // actually fires, so on the normal timer path each export would
+  // otherwise leave a dangling listener behind for the life of the tab.
+  const revoke = () => {
+    window.removeEventListener("pagehide", revoke);
+    URL.revokeObjectURL(url);
+  };
+  window.setTimeout(revoke, 60_000);
+  window.addEventListener("pagehide", revoke, { once: true });
   document.body.appendChild(a);
   a.click();
   a.remove();

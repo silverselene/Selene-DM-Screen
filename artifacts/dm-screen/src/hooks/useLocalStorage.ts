@@ -1,4 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+import { registerPendingWrite } from "@/lib/pendingWrites";
+
+interface UseLocalStorageOptions {
+  /** Debounce `setItem` by this many ms (trailing edge). React state still
+   *  updates synchronously — only the storage write is deferred — so use
+   *  this for keys written on every keystroke over potentially large
+   *  values (the Notepad's full note is re-serialized per keypress
+   *  otherwise). Pending writes are flushed on unmount, `pagehide`, when
+   *  the tab is hidden, and — via the `pendingWrites` registry — before
+   *  the backup export/import sweeps in `backup.ts` read localStorage, so
+   *  neither a closed tab nor a mid-debounce backup can miss the newest
+   *  keystrokes. */
+  debounceWriteMs?: number;
+}
 
 /**
  * Persist React state in `localStorage` under a versioned key.
@@ -19,7 +33,9 @@ export function useLocalStorage<T>(
   key: string,
   initialValue: T | (() => T),
   validator?: (parsed: unknown) => T | undefined,
+  options?: UseLocalStorageOptions,
 ) {
+  const debounceMs = options?.debounceWriteMs ?? 0;
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -65,12 +81,13 @@ export function useLocalStorage<T>(
     valueRef.current = storedValue;
   });
 
-  const setValue = (value: T | ((val: T) => T)) => {
-    const next = value instanceof Function ? value(valueRef.current) : value;
-    valueRef.current = next;
-    setStoredValue(next);
+  // Debounced-write machinery (inert when debounceMs is 0).
+  const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const writePending = useRef(false);
+
+  const writeNow = (val: T) => {
     try {
-      window.localStorage.setItem(key, JSON.stringify(next));
+      window.localStorage.setItem(key, JSON.stringify(val));
     } catch (err) {
       // quota / private mode. In-memory state still updates so the UI
       // doesn't freeze, but log so the failure is visible — silently
@@ -78,6 +95,56 @@ export function useLocalStorage<T>(
       // scenarios.
       console.error(`useLocalStorage("${key}"): failed to persist`, err);
     }
+  };
+
+  // Flush a pending debounced write before the value can be lost: tab
+  // hidden / navigating away (`pagehide` covers close + refresh +
+  // bfcache), unmount (tile cleared / widget swapped), and — via the
+  // `pendingWrites` registry — synchronously before a backup export or
+  // import snapshot sweeps localStorage.
+  useEffect(() => {
+    if (debounceMs <= 0) return;
+    const flush = () => {
+      if (!writePending.current) return;
+      if (writeTimer.current) {
+        clearTimeout(writeTimer.current);
+        writeTimer.current = null;
+      }
+      writePending.current = false;
+      writeNow(valueRef.current);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    const unregister = registerPendingWrite(flush);
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      unregister();
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+      flush();
+    };
+    // key/debounceMs are fixed for a call site; re-subscribing on change
+    // would flush against the wrong key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setValue = (value: T | ((val: T) => T)) => {
+    const next = value instanceof Function ? value(valueRef.current) : value;
+    valueRef.current = next;
+    setStoredValue(next);
+    if (debounceMs <= 0) {
+      writeNow(next);
+      return;
+    }
+    writePending.current = true;
+    if (writeTimer.current) clearTimeout(writeTimer.current);
+    writeTimer.current = setTimeout(() => {
+      writeTimer.current = null;
+      writePending.current = false;
+      writeNow(valueRef.current);
+    }, debounceMs);
   };
 
   return [storedValue, setValue] as const;

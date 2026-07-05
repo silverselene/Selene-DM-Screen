@@ -13,6 +13,46 @@ import type { Combatant } from "@/types";
 export const MAX_COMBATANTS = 100;
 export const MAX_COMBATANT_ID_LENGTH = 64;
 
+// The versioned storage key backing the live combatant list. Exported so
+// the Party widget's not-consumed fallback (PartyWidget.addToInitiative)
+// reads and writes the exact key the Initiative widget's `useLocalStorage`
+// call and the boot-time migrations use — a hardcoded copy in another
+// file is how a future version bump would silently fork the two paths.
+export const INITIATIVE_STORAGE_KEY = "dm-initiative-v1";
+
+/** Append a combatant and re-sort descending by initiative — the ONE
+ *  ordering rule for the tracker. Shared by the Initiative widget's add
+ *  paths (forms + the `dm-add-to-initiative` handler) and the Party
+ *  widget's direct-storage fallback, so a future tie-breaking change
+ *  can't diverge between them. Pure: returns a new array. */
+export function appendCombatant(list: Combatant[], c: Combatant): Combatant[] {
+  return [...list, c].sort((a, b) => b.initiative - a.initiative);
+}
+
+/** User-facing refusal shown by every entry point that hits the
+ *  MAX_COMBATANTS ceiling — kept here so the copy can't drift between
+ *  the Initiative and Party widgets. */
+export function initiativeFullMessage(): string {
+  return `Initiative is full (max ${MAX_COMBATANTS} combatants). Remove some before adding more.`;
+}
+
+// Initiative bounds. Wide (high-DEX + bonuses can exceed 20, penalties go
+// negative) but still capped so a typo'd "2000" can't wreck the sort
+// order. Shared by EVERY entry point that turns typed text into a
+// combatant's initiative — the Initiative widget's three add forms AND
+// the Party widget's per-row "Add to Initiative" — so no path can skip
+// the clamp.
+export const INIT_MIN = -99;
+export const INIT_MAX = 999;
+
+/** Parse a typed initiative string and clamp it to [INIT_MIN, INIT_MAX].
+ *  `<input type="number" min max>` attributes are only UI hints — typed
+ *  or pasted text flows through unchecked. Unparseable input → 0. */
+export function clampInitiative(raw: string): number {
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? Math.max(INIT_MIN, Math.min(INIT_MAX, n)) : 0;
+}
+
 /**
  * Validate the persisted "active combatant id" — the id of the combatant
  * whose turn it currently is in the Initiative tracker. Persisted as the
@@ -83,6 +123,17 @@ export function mintCombatantId(): string {
  */
 export function validateCombatants(parsed: unknown): Combatant[] | undefined {
   if (!Array.isArray(parsed)) return undefined;
+  if (parsed.length > MAX_COMBATANTS) {
+    // The slice below is a hostile-input defense, but it fires on ANY
+    // oversized list — and on the read path the caller persists the
+    // cleaned value, making the loss permanent. The live add paths
+    // refuse at MAX_COMBATANTS so legitimate state should never get
+    // here; warn loudly in case one slips through so the loss is at
+    // least diagnosable.
+    console.warn(
+      `validateCombatants: dropping ${parsed.length - MAX_COMBATANTS} combatants beyond the ${MAX_COMBATANTS} cap`,
+    );
+  }
   const finiteNum = (v: unknown, def: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : def;
   const normalized = parsed

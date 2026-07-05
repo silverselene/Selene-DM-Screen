@@ -26,6 +26,18 @@
 npm-debug.log*
 pnpm-debug.log*
 
+# Secrets. The app needs no env vars, so any such file is local-only by
+# definition — but `COPY . .` would still pull it into build-stage layers
+# (which leak via pushed intermediate layers or registry-backed build
+# caches) if someone drops one in the repo root.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets*
+
 # Docker scaffolding (no point shipping the Dockerfile into the image).
 Dockerfile
 .dockerignore

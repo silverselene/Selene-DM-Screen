@@ -1,8 +1,14 @@
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import { Search, BookMarked, ChevronLeft } from "lucide-react";
 import { spellData, spellSchools, spellClasses, type Spell } from "@/data/spells";
 import { Combobox } from "@/lib/Combobox";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  validateBoundedInt,
+  validateNullableStringMax,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
 const levelLabels = ["Cantrip", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
@@ -84,23 +90,31 @@ export function WizardsTomeWidget() {
   // Persisted state. The selected spell is stored by name and re-resolved
   // against the live dataset on mount, so regenerating spells.ts later
   // doesn't strand a stale entry.
-  const [query, setQuery] = useLocalStorage<string>("dm-tome-query-v1", "");
+  const [query, setQuery] = useLocalStorage<string>(
+    "dm-tome-query-v1",
+    "",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
   const [filterLevel, setFilterLevel] = useLocalStorage<number>(
     "dm-tome-level-v1",
     -1,
+    validateBoundedInt(-1, 9), // -1 = "all levels"
   );
   // "" = no filter; non-empty = the picked class/school name.
   const [filterClass, setFilterClass] = useLocalStorage<string>(
     "dm-tome-class-v1",
     "",
+    validateStringMax(WIDGET_QUERY_MAX),
   );
   const [filterSchool, setFilterSchool] = useLocalStorage<string>(
     "dm-tome-school-v1",
     "",
+    validateStringMax(WIDGET_QUERY_MAX),
   );
   const [selectedName, setSelectedName] = useLocalStorage<string | null>(
     "dm-tome-selected-v1",
     null,
+    validateNullableStringMax(WIDGET_QUERY_MAX),
   );
   const selected: Spell | null = useMemo(
     () =>
@@ -111,8 +125,14 @@ export function WizardsTomeWidget() {
   );
   const setSelected = (s: Spell | null) => setSelectedName(s?.name ?? null);
 
+  // The input stays driven by `query` (instant echo); the scan + sort runs
+  // off the deferred value. This is the largest per-keystroke search in the
+  // app by bytes scanned (~0.5 MB of precomputed name+description text), so
+  // it gets the same `useDeferredValue` treatment as the Bestiary's
+  // 2,158-row index filter.
+  const deferredQuery = useDeferredValue(query);
   const filtered = useMemo(() => {
-    const q = query.toLowerCase();
+    const q = deferredQuery.toLowerCase();
     return spellData
       .filter((s) => {
         const matchQ = !q || (SPELL_SEARCH_INDEX.get(s)?.includes(q) ?? false);
@@ -122,7 +142,7 @@ export function WizardsTomeWidget() {
         return matchQ && matchLv && matchCl && matchSch;
       })
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
-  }, [query, filterLevel, filterClass, filterSchool]);
+  }, [deferredQuery, filterLevel, filterClass, filterSchool]);
 
   if (selected) return <SpellDetail spell={selected} onBack={() => setSelected(null)} />;
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Swords,
   SkipForward, RotateCcw, Search, Skull, User, Shield, ExternalLink, Users,
@@ -9,6 +9,7 @@ import { useParty } from "@/lib/partyStore";
 import { searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
 import {
   INITIATIVE_MODES,
+  MAX_COMBATANTS,
   mintCombatantId,
   validateBoundedInt,
   validateCombatants,
@@ -16,6 +17,11 @@ import {
   validateInitiativeActiveId,
   type ShapeValidator,
 } from "@/lib/backup";
+import {
+  appendCombatant,
+  clampInitiative,
+  initiativeFullMessage,
+} from "@/lib/combatant";
 import { isV1Empty } from "@/lib/migrations";
 import { isImeComposing } from "@/lib/keyboard";
 
@@ -29,12 +35,10 @@ const clampInt = (raw: string, min: number, max: number, fallback = 0): number =
   return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
 };
 
-// Bounds. Initiative allows a wide range (high-DEX + bonuses can exceed 20, and
-// penalties can go negative) but is still capped so a stray "200" can't break
-// the sort. HP/AC are non-negative; AC tops out at the same 99 the party store
-// uses, HP at 9999.
-const INIT_MIN = -99;
-const INIT_MAX = 999;
+// Bounds. Initiative clamping is `clampInitiative` from `@/lib/combatant`
+// (imported above) so the Party widget's "Add to Initiative" path clamps
+// to the same range. HP/AC are non-negative; AC tops out at the same 99
+// the party store uses, HP at 9999.
 const HP_MAX = 9999;
 const AC_MAX = 99;
 
@@ -116,8 +120,9 @@ type AddMode = (typeof INITIATIVE_MODES)[number];
 export function InitiativeWidget() {
   // Versioned per phase 2 ("Persist live combat state to a versioned key").
   // Migration from the older unversioned keys (dm-initiative /
-  // dm-initiative-turn / dm-round) is handled once at module load — see
-  // migrateLegacyInitiativeKeys() above.
+  // dm-initiative-turn / dm-round) lives in `src/lib/migrations.ts` and
+  // runs from main.tsx BEFORE render — never in this (lazy-loaded) module,
+  // where it wouldn't fire until the DM first mounts the widget.
   const [combatants, setCombatants] = useLocalStorage<Combatant[]>(
     "dm-initiative-v1",
     legacyInitialValue("dm-initiative", validateCombatants, []),
@@ -126,8 +131,9 @@ export function InitiativeWidget() {
   // Active combatant tracked by id, not by sort-list index — so removing
   // the active combatant (or any initiative tie re-sort) doesn't silently
   // re-point the turn highlight to whoever shifts into that index. The
-  // pre-existing `dm-initiative-turn-v1` key is migrated to this one once
-  // at module load (see `migrateTurnIndexToActiveId` above).
+  // pre-existing `dm-initiative-turn-v1` key is converted to this one by
+  // `migrateTurnIndexToActiveId` in `src/lib/migrations.ts` (boot-time,
+  // from main.tsx).
   const [activeId, setActiveId] = useLocalStorage<string | null>(
     "dm-initiative-active-id-v1",
     null,
@@ -194,12 +200,29 @@ export function InitiativeWidget() {
   }, [activeId, currentIndex, setActiveId]);
 
   // ── Listen for dm-add-to-initiative events from PartyWidget ──
-  useEffect(() => {
+  // useLayoutEffect, not useEffect: PartyWidget treats "nobody called
+  // preventDefault()" as "no Initiative widget mounted" and falls back to
+  // writing dm-initiative-v1 directly. A passive effect attaches this
+  // listener only AFTER first paint, leaving a window where the widget is
+  // mounted (its useState already read storage) but not yet listening —
+  // the fallback then writes a combatant this widget's next setCombatants
+  // would clobber with its stale in-memory list. Layout effects run
+  // synchronously before paint, so no click can land in that gap.
+  useLayoutEffect(() => {
     const handler = (e: Event) => {
       const combatant = (e as CustomEvent<{ combatant: Combatant }>).detail?.combatant;
       if (!combatant) return;
+      // Signal consumption: PartyWidget dispatches this event cancelable
+      // and falls back to a direct storage write when NO mounted widget
+      // preventDefault()s it (tile absent / lazy chunk still pending).
+      e.preventDefault();
+      // Cap guard mirrors the local add paths: `validateCombatants`
+      // truncates past MAX_COMBATANTS on the next read, so letting the
+      // list grow beyond it live would silently delete the excess on
+      // reload. PartyWidget checks the cap (and alerts) before
+      // dispatching; this is the belt to that suspenders.
       setCombatants(prev =>
-        [...prev, combatant].sort((a, b) => b.initiative - a.initiative)
+        prev.length >= MAX_COMBATANTS ? prev : appendCombatant(prev, combatant)
       );
     };
     window.addEventListener("dm-add-to-initiative", handler);
@@ -249,80 +272,102 @@ export function InitiativeWidget() {
   };
 
   // ── Add combatant helpers ──
+  // Refuse adds at the MAX_COMBATANTS ceiling instead of letting the list
+  // grow past what `validateCombatants` preserves — the validator slices
+  // to the cap on the next read and the heal-on-read write-back would
+  // make that loss permanent and silent.
+  const combatListFull = (): boolean => {
+    if (combatants.length < MAX_COMBATANTS) return false;
+    window.alert(initiativeFullMessage());
+    return true;
+  };
+
   const addPlayer = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || combatListFull()) return;
     const hp = clampInt(form.hp, 0, HP_MAX);
     const newC: Combatant = {
       id: mintCombatantId(), name: form.name.trim(),
-      initiative: clampInt(form.initiative, INIT_MIN, INIT_MAX),
+      initiative: clampInitiative(form.initiative),
       hp, maxHp: hp,
       ac: form.ac ? clampInt(form.ac, 0, AC_MAX) : undefined,
       isPlayer: form.isPlayer,
     };
-    setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
+    setCombatants(appendCombatant(combatants, newC));
     setForm(freshForm());
     setShowForm(false);
   };
 
   const addMonster = () => {
-    if (!selectedMonster) return;
+    if (!selectedMonster || combatListFull()) return;
     const overrideHp = parseInt(monsterHpOverride, 10);
     const hp = Number.isFinite(overrideHp)
       ? Math.max(0, Math.min(HP_MAX, overrideHp))
       : parseMaxHp(selectedMonster.hp);
     const newC: Combatant = {
       id: mintCombatantId(), name: selectedMonster.name,
-      initiative: clampInt(monsterInitiative, INIT_MIN, INIT_MAX),
+      initiative: clampInitiative(monsterInitiative),
       hp, maxHp: hp, ac: selectedMonster.ac, isPlayer: false,
     };
-    setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
+    setCombatants(appendCombatant(combatants, newC));
     setSelectedMonster(null); setMonsterQuery("");
     setMonsterD20Roll(""); setMonsterInitiative(""); setMonsterHpOverride("");
     setShowForm(false);
   };
 
   const addFromParty = () => {
-    if (!selectedPc) return;
+    if (!selectedPc || combatListFull()) return;
     const newC: Combatant = {
       id: mintCombatantId(), name: selectedPc.name,
-      initiative: clampInt(pcInitiative, INIT_MIN, INIT_MAX),
+      initiative: clampInitiative(pcInitiative),
       hp: selectedPc.hp || 0, maxHp: selectedPc.hp || 0,
       ac: selectedPc.ac ?? undefined, isPlayer: true,
     };
-    setCombatants([...combatants, newC].sort((a, b) => b.initiative - a.initiative));
+    setCombatants(appendCombatant(combatants, newC));
     setSelectedPc(null); setPcInitiative("");
     setShowForm(false);
   };
 
   const removeCombatant = (id: string) => {
-    // Persist from the freshest state (functional updater) so a combatant
-    // added via `dm-add-to-initiative` in the same render tick isn't dropped
-    // by a stale `combatants` closure.
-    setCombatants((prev) =>
-      prev.filter((c) => c.id !== id).sort((a, b) => b.initiative - a.initiative),
-    );
-    // Active-id repoint is best-effort — derived from the in-scope snapshot,
-    // it only decides whose turn is highlighted, never combatant data.
-    if (id !== activeId) return;
-    const next = combatants
-      .filter((c) => c.id !== id)
-      .sort((a, b) => b.initiative - a.initiative);
-    if (next.length === 0) {
-      setActiveId(null);
-      return;
+    // Both the list mutation AND the active-id repoint derive from the
+    // functional updater's `prev`, so a combatant added via
+    // `dm-add-to-initiative` in the same render tick can't be dropped by
+    // (or repointed against) a stale `combatants` closure — the render-
+    // scope snapshot would pick the wrong id and its `oldIdx >=
+    // next.length` wrap could phantom-bump the round counter.
+    //
+    // The repoint decision is CAPTURED inside the updater (it needs
+    // `prev`) but APPLIED after it: updaters should stay pure, and even
+    // though useLocalStorage's setValue resolves them eagerly exactly
+    // once today, nothing here should break if that ever changes to
+    // React-managed (replayable) updater semantics. Re-assigning
+    // `repoint` is idempotent, and the setActiveId/setRound calls below
+    // run once regardless.
+    let repoint: { activeId: string | null; bumpRound: boolean } | undefined;
+    setCombatants((prev) => {
+      const prevSorted = [...prev].sort((a, b) => b.initiative - a.initiative);
+      const next = prevSorted.filter((c) => c.id !== id);
+      if (id === activeId) {
+        if (next.length === 0) {
+          repoint = { activeId: null, bumpRound: false };
+        } else {
+          // The active combatant was just removed — advance the turn
+          // pointer to whoever sorts into the same slot in the new list.
+          // If the removed combatant was last in initiative order, wrap to
+          // the top and bump `round` so the encounter doesn't silently
+          // regress to the previous combatant without a round increment.
+          const oldIdx = prevSorted.findIndex((c) => c.id === id);
+          repoint =
+            oldIdx >= next.length
+              ? { activeId: next[0].id, bumpRound: true }
+              : { activeId: next[oldIdx].id, bumpRound: false };
+        }
+      }
+      return next;
+    });
+    if (repoint !== undefined) {
+      setActiveId(repoint.activeId);
+      if (repoint.bumpRound) setRound((r) => r + 1);
     }
-    // The active combatant was just removed — advance the turn pointer to
-    // whoever sorts into the same slot in the new list. If the removed
-    // combatant was last in initiative order, wrap to the top and bump
-    // `round` so the encounter doesn't silently regress to the previous
-    // combatant without a round increment.
-    const oldIdx = sorted.findIndex((c) => c.id === id);
-    if (oldIdx >= next.length) {
-      setActiveId(next[0].id);
-      setRound((r) => r + 1);
-      return;
-    }
-    setActiveId(next[oldIdx].id);
   };
 
   const updateHp = (id: string, delta: number) => {
@@ -611,17 +656,17 @@ export function InitiativeWidget() {
                 </div>
               )}
               <div className="flex items-center gap-0.5 shrink-0">
-                <button onClick={() => updateHp(c.id, -1)} className="w-4 h-4 flex items-center justify-center bg-red-900/60 hover:bg-red-800 rounded text-xs text-red-300">
+                <button onClick={() => updateHp(c.id, -1)} aria-label={`Damage ${c.name || "combatant"}`} title={`Damage ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-red-900/60 hover:bg-red-800 rounded text-xs text-red-300">
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 <span className={`text-xs font-mono w-12 text-center ${isDead ? "text-red-500 font-bold" : "text-gray-300"}`}>
                   {isDead ? "DEAD" : `${c.hp}/${c.maxHp}`}
                 </span>
-                <button onClick={() => updateHp(c.id, 1)} className="w-4 h-4 flex items-center justify-center bg-green-900/60 hover:bg-green-800 rounded text-xs text-green-300">
+                <button onClick={() => updateHp(c.id, 1)} aria-label={`Heal ${c.name || "combatant"}`} title={`Heal ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-green-900/60 hover:bg-green-800 rounded text-xs text-green-300">
                   <ChevronUp className="w-3 h-3" />
                 </button>
               </div>
-              <button onClick={() => removeCombatant(c.id)} className="w-4 h-4 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors shrink-0">
+              <button onClick={() => removeCombatant(c.id)} aria-label={`Remove ${c.name || "combatant"}`} title={`Remove ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors shrink-0">
                 <Trash2 className="w-3 h-3" />
               </button>
             </div>

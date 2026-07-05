@@ -14,7 +14,19 @@ import {
   updateCharacter,
   useParty,
 } from "@/lib/partyStore";
-import { downloadJsonFile, mintCombatantId, promptForJsonFile } from "@/lib/backup";
+import {
+  downloadJsonFile,
+  MAX_COMBATANTS,
+  mintCombatantId,
+  promptForJsonFile,
+  validateCombatants,
+} from "@/lib/backup";
+import {
+  appendCombatant,
+  clampInitiative,
+  INITIATIVE_STORAGE_KEY,
+  initiativeFullMessage,
+} from "@/lib/combatant";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { Combobox } from "@/lib/Combobox";
 import { isImeComposing } from "@/lib/keyboard";
@@ -470,7 +482,7 @@ export function PartyWidget() {
         weapons: form.weapons,
       });
       setForm(emptyForm()); setShowAdd(false); setError(null);
-    } catch { setError("Failed to save."); }
+    } catch (e) { setError(`Failed to save: ${(e as Error).message}`); }
   };
 
   // ── Save edit ────────────────────────────────────────────────────────────
@@ -488,7 +500,7 @@ export function PartyWidget() {
         weapons: editForm.weapons,
       });
       setEditingId(null); setError(null);
-    } catch { setError("Failed to update."); }
+    } catch (e) { setError(`Failed to update: ${(e as Error).message}`); }
   };
 
   const deleteChar = (c: PlayerCharacter) => {
@@ -496,7 +508,7 @@ export function PartyWidget() {
     if (!window.confirm(`Delete ${label}? This can't be undone.`)) return;
     try {
       deleteCharacter(c.id);
-    } catch { setError("Failed to delete."); }
+    } catch (e) { setError(`Failed to delete: ${(e as Error).message}`); }
   };
 
   const startEdit = (c: PlayerCharacter) => {
@@ -533,11 +545,16 @@ export function PartyWidget() {
     }
     const { summary, commit } = prepared;
     const charWord = (n: number) => `character${n === 1 ? "" : "s"}`;
-    const prompt =
+    let prompt =
       summary.currentCount > 0
         ? `Replace your current ${summary.currentCount} ${charWord(summary.currentCount)} ` +
           `with ${summary.accepted} imported ${charWord(summary.accepted)}?`
         : `Import ${summary.accepted} ${charWord(summary.accepted)}?`;
+    if (summary.dropped > 0) {
+      prompt +=
+        `\n\nNote: the file holds ${summary.dropped} more ${charWord(summary.dropped)} ` +
+        `beyond the party-size limit; they will be skipped.`;
+    }
     if (!window.confirm(prompt)) return;
     try {
       const count = commit();
@@ -555,13 +572,60 @@ export function PartyWidget() {
   };
 
   const addToInitiative = (c: PlayerCharacter) => {
+    // Read + validate the persisted list ONCE, serving both checks below:
+    // the cap pre-check (the Initiative widget's listener silently drops
+    // adds past MAX_COMBATANTS, so give the DM feedback instead of a
+    // click that looks successful but did nothing) and the not-consumed
+    // fallback write. `null` = unreadable storage — the Initiative
+    // widget's own validator heals that case, so let the dispatch
+    // proceed and only fail if the fallback path actually needs the list.
+    let stored: Combatant[] | null = null;
+    try {
+      const raw = window.localStorage.getItem(INITIATIVE_STORAGE_KEY);
+      stored = validateCombatants(raw ? JSON.parse(raw) : []) ?? [];
+    } catch {
+      stored = null;
+    }
+    if (stored !== null && stored.length >= MAX_COMBATANTS) {
+      window.alert(initiativeFullMessage());
+      return;
+    }
     const combatant: Combatant = {
       id: mintCombatantId(), name: c.name,
-      initiative: parseInt(initiativeVal) || 0,
+      // Same clamp as the Initiative widget's own add forms — a raw
+      // parseInt here was the one entry point a typo'd "2000" could
+      // still sneak through.
+      initiative: clampInitiative(initiativeVal),
       hp: c.hp || 0, maxHp: c.hp || 0,
       ac: c.ac ?? undefined, isPlayer: true,
     };
-    window.dispatchEvent(new CustomEvent("dm-add-to-initiative", { detail: { combatant } }));
+    // The event is cancelable so a mounted Initiative widget can signal
+    // consumption via preventDefault(). If nothing consumed it (no
+    // Initiative tile placed, or its lazy chunk hasn't mounted yet), fall
+    // back to writing storage directly — the combatant then appears when
+    // the widget mounts, instead of the click silently doing nothing.
+    // (The widget attaches its listener in a layout effect, so a mounted
+    // widget is always listening by the time a click can dispatch this.)
+    const consumed = !window.dispatchEvent(
+      new CustomEvent("dm-add-to-initiative", {
+        detail: { combatant },
+        cancelable: true,
+      }),
+    );
+    if (!consumed) {
+      try {
+        if (stored === null) throw new Error("unreadable initiative list");
+        window.localStorage.setItem(
+          INITIATIVE_STORAGE_KEY,
+          JSON.stringify(appendCombatant(stored, combatant)),
+        );
+      } catch {
+        window.alert(
+          "Couldn't add to initiative — place the Initiative tile and try again.",
+        );
+        return;
+      }
+    }
     setInitiativeFor(null); setInitiativeVal("");
   };
 

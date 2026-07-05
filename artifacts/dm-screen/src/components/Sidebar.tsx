@@ -142,6 +142,8 @@ export function Sidebar({
       {/* Toggle button */}
       <button
         onClick={onToggle}
+        aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+        aria-expanded={open}
         className="absolute -right-3 top-3 z-20 w-6 h-6 rounded-full border flex items-center justify-center text-purple-500 hover:text-purple-300 hover:border-purple-600 transition-all shadow-lg"
         style={{ background: toggleBg, borderColor: toggleBorder }}
       >
@@ -303,6 +305,7 @@ export function Sidebar({
           <button
             onClick={runFullExport}
             title="Export a full backup of all widget state"
+            aria-label="Export a full backup of all widget state"
             className="text-purple-700 hover:text-purple-300 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -310,6 +313,7 @@ export function Sidebar({
           <button
             onClick={runFullImport}
             title="Import a backup (replaces all current state)"
+            aria-label="Import a backup (replaces all current state)"
             className="text-purple-700 hover:text-purple-300 transition-colors"
           >
             <Upload className="w-4 h-4" />

@@ -8,7 +8,13 @@
 FROM node:24-bookworm-slim AS build
 
 # Corepack is bundled with node 24; use it to materialise the exact pnpm
-# version pinned by the lockfile.
+# version pinned by root package.json's `packageManager` field (corepack
+# reads that field — NOT the lockfile — and verifies its sha512 hash).
+# COREPACK_DEFAULT_TO_LATEST=0 makes corepack fail loudly if the pin is
+# ever missing instead of silently downloading whatever pnpm is newest
+# that day — an unpinned package manager would undercut the
+# minimumReleaseAge supply-chain gate the workspace enforces on deps.
+ENV COREPACK_DEFAULT_TO_LATEST=0
 RUN corepack enable
 
 WORKDIR /app

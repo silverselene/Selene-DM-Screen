@@ -64,7 +64,11 @@ sessions via `localStorage`.
 >   verbatim and reloads the tab on import.
 > - **Stay on one origin.** Running in dev (`http://localhost:38080`) and in
 >   Docker (`http://localhost:38080`) on the same port and host shares state.
->   Switching ports starts a fresh, separate store.
+>   Switching ports starts a fresh, separate store. One side effect of the
+>   shared origin: the Docker/preview build registers a service worker, so
+>   the first `pnpm dev` load after visiting it can serve the stale cached
+>   production shell — hard-reload once (or unregister the SW in DevTools)
+>   and it self-heals.
 > - **Use one tab at a time.** State is plain `localStorage` with no
 >   cross-tab conflict resolution — last write wins. If you open the screen
 >   in two tabs and edit in both, whichever tab saves last silently clobbers
@@ -77,9 +81,12 @@ sessions via `localStorage`.
 ### Prerequisites
 
 - Node.js 24+
-- pnpm 9+ — install with `npm install -g pnpm` or `corepack enable` (the
-  root `preinstall` script rejects npm/yarn; pnpm is required for the
-  workspace's `catalog:` deps and the `minimumReleaseAge` supply-chain check)
+- pnpm 10.16+ — easiest via `corepack enable`, which materialises the exact
+  version pinned in root `package.json`'s `packageManager` field (or
+  `npm install -g pnpm`). The root `preinstall` script rejects npm/yarn.
+  The 10.16 floor matters: older pnpm **silently ignores** the
+  `minimumReleaseAge` supply-chain gate in `pnpm-workspace.yaml`, so a
+  9.x install runs with that defense off and no warning.
 
 ### Run locally
 

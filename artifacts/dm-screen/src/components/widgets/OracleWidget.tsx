@@ -4,26 +4,39 @@ import {
   namesByRace, lootByCR, settlementTypes,
 } from "@/data/generators";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-
-type OracleTab = "names" | "loot" | "items" | "places";
+import {
+  ORACLE_TABS,
+  type OracleTab,
+  validateEnum,
+  validateOracleHistory,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
 const EMPTY_HISTORY: Record<OracleTab, string[]> = {
   names: [], loot: [], items: [], places: [],
 };
 
 export function OracleWidget() {
-  const [tab, setTab] = useLocalStorage<OracleTab>("dm-oracle-tab-v1", "names");
+  const [tab, setTab] = useLocalStorage<OracleTab>(
+    "dm-oracle-tab-v1",
+    "names",
+    validateEnum(ORACLE_TABS),
+  );
   const [selectedRace, setSelectedRace] = useLocalStorage<string>(
     "dm-oracle-race-v1",
     "Human",
+    validateStringMax(WIDGET_QUERY_MAX),
   );
   const [selectedCR, setSelectedCR] = useLocalStorage<string>(
     "dm-oracle-cr-v1",
     "CR 0-4",
+    validateStringMax(WIDGET_QUERY_MAX),
   );
   const [selectedSettlement, setSelectedSettlement] = useLocalStorage<string>(
     "dm-oracle-settlement-v1",
     "Town",
+    validateStringMax(WIDGET_QUERY_MAX),
   );
   // History is kept per-tab (v2 shape) so peeking at Loot no longer wipes your
   // recent Names. The active tab's most recent roll is the displayed result, so
@@ -31,6 +44,7 @@ export function OracleWidget() {
   const [history, setHistory] = useLocalStorage<Record<OracleTab, string[]>>(
     "dm-oracle-history-v2",
     EMPTY_HISTORY,
+    validateOracleHistory,
   );
   const tabHistory = history[tab] ?? [];
   const result = tabHistory[0] ?? "";

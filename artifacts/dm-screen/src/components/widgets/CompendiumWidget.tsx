@@ -2,16 +2,27 @@ import { useMemo } from "react";
 import { Search, BookOpen } from "lucide-react";
 import { compendiumData, categories } from "@/data/compendium";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  validateNullableStringMax,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
 export function CompendiumWidget() {
-  const [query, setQuery] = useLocalStorage<string>("dm-compendium-query-v1", "");
+  const [query, setQuery] = useLocalStorage<string>(
+    "dm-compendium-query-v1",
+    "",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
   const [selectedCategory, setSelectedCategory] = useLocalStorage<string>(
     "dm-compendium-category-v1",
     "All",
+    validateStringMax(WIDGET_QUERY_MAX),
   );
   const [selectedEntry, setSelectedEntry] = useLocalStorage<string | null>(
     "dm-compendium-entry-v1",
     null,
+    validateNullableStringMax(WIDGET_QUERY_MAX),
   );
 
   const filtered = useMemo(() => {

@@ -3,6 +3,14 @@ import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from
 import { bestiaryData, mod, crToNumber, type Monster } from "@/data/bestiary";
 import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  BESTIARY_CR_FILTERS,
+  BESTIARY_SORT_MODES,
+  validateEnum,
+  validateNullableStringMax,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
 // ── Unified display type ─────────────────────────────────────────────────────
 // The widget combines two sources: bestiaryData (40 rich stat blocks) and
@@ -285,8 +293,13 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   const [selectedName, setSelectedName] = useLocalStorage<string | null>(
     "dm-bestiary-selected-v1",
     null,
+    validateNullableStringMax(WIDGET_QUERY_MAX),
   );
-  const [query, setQuery] = useLocalStorage<string>("dm-bestiary-query-v1", "");
+  const [query, setQuery] = useLocalStorage<string>(
+    "dm-bestiary-query-v1",
+    "",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
   // The input stays driven by `query` (instant echo); the heavier filters over
   // the 2,158-row index run off the deferred value, so a fast typist doesn't
   // re-scan the whole index on every keystroke. Matches the debounce the
@@ -295,10 +308,12 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   const [sortMode, setSortMode] = useLocalStorage<SortMode>(
     "dm-bestiary-sort-v1",
     "alpha",
+    validateEnum(BESTIARY_SORT_MODES),
   );
   const [crFilter, setCrFilter] = useLocalStorage<string>(
     "dm-bestiary-cr-v1",
     "All",
+    validateEnum(BESTIARY_CR_FILTERS),
   );
 
   // Resolve the persisted name back to a UnifiedMonster.
@@ -307,7 +322,9 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
     [selectedName],
   );
   const setSelected = (m: UnifiedMonster | null) => setSelectedName(m?.name ?? null);
-  const crOptions = ["All", "0–1", "2–4", "5–10", "11–16", "17+"];
+  // Shared with the read/import validators in backup.ts so the allowlist
+  // can't drift from the buttons rendered here.
+  const crOptions = BESTIARY_CR_FILTERS;
 
   // ── When a target name arrives from Initiative Tracker ───────────────────
   // `target` is a one-shot signal. Consume it immediately (clear it back to
@@ -319,7 +336,16 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   useEffect(() => {
     if (!target) return;
     const match = lookupByName(target);
-    if (match) setSelected(match);
+    if (match) {
+      setSelected(match);
+    } else {
+      // No exact dataset match (custom-named combatant like "Goblin Boss
+      // #2"). A silent no-op here looks like a dead click, so fall back to
+      // searching the name: the DM lands on the near-matches list — or the
+      // "No monsters found" empty state — instead of nothing happening.
+      setSelected(null);
+      setQuery(target);
+    }
     onTargetClear?.();
   }, [target]);
 

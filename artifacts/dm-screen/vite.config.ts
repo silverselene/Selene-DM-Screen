@@ -43,7 +43,7 @@ export default defineConfig({
       injectRegister: "script",
       includeAssets: ["favicon.svg", "pwa-icon.svg"],
       manifest: {
-        name: "Legendary DM Screen",
+        name: "Selene's DM Screen",
         short_name: "DM Screen",
         description:
           "A browser-based dashboard for running D&D 5e (2024) games at the table — bestiary, initiative tracker, spells, party roster, and notes, fully offline after first load.",

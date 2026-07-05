@@ -1,14 +1,39 @@
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { NOTEPAD_MAX_CHARS, validateStringMax } from "@/lib/backup";
+import { NOTEPAD_MAX_CHARS, type ShapeValidator } from "@/lib/backup";
 import { FileText, Trash2 } from "lucide-react";
 
-// Defend the read path with the same cap the backup-import path enforces:
-// a non-string or oversized stored value (DevTools edit, future write bug)
-// heals to "" on load instead of poisoning `notes.length` / the textarea.
-const validateNotes = validateStringMax(NOTEPAD_MAX_CHARS);
+// Defend the read path with the same cap the backup-import path enforces —
+// but TRUNCATE an over-length string instead of rejecting it. Rejection
+// resets the textarea to "", and the first keystroke then overwrites the
+// stored original: a note written by a pre-cap build would be destroyed by
+// the upgrade rather than by any user action. Truncating keeps the first
+// 1 MB and warns. Non-strings (DevTools edit, future write bug) still
+// heal to "". (The backup importer deliberately differs: it REJECTS an
+// over-length note and reports the key in `skipped`, so an import never
+// silently drops content — here the alternative to truncation is loss of
+// the whole note.)
+const validateNotes: ShapeValidator<string> = (parsed) => {
+  if (typeof parsed !== "string") return undefined;
+  if (parsed.length > NOTEPAD_MAX_CHARS) {
+    console.warn(
+      `NotepadWidget: stored note exceeds ${NOTEPAD_MAX_CHARS} chars; truncating (legacy pre-cap value?)`,
+    );
+    return parsed.slice(0, NOTEPAD_MAX_CHARS);
+  }
+  return parsed;
+};
 
 export function NotepadWidget() {
-  const [notes, setNotes] = useLocalStorage<string>("dm-notepad", "", validateNotes);
+  // Debounce the storage write: the note is re-serialized in full on every
+  // keystroke and can legitimately reach ~1 MB, so a synchronous setItem in
+  // the keydown path degrades linearly (and silently) as the note grows.
+  // React state still updates per keystroke; the write lands 300 ms after
+  // typing pauses and is flushed on unmount / tab-hide / pagehide, and
+  // before the backup export/import sweeps (pendingWrites registry), so
+  // a backup taken mid-debounce can't miss the newest keystrokes.
+  const [notes, setNotes] = useLocalStorage<string>("dm-notepad", "", validateNotes, {
+    debounceWriteMs: 300,
+  });
 
   return (
     <div className="h-full min-h-0 flex flex-col">

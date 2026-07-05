@@ -44,6 +44,15 @@ export function Combobox({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mirror of the latest text/value for the blur timeout below. The blur
+  // handler closes over ONE render's state, so an Enter-pick — which runs
+  // `pick()` then `blur()` in the same keydown — would otherwise be judged
+  // 120 ms later against the PRE-pick text/value: "evo" matches no option
+  // exactly, so the snap-back branch blanks the input while the parent
+  // filter is already committed to "Evocation". Reading through the ref
+  // makes the timeout see the post-pick state instead.
+  const latest = useRef({ text, value });
+  latest.current = { text, value };
 
   const listboxId = useId();
   const optionId = (i: number) => `${listboxId}-opt-${i}`;
@@ -103,16 +112,18 @@ export function Combobox({
             setHighlight(-1);
             blurTimer.current = null;
             if (!allowCustom) {
+              // Read via `latest`, not the closure — see the ref's comment.
+              const { text: curText, value: curValue } = latest.current;
               const match = options.find(
-                (o) => o.toLowerCase() === text.trim().toLowerCase(),
+                (o) => o.toLowerCase() === curText.trim().toLowerCase(),
               );
               if (match) {
                 setText(match);
                 onChange(match);
-              } else if (text.trim() === "") {
+              } else if (curText.trim() === "") {
                 onChange("");
               } else {
-                setText(value); // revert
+                setText(curValue); // revert
               }
             }
           }, 120);

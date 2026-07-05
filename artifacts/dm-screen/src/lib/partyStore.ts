@@ -62,6 +62,22 @@ const PC_LEVEL_MIN = 1;
 const PC_LEVEL_MAX = 30;
 const PC_AC_MAX = 99;
 const PC_HP_MAX = 9999;
+// Per-PC spells/weapons list ceiling. `filterStrings` caps each entry at
+// PC_MAX_STRING but previously not the entry COUNT, so a hostile party
+// file could smuggle millions of tags through the import paths.
+const PC_MAX_LIST = 100;
+
+// Roster ceiling. Defined here (not backup.ts, which re-exports it) so the
+// store's own write path can refuse at the same cap the backup importer's
+// `validateParty` truncates to — otherwise a 51st live add would survive
+// normal reads but silently vanish on the next full-backup round trip.
+export const MAX_PARTY = 50;
+
+// Raw-file cap for the party import, checked BEFORE JSON.parse: a
+// multi-hundred-MB file would otherwise hang or OOM the tab during
+// parse+normalize, long before any confirm dialog appears. Matches the
+// full-backup importer's raw-value cap; ~40× a realistic 50-PC roster.
+const MAX_IMPORT_FILE_CHARS = 2_000_000;
 
 function clampString(v: unknown, max: number): string {
   return typeof v === "string" ? v.slice(0, max) : "";
@@ -86,6 +102,7 @@ function nullableNonNegInt(v: unknown, max: number): number | null {
 function filterStrings(arr: unknown[]): string[] {
   return arr
     .filter(isString)
+    .slice(0, PC_MAX_LIST)
     .map((s) => s.slice(0, PC_MAX_STRING));
 }
 
@@ -178,6 +195,13 @@ export function addCharacter(
   input: Omit<PlayerCharacter, "id">,
 ): PlayerCharacter {
   const list = readRaw();
+  if (list.length >= MAX_PARTY) {
+    // Refuse rather than allow a roster the backup importer's
+    // `validateParty` would silently truncate on the next restore.
+    throw new Error(
+      `The party is full (max ${MAX_PARTY} characters). Remove one first.`,
+    );
+  }
   const id = nextId(list);
   const created: PlayerCharacter = { ...input, id };
   write([...list, created]);
@@ -232,6 +256,9 @@ export interface PartyImportSummary {
   accepted: number;
   /** How many PCs are currently in the roster (will be replaced). */
   currentCount: number;
+  /** PCs in the file beyond MAX_PARTY that the import will drop. Surfaced
+   *  so the confirm dialog can warn instead of truncating silently. */
+  dropped: number;
   /** envelope.exportedAt, if present. */
   exportedAt?: string;
 }
@@ -248,16 +275,27 @@ export interface PreparedPartyImport {
  *  message. The summary lets the caller show "Replace your N characters
  *  with M imported characters?" instead of a count-blind prompt. */
 export function preparePartyImport(text: string): PreparedPartyImport {
+  // Size gate BEFORE parse — this is the one input surface fed by files
+  // other people hand the DM, so it gets the same hard caps the
+  // full-backup importer enforces.
+  if (text.length > MAX_IMPORT_FILE_CHARS) {
+    throw new Error(
+      `This file is too large to be a Party export ` +
+        `(${(text.length / 1_000_000).toFixed(1)} MB; max ${MAX_IMPORT_FILE_CHARS / 1_000_000} MB).`,
+    );
+  }
   const env = parseEnvelopeHead(text, "selene-dm-party", "Party export");
   if (!Array.isArray(env.party)) {
     throw new Error(
       "This Party file is incomplete or corrupted. Try exporting it again.",
     );
   }
-  const normalized = normalizePartyBatch(env.party);
+  const dropped = Math.max(0, env.party.length - MAX_PARTY);
+  const normalized = normalizePartyBatch(env.party.slice(0, MAX_PARTY));
   const summary: PartyImportSummary = {
     accepted: normalized.length,
     currentCount: readRaw().length,
+    dropped,
     ...(typeof env.exportedAt === "string" ? { exportedAt: env.exportedAt } : {}),
   };
   return {
@@ -287,10 +325,19 @@ export function useParty(): PlayerCharacter[] {
     // conflict resolution — there's no merge or version check, so two tabs
     // editing near-simultaneously is last-write-wins (documented as "use one
     // tab at a time" in the README). Don't mistake this listener for sync.
-    window.addEventListener("storage", refresh);
+    //
+    // Filter to OUR key: without it, every localStorage write in another
+    // tab (including per-keystroke notepad/search-query writes) triggers a
+    // full roster re-parse + re-render of both subscribed widgets.
+    // `e.key === null` means `storage.clear()` — re-read for that too.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== STORAGE_KEY) return;
+      refresh();
+    };
+    window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(CHANGED_EVENT, refresh);
-      window.removeEventListener("storage", refresh);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
