@@ -1,0 +1,55 @@
+# Anything in this file is excluded from the build context sent to the
+# Docker daemon. Aim is to keep the context small so the build is fast and
+# never accidentally bundles secrets or local-only state into the image.
+
+# Per-package node_modules. Docker reinstalls everything inside the build
+# stage anyway via `pnpm install --frozen-lockfile`.
+**/node_modules
+
+# Build outputs. The image's build stage produces these fresh.
+**/dist
+**/build
+
+# Git metadata.
+.git
+.gitignore
+.gitattributes
+
+# Editor / OS noise.
+.vscode
+.idea
+.DS_Store
+**/*.swp
+
+# Logs and local-only state.
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Secrets. The app needs no env vars, so any such file is local-only by
+# definition — but `COPY . .` would still pull it into build-stage layers
+# (which leak via pushed intermediate layers or registry-backed build
+# caches) if someone drops one in the repo root.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets*
+
+# Docker scaffolding (no point shipping the Dockerfile into the image).
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Project intake docs — not needed inside the image. CLAUDE.md, README,
+# the handover doc, etc. stay in the repo but don't bloat the build
+# context.
+HANDOVER-self-hosting.md
+CLAUDE.md
+
+# Data-generation script outputs that aren't part of the source tree
+# (lib/ was deleted in Phase 3, but cover .pnpm-store just in case).
+.pnpm-store

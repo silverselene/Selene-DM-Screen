@@ -1,6 +1,97 @@
-import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2 } from "lucide-react";
+import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { useTheme } from "@/contexts/ThemeContext";
+import {
+  downloadJsonFile,
+  exportFullBackupAsJson,
+  prepareImport,
+  promptForJsonFile,
+} from "@/lib/backup";
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+// Map internal `dm-*` storage keys to the widget names a DM recognizes, so a
+// skipped-items warning during restore reads "Party, Notes" rather than
+// "dm-party-v1, dm-notepad". Unknown keys fall back to a de-prefixed label.
+const KEY_LABELS: Record<string, string> = {
+  "dm-grid-cols": "Layout",
+  "dm-grid-rows": "Layout",
+  "dm-tiles-v3": "Layout",
+  "dm-recent-widgets": "Recent widgets",
+  "dm-theme": "Theme",
+  "dm-notepad": "Notes",
+  "dm-party-v1": "Party",
+  "dm-initiative-v1": "Initiative",
+  "dm-initiative-turn-v1": "Initiative",
+  "dm-initiative-active-id-v1": "Initiative",
+  "dm-round-v1": "Initiative",
+  "dm-initiative-mode-v1": "Initiative",
+  "dm-bestiary-query-v1": "Bestiary",
+  "dm-bestiary-selected-v1": "Bestiary",
+  "dm-bestiary-sort-v1": "Bestiary",
+  "dm-bestiary-cr-v1": "Bestiary",
+};
+
+function friendlyKeyLabels(keys: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const k of keys) {
+    const label = KEY_LABELS[k] ?? k.replace(/^dm-/, "").replace(/-v\d+$/, "");
+    if (seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out;
+}
+
+async function runFullImport() {
+  let text: string;
+  try {
+    text = await promptForJsonFile();
+  } catch (e) {
+    if ((e as DOMException).name === "AbortError") return;
+    window.alert(`Import failed: ${(e as Error).message}`);
+    return;
+  }
+  try {
+    // Two-phase: prepare (parse + validate + snapshot) now, commit after
+    // the user confirms. Closes the TOCTOU window — the bytes the user
+    // sees in the prompt match what the commit will wipe, even if other
+    // tabs write between confirm-show and confirm-accept.
+    const { summary, commit } = prepareImport(text);
+    const itemWord = summary.accepted === 1 ? "item" : "items";
+    let prompt =
+      `Import ${summary.accepted} ${itemWord} (${formatBytes(summary.bytes)}) from this backup?\n\n` +
+      `This will REPLACE all current widget state — party, notes, layout, in-progress combat ` +
+      `(currently ${formatBytes(summary.currentBytes)}).`;
+    if (summary.skipped.length > 0) {
+      const labels = friendlyKeyLabels(summary.skipped);
+      const sample = labels.slice(0, 4).join(", ");
+      const more = labels.length > 4 ? ` (+${labels.length - 4} more)` : "";
+      prompt +=
+        `\n\n⚠ Some data couldn't be read (it's damaged or from an unsupported version) ` +
+        `and will reset to default:\n${sample}${more}`;
+    }
+    if (!window.confirm(prompt)) return;
+    const { skipped } = commit();
+    if (skipped.length > 0) {
+      console.warn("Backup import: skipped malformed keys:", skipped);
+    }
+    window.alert("Backup restored. Reloading…");
+    window.location.reload();
+  } catch (e) {
+    window.alert(`Import failed: ${(e as Error).message}`);
+  }
+}
+
+function runFullExport() {
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadJsonFile(`selene-dm-backup-${stamp}.json`, exportFullBackupAsJson());
+}
 
 const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: React.ReactNode; color: string }> = {
   compendium: { label: "Compendium", icon: <BookOpen className="w-3.5 h-3.5" />, color: "text-blue-400 bg-blue-900/20 border-blue-800/40" },
@@ -51,6 +142,8 @@ export function Sidebar({
       {/* Toggle button */}
       <button
         onClick={onToggle}
+        aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+        aria-expanded={open}
         className="absolute -right-3 top-3 z-20 w-6 h-6 rounded-full border flex items-center justify-center text-purple-500 hover:text-purple-300 hover:border-purple-600 transition-all shadow-lg"
         style={{ background: toggleBg, borderColor: toggleBorder }}
       >
@@ -164,17 +257,67 @@ export function Sidebar({
               })}
             </div>
           </div>
+
+          {/* ── Backup / Restore ── */}
+          <div className="shrink-0 border-t p-3" style={{ borderTopColor: "var(--dm-border)" }}>
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--dm-t2)" }}>Backup</span>
+              </div>
+            </div>
+            <p className="text-[10px] leading-relaxed mb-2" style={{ color: "var(--dm-t4)" }}>
+              State is stored per-browser. Export a snapshot to move it to another browser or back up.
+            </p>
+            <div className="flex gap-1">
+              <button
+                onClick={runFullExport}
+                title="Download a full backup of all widget state"
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40 transition-colors"
+              >
+                <Download className="w-3 h-3" /> Export
+              </button>
+              <button
+                onClick={runFullImport}
+                title="Restore from a backup (replaces ALL current state, then reloads)"
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40 transition-colors"
+              >
+                <Upload className="w-3 h-3" /> Import
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 pt-10 pb-3">
-          <Grid className="w-4 h-4 text-purple-700" title="Grid size" />
+          <span title="Grid size" className="flex">
+            <Grid className="w-4 h-4 text-purple-700" />
+          </span>
           <div className="w-3 h-px bg-purple-900/50" />
-          <Clock className="w-4 h-4 text-purple-700" title="Recent widgets" />
+          <span title="Recent widgets" className="flex">
+            <Clock className="w-4 h-4 text-purple-700" />
+          </span>
           {recentWidgets.length > 0 && (
             <span className="text-[9px] bg-purple-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
               {recentWidgets.length}
             </span>
           )}
+          <div className="w-3 h-px bg-purple-900/50" />
+          <button
+            onClick={runFullExport}
+            title="Export a full backup of all widget state"
+            aria-label="Export a full backup of all widget state"
+            className="text-purple-700 hover:text-purple-300 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          <button
+            onClick={runFullImport}
+            title="Import a backup (replaces all current state)"
+            aria-label="Import a backup (replaces all current state)"
+            className="text-purple-700 hover:text-purple-300 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
         </div>
       )}
     </aside>

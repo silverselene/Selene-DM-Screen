@@ -29,23 +29,18 @@ minimumReleaseAge: 1440
 
 packages:
   - artifacts/*
-  - lib/*
-  - lib/integrations/*
   - scripts
 
 catalog:
-  '@replit/vite-plugin-cartographer': ^0.5.0
-  '@replit/vite-plugin-dev-banner': ^0.1.1
-  '@replit/vite-plugin-runtime-error-modal': ^0.0.6
   '@tailwindcss/vite': ^4.1.14
-  '@tanstack/react-query': ^5.90.21
-  '@types/node': ^25.3.3
+  # Pinned to ^24 to match the documented Node 24+ runtime (Dockerfile build
+  # stage + README); ^25 types drift ahead of the runtime we actually ship on.
+  '@types/node': ^24
   '@types/react': ^19.2.0
   '@types/react-dom': ^19.2.0
   '@vitejs/plugin-react': ^5.0.4
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
-  drizzle-orm: ^0.45.1
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
   # Must be this exact version because expo requires it
@@ -61,19 +56,17 @@ catalog:
 autoInstallPeers: false
 
 onlyBuiltDependencies:
-  - '@swc/core'
   - esbuild
-  - msw
-  - unrs-resolver
 
 overrides:
-  # replit uses linux-x64 only, we can exclude all other platforms
-  "esbuild>@esbuild/darwin-arm64": "-"
+  # Exclude native prebuilds for platforms we never build on. We keep the
+  # glibc variants for our three real targets — macOS arm64 (dev), and
+  # linux x64 + arm64-gnu (the Docker image) — and drop everything else
+  # (musl, Windows, BSD, exotic arches) so installs stay lean.
   "esbuild>@esbuild/darwin-x64": "-"
   "esbuild>@esbuild/freebsd-arm64": "-"
   "esbuild>@esbuild/freebsd-x64": "-"
   "esbuild>@esbuild/linux-arm": "-"
-  "esbuild>@esbuild/linux-arm64": "-"
   "esbuild>@esbuild/linux-ia32": "-"
   "esbuild>@esbuild/linux-loong64": "-"
   "esbuild>@esbuild/linux-mips64el": "-"
@@ -94,34 +87,28 @@ overrides:
   "esbuild>@esbuild/android-x64": '-'
   "esbuild>@esbuild/openharmony-arm64": '-'
   "lightningcss>lightningcss-android-arm64": "-"
-  "lightningcss>lightningcss-darwin-arm64": "-"
   "lightningcss>lightningcss-darwin-x64": "-"
   "lightningcss>lightningcss-freebsd-x64": "-"
   "lightningcss>lightningcss-linux-arm-gnueabihf": "-"
-  "lightningcss>lightningcss-linux-arm64-gnu": "-"
   "lightningcss>lightningcss-linux-arm64-musl": "-"
   "lightningcss>lightningcss-linux-x64-musl": "-"
   "lightningcss>lightningcss-win32-arm64-msvc": "-"
   "lightningcss>lightningcss-win32-x64-msvc": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-android-arm64": "-"
-  "@tailwindcss/oxide>@tailwindcss/oxide-darwin-arm64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-darwin-x64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-freebsd-x64": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-linux-arm-gnueabihf": "-"
-  "@tailwindcss/oxide>@tailwindcss/oxide-linux-arm64-gnu": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-linux-arm64-musl": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-win32-arm64-msvc": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-win32-x64-msvc": "-"
   "@tailwindcss/oxide>@tailwindcss/oxide-linux-x64-musl": "-"
   "rollup>@rollup/rollup-android-arm-eabi": "-"
   "rollup>@rollup/rollup-android-arm64": "-"
-  "rollup>@rollup/rollup-darwin-arm64": "-"
   "rollup>@rollup/rollup-darwin-x64": "-"
   "rollup>@rollup/rollup-freebsd-arm64": "-"
   "rollup>@rollup/rollup-freebsd-x64": "-"
   "rollup>@rollup/rollup-linux-arm-gnueabihf": "-"
   "rollup>@rollup/rollup-linux-arm-musleabihf": "-"
-  "rollup>@rollup/rollup-linux-arm64-gnu": "-"
   "rollup>@rollup/rollup-linux-arm64-musl": "-"
   "rollup>@rollup/rollup-linux-loong64-gnu": "-"
   "rollup>@rollup/rollup-linux-loong64-musl": "-"
@@ -137,16 +124,9 @@ overrides:
   "rollup>@rollup/rollup-win32-ia32-msvc": "-"
   "rollup>@rollup/rollup-win32-x64-gnu": "-"
   "rollup>@rollup/rollup-win32-x64-msvc": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-freebsd-ia32": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-freebsd-x64": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-linux-arm64": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-linux-arm": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-linux-ia32": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-sunos-x64": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-win32-ia32": "-"
-  "@expo/ngrok-bin>@expo/ngrok-bin-win32-x64": "-"
-  # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
-  "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
+  # Pin esbuild to a patched version (older releases had a dev-server
+  # request vulnerability). Pulled in transitively by Vite and tsx.
   esbuild: "0.27.3"
+
+allowBuilds:
+  esbuild: true

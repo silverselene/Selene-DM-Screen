@@ -1,19 +1,53 @@
-import { useState } from "react";
 import { Wand2, RefreshCw, User, Gem, Sword, MapPin } from "lucide-react";
 import {
   generateName, generateLoot, generateItem, generatePlaceName,
   namesByRace, lootByCR, settlementTypes,
 } from "@/data/generators";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  ORACLE_TABS,
+  type OracleTab,
+  validateEnum,
+  validateOracleHistory,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
-type OracleTab = "names" | "loot" | "items" | "places";
+const EMPTY_HISTORY: Record<OracleTab, string[]> = {
+  names: [], loot: [], items: [], places: [],
+};
 
 export function OracleWidget() {
-  const [tab, setTab] = useState<OracleTab>("names");
-  const [result, setResult] = useState<string>("");
-  const [selectedRace, setSelectedRace] = useState("Human");
-  const [selectedCR, setSelectedCR] = useState("CR 0-4");
-  const [selectedSettlement, setSelectedSettlement] = useState("Town");
-  const [history, setHistory] = useState<string[]>([]);
+  const [tab, setTab] = useLocalStorage<OracleTab>(
+    "dm-oracle-tab-v1",
+    "names",
+    validateEnum(ORACLE_TABS),
+  );
+  const [selectedRace, setSelectedRace] = useLocalStorage<string>(
+    "dm-oracle-race-v1",
+    "Human",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
+  const [selectedCR, setSelectedCR] = useLocalStorage<string>(
+    "dm-oracle-cr-v1",
+    "CR 0-4",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
+  const [selectedSettlement, setSelectedSettlement] = useLocalStorage<string>(
+    "dm-oracle-settlement-v1",
+    "Town",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
+  // History is kept per-tab (v2 shape) so peeking at Loot no longer wipes your
+  // recent Names. The active tab's most recent roll is the displayed result, so
+  // switching tabs restores each tab's last result instead of clearing it.
+  const [history, setHistory] = useLocalStorage<Record<OracleTab, string[]>>(
+    "dm-oracle-history-v2",
+    EMPTY_HISTORY,
+    validateOracleHistory,
+  );
+  const tabHistory = history[tab] ?? [];
+  const result = tabHistory[0] ?? "";
 
   const generate = () => {
     let res = "";
@@ -21,8 +55,7 @@ export function OracleWidget() {
     else if (tab === "loot") res = generateLoot(selectedCR);
     else if (tab === "places") res = generatePlaceName(selectedSettlement);
     else res = generateItem();
-    setResult(res);
-    setHistory((h) => [res, ...h.slice(0, 4)]);
+    setHistory((h) => ({ ...h, [tab]: [res, ...(h[tab] ?? []).slice(0, 4)] }));
   };
 
   const tabs: { id: OracleTab; label: string; icon: React.ReactNode }[] = [
@@ -44,7 +77,7 @@ export function OracleWidget() {
         {tabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setResult(""); setHistory([]); }}
+            onClick={() => setTab(t.id)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-all ${
               tab === t.id
                 ? "bg-purple-700 text-white shadow-[0_0_6px_rgba(139,43,226,0.4)]"
@@ -127,11 +160,11 @@ export function OracleWidget() {
       )}
 
       {/* History */}
-      {history.length > 1 && (
+      {tabHistory.length > 1 && (
         <div className="mt-3 flex-1 min-h-0 overflow-y-auto">
           <div className="text-xs text-gray-600 mb-1">Previous Results</div>
           <div className="space-y-1">
-            {history.slice(1).map((h, i) => {
+            {tabHistory.slice(1).map((h, i) => {
               const [pn, pd] = tab === "places" ? h.split(" — ") : [h, ""];
               return (
                 <div key={i} className="text-xs text-gray-500 px-2 py-1 bg-gray-900/40 rounded border border-gray-800">

@@ -1,11 +1,29 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { Search, BookOpen } from "lucide-react";
 import { compendiumData, categories } from "@/data/compendium";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  validateNullableStringMax,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
 export function CompendiumWidget() {
-  const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
+  const [query, setQuery] = useLocalStorage<string>(
+    "dm-compendium-query-v1",
+    "",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
+  const [selectedCategory, setSelectedCategory] = useLocalStorage<string>(
+    "dm-compendium-category-v1",
+    "All",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
+  const [selectedEntry, setSelectedEntry] = useLocalStorage<string | null>(
+    "dm-compendium-entry-v1",
+    null,
+    validateNullableStringMax(WIDGET_QUERY_MAX),
+  );
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -33,7 +51,7 @@ export function CompendiumWidget() {
             type="text"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedEntry(null); }}
-            placeholder="Search 5.5e rules..."
+            placeholder="Search 5.5e rules…"
             className="w-full pl-7 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
           />
         </div>

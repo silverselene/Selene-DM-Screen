@@ -1,38 +1,22 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { bestiaryData, mod, crToNumber, type Monster } from "@/data/bestiary";
-
-// ── DB monster shape (snake_case from API) ───────────────────────────────────
-interface DbMonster {
-  id: number;
-  name: string;
-  size: string;
-  type: string;
-  alignment: string;
-  ac: number;
-  ac_type: string;
-  hp: string;
-  speed: string;
-  str: number; dex: number; con: number; int_score: number; wis: number; cha: number;
-  saving_throws?: string;
-  skills?: string;
-  damage_immunities?: string;
-  damage_resistances?: string;
-  damage_vulnerabilities?: string;
-  condition_immunities?: string;
-  senses: string;
-  languages: string;
-  cr: string;
-  traits: { name: string; desc: string }[];
-  actions: { name: string; desc: string }[];
-  reactions: { name: string; desc: string }[];
-  legendary_actions: { name: string; desc: string }[];
-  source?: string;
-  is_legendary?: boolean;
-  initiative_modifier?: number;
-}
+import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  BESTIARY_CR_FILTERS,
+  BESTIARY_SORT_MODES,
+  validateEnum,
+  validateNullableStringMax,
+  validateStringMax,
+  WIDGET_QUERY_MAX,
+} from "@/lib/backup";
 
 // ── Unified display type ─────────────────────────────────────────────────────
+// The widget combines two sources: bestiaryData (40 rich stat blocks) and
+// monsterIndex (2,158 thin entries — name/AC/HP/CR/size/type/source). Thin
+// entries render the header but the body falls back to "Full stat block not
+// available" — same UX as the old DB fallback, just sourced locally.
 interface UnifiedMonster {
   name: string;
   size: string;
@@ -64,28 +48,55 @@ function fromLocal(m: Monster): UnifiedMonster {
     ...m, acType: m.acType ?? "",
     traits: m.traits ?? [], reactions: m.reactions ?? [],
     legendaryActions: m.legendaryActions ?? [],
-    source: "5e SRD",
+    source: "5etools",
   };
 }
 
-function fromDb(m: DbMonster): UnifiedMonster {
+function fromIndex(m: MonsterIndexEntry): UnifiedMonster {
   return {
     name: m.name, size: m.size, type: m.type, alignment: m.alignment,
-    ac: m.ac, acType: m.ac_type ?? "", hp: m.hp, speed: m.speed,
-    str: m.str, dex: m.dex, con: m.con, int: m.int_score, wis: m.wis, cha: m.cha,
-    savingThrows: m.saving_throws, skills: m.skills,
-    damageImmunities: m.damage_immunities, damageResistances: m.damage_resistances,
-    damageVulnerabilities: m.damage_vulnerabilities, conditionImmunities: m.condition_immunities,
-    senses: m.senses, languages: m.languages, cr: m.cr,
-    traits: m.traits ?? [], actions: m.actions ?? [],
-    reactions: m.reactions ?? [], legendaryActions: m.legendary_actions ?? [],
+    ac: m.ac, acType: "", hp: m.hp, speed: "",
+    str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
+    senses: "", languages: "", cr: m.cr,
+    traits: [], actions: [], reactions: [], legendaryActions: [],
     source: m.source,
   };
+}
+
+// Lowercased-name → rich Monster lookup, built once.
+const RICH_BY_NAME = new Map<string, Monster>(
+  bestiaryData.map(m => [m.name.toLowerCase(), m]),
+);
+
+// Lowercased-name → first thin index hit, built once.
+const THIN_BY_NAME = new Map<string, MonsterIndexEntry>();
+for (const m of monsterIndex) {
+  const key = m.name.toLowerCase();
+  if (!THIN_BY_NAME.has(key)) THIN_BY_NAME.set(key, m);
+}
+
+// Count of distinct searchable monsters across both datasets (rich entries
+// that also appear in the thin index aren't double-counted). Computed so the
+// search placeholder never drifts from the data the way a hardcoded number
+// does on every regen.
+const MONSTER_COUNT = new Set<string>([
+  ...RICH_BY_NAME.keys(),
+  ...THIN_BY_NAME.keys(),
+]).size;
+
+function lookupByName(name: string): UnifiedMonster | null {
+  const key = name.toLowerCase();
+  const rich = RICH_BY_NAME.get(key);
+  if (rich) return fromLocal(rich);
+  const thin = THIN_BY_NAME.get(key);
+  if (thin) return fromIndex(thin);
+  return null;
 }
 
 // ── CR colour ────────────────────────────────────────────────────────────────
 function crColor(cr: string) {
   const n = crToNumber(cr);
+  if (!Number.isFinite(n)) return "text-gray-400"; // ungraded / unknown CR
   if (n === 0) return "text-gray-400";
   if (n <= 1) return "text-green-400";
   if (n <= 4) return "text-yellow-400";
@@ -94,6 +105,17 @@ function crColor(cr: string) {
   if (n <= 16) return "text-purple-400";
   if (n <= 20) return "text-pink-400";
   return "text-white";
+}
+
+// Sort comparator by CR. Equal values (including two ungraded CRs, both
+// POSITIVE_INFINITY) short-circuit to 0 so the subtraction can never produce
+// NaN — an inconsistent comparator would otherwise leave such pairs in an
+// undefined order. Current data has no ungraded CRs, but this keeps the sort
+// well-defined if a future regen reintroduces one.
+function crCompare(a: string, b: string): number {
+  const na = crToNumber(a);
+  const nb = crToNumber(b);
+  return na === nb ? 0 : na - nb;
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
@@ -124,68 +146,132 @@ function TraitSection({ title, items }: { title: string; items: { name: string; 
   );
 }
 
+type StatBlockTab = "traits" | "actions" | "reactions" | "legendary";
+
+const TAB_LABELS: Record<StatBlockTab, string> = {
+  traits: "Traits",
+  actions: "Actions",
+  reactions: "Reactions",
+  legendary: "Legendary",
+};
+
 function StatBlock({ monster }: { monster: UnifiedMonster }) {
   const hasAbilities = monster.str !== 10 || monster.dex !== 10 || monster.con !== 10 || monster.int !== 10;
-  const hasTraits = monster.traits.length > 0 || monster.actions.length > 0;
+
+  // Decide which tabs have content. Pick the first non-empty as default; reset
+  // when the monster changes so jumping from Aboleth → Goblin starts at the
+  // first tab that's actually populated for the new entry.
+  const tabContent: Record<StatBlockTab, { name: string; desc: string }[]> = {
+    traits: monster.traits,
+    actions: monster.actions,
+    reactions: monster.reactions,
+    legendary: monster.legendaryActions,
+  };
+  const presentTabs = (Object.keys(tabContent) as StatBlockTab[]).filter(
+    (k) => tabContent[k].length > 0,
+  );
+  const [activeTab, setActiveTab] = useState<StatBlockTab | null>(
+    presentTabs[0] ?? null,
+  );
+  useEffect(() => {
+    setActiveTab(presentTabs[0] ?? null);
+    // Tab membership is fully determined by `monster`, so keying on its name
+    // is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monster.name]);
 
   return (
-    <div className="text-[10px] leading-relaxed">
-      <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
-        <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
-        <div className="flex items-center gap-1.5">
-          {monster.source && <span className="text-[9px] text-gray-600 bg-gray-900/60 px-1 rounded">{monster.source}</span>}
-          <span className={`text-xs font-bold ${crColor(monster.cr)}`}>CR {monster.cr}</span>
+    // `flex-1 min-h-0` claims the remaining height inside the detail-view
+    // card; `overflow-hidden` forces the column to honour its computed
+    // height instead of stretching to the tab body's content.
+    <div className="flex-1 min-h-0 overflow-hidden flex flex-col text-[10px] leading-relaxed">
+      {/* ── Sticky header (always visible) ───────────────────────────────── */}
+      <div className="shrink-0">
+        <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
+          <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
+          <div className="flex items-center gap-1.5">
+            {monster.source && <span className="text-[9px] text-gray-600 bg-gray-900/60 px-1 rounded">{monster.source}</span>}
+            <span className={`text-xs font-bold ${crColor(monster.cr)}`}>CR {monster.cr}</span>
+          </div>
         </div>
-      </div>
 
-      <div className="flex gap-3 mb-2 flex-wrap">
-        <div className="flex items-center gap-1">
-          <Shield className="w-3 h-3 text-blue-400" />
-          <span className="text-gray-300">AC {monster.ac}{monster.acType ? ` (${monster.acType})` : ""}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Heart className="w-3 h-3 text-red-400" />
-          <span className="text-gray-300">{monster.hp} HP</span>
-        </div>
-        {monster.speed && (
+        <div className="flex gap-3 mb-2 flex-wrap">
           <div className="flex items-center gap-1">
-            <Zap className="w-3 h-3 text-yellow-400" />
-            <span className="text-gray-300">{monster.speed}</span>
+            <Shield className="w-3 h-3 text-blue-400" />
+            <span className="text-gray-300">AC {monster.ac}{monster.acType ? ` (${monster.acType})` : ""}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Heart className="w-3 h-3 text-red-400" />
+            <span className="text-gray-300">{monster.hp} HP</span>
+          </div>
+          {monster.speed && (
+            <div className="flex items-center gap-1">
+              <Zap className="w-3 h-3 text-yellow-400" />
+              <span className="text-gray-300">{monster.speed}</span>
+            </div>
+          )}
+        </div>
+
+        {hasAbilities && (
+          <div className="flex gap-1 mb-2 flex-wrap">
+            <AbilityScore label="STR" score={monster.str} />
+            <AbilityScore label="DEX" score={monster.dex} />
+            <AbilityScore label="CON" score={monster.con} />
+            <AbilityScore label="INT" score={monster.int} />
+            <AbilityScore label="WIS" score={monster.wis} />
+            <AbilityScore label="CHA" score={monster.cha} />
           </div>
         )}
-      </div>
 
-      {hasAbilities && (
-        <div className="flex gap-1 mb-2 flex-wrap">
-          <AbilityScore label="STR" score={monster.str} />
-          <AbilityScore label="DEX" score={monster.dex} />
-          <AbilityScore label="CON" score={monster.con} />
-          <AbilityScore label="INT" score={monster.int} />
-          <AbilityScore label="WIS" score={monster.wis} />
-          <AbilityScore label="CHA" score={monster.cha} />
+        <div className="space-y-0.5 mb-2">
+          {monster.savingThrows && <div><span className="text-gray-500 font-semibold">Saving Throws </span><span className="text-gray-300">{monster.savingThrows}</span></div>}
+          {monster.skills && <div><span className="text-gray-500 font-semibold">Skills </span><span className="text-gray-300">{monster.skills}</span></div>}
+          {monster.damageImmunities && <div><span className="text-gray-500 font-semibold">Immunities </span><span className="text-gray-300">{monster.damageImmunities}</span></div>}
+          {monster.damageResistances && <div><span className="text-gray-500 font-semibold">Resistances </span><span className="text-gray-300">{monster.damageResistances}</span></div>}
+          {monster.damageVulnerabilities && <div><span className="text-gray-500 font-semibold">Vulnerabilities </span><span className="text-gray-300">{monster.damageVulnerabilities}</span></div>}
+          {monster.conditionImmunities && <div><span className="text-gray-500 font-semibold">Condition Immunities </span><span className="text-gray-300">{monster.conditionImmunities}</span></div>}
+          {monster.senses && <div><span className="text-gray-500 font-semibold">Senses </span><span className="text-gray-300">{monster.senses}</span></div>}
+          {monster.languages && <div><span className="text-gray-500 font-semibold">Languages </span><span className="text-gray-300">{monster.languages}</span></div>}
         </div>
-      )}
-
-      <div className="space-y-0.5 mb-2">
-        {monster.savingThrows && <div><span className="text-gray-500 font-semibold">Saving Throws </span><span className="text-gray-300">{monster.savingThrows}</span></div>}
-        {monster.skills && <div><span className="text-gray-500 font-semibold">Skills </span><span className="text-gray-300">{monster.skills}</span></div>}
-        {monster.damageImmunities && <div><span className="text-gray-500 font-semibold">Immunities </span><span className="text-gray-300">{monster.damageImmunities}</span></div>}
-        {monster.damageResistances && <div><span className="text-gray-500 font-semibold">Resistances </span><span className="text-gray-300">{monster.damageResistances}</span></div>}
-        {monster.damageVulnerabilities && <div><span className="text-gray-500 font-semibold">Vulnerabilities </span><span className="text-gray-300">{monster.damageVulnerabilities}</span></div>}
-        {monster.conditionImmunities && <div><span className="text-gray-500 font-semibold">Condition Immunities </span><span className="text-gray-300">{monster.conditionImmunities}</span></div>}
-        {monster.senses && <div><span className="text-gray-500 font-semibold">Senses </span><span className="text-gray-300">{monster.senses}</span></div>}
-        {monster.languages && <div><span className="text-gray-500 font-semibold">Languages </span><span className="text-gray-300">{monster.languages}</span></div>}
       </div>
 
-      {hasTraits ? (
-        <>
-          <TraitSection title="Traits" items={monster.traits} />
-          <TraitSection title="Actions" items={monster.actions} />
-          <TraitSection title="Reactions" items={monster.reactions} />
-          <TraitSection title="Legendary Actions" items={monster.legendaryActions} />
-        </>
+      {/* ── Tab strip + scrollable tab body ──────────────────────────────── */}
+      {presentTabs.length === 0 ? (
+        <p className="text-[10px] text-gray-600 italic mt-2 shrink-0">Full stat block not available for this monster.</p>
       ) : (
-        <p className="text-[10px] text-gray-600 italic mt-2">Full stat block not available for this monster.</p>
+        <>
+          <div className="flex gap-0.5 border-b border-purple-900/40 shrink-0">
+            {presentTabs.map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                    isActive
+                      ? "text-purple-300 border-purple-400"
+                      : "text-gray-500 border-transparent hover:text-purple-400"
+                  }`}
+                >
+                  {TAB_LABELS[tab]}
+                  <span className="ml-1 text-[9px] opacity-60">{tabContent[tab].length}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto pt-1.5">
+            {activeTab && (
+              <div className="space-y-1.5">
+                {tabContent[activeTab].map((t, i) => (
+                  <div key={i} className="text-[10px] leading-relaxed text-gray-300">
+                    <span className="font-bold italic text-gray-100">{t.name}. </span>{t.desc}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -200,44 +286,72 @@ interface Props {
 type SortMode = "alpha" | "cr";
 
 export function BestiaryWidget({ target, onTargetClear }: Props) {
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<UnifiedMonster | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>("alpha");
-  const [crFilter, setCrFilter] = useState("All");
-  const [loadingTarget, setLoadingTarget] = useState(false);
-  const crOptions = ["All", "0–1", "2–4", "5–10", "11–16", "17+"];
+  // Persist the open monster (by name) + view preferences so a tab reload
+  // / server bounce drops the DM back exactly where they were. The selected
+  // monster is stored as a name and resolved against the live datasets on
+  // mount; that survives regenerations of the underlying data files.
+  const [selectedName, setSelectedName] = useLocalStorage<string | null>(
+    "dm-bestiary-selected-v1",
+    null,
+    validateNullableStringMax(WIDGET_QUERY_MAX),
+  );
+  const [query, setQuery] = useLocalStorage<string>(
+    "dm-bestiary-query-v1",
+    "",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
+  // The input stays driven by `query` (instant echo); the heavier filters over
+  // the 2,158-row index run off the deferred value, so a fast typist doesn't
+  // re-scan the whole index on every keystroke. Matches the debounce the
+  // Initiative/Party search inputs already use.
+  const deferredQuery = useDeferredValue(query);
+  const [sortMode, setSortMode] = useLocalStorage<SortMode>(
+    "dm-bestiary-sort-v1",
+    "alpha",
+    validateEnum(BESTIARY_SORT_MODES),
+  );
+  const [crFilter, setCrFilter] = useLocalStorage<string>(
+    "dm-bestiary-cr-v1",
+    "All",
+    validateEnum(BESTIARY_CR_FILTERS),
+  );
+
+  // Resolve the persisted name back to a UnifiedMonster.
+  const selected: UnifiedMonster | null = useMemo(
+    () => (selectedName ? lookupByName(selectedName) : null),
+    [selectedName],
+  );
+  const setSelected = (m: UnifiedMonster | null) => setSelectedName(m?.name ?? null);
+  // Shared with the read/import validators in backup.ts so the allowlist
+  // can't drift from the buttons rendered here.
+  const crOptions = BESTIARY_CR_FILTERS;
 
   // ── When a target name arrives from Initiative Tracker ───────────────────
+  // `target` is a one-shot signal. Consume it immediately (clear it back to
+  // null in App) so re-opening the SAME monster from Initiative re-fires this
+  // effect — otherwise a repeat dispatch sets an identical value, React bails
+  // the state update, the effect never re-runs, and the click is a silent
+  // no-op. The open monster is driven by the persisted `selectedName`, not by
+  // `target`, so clearing the signal here does not close the detail view.
   useEffect(() => {
     if (!target) return;
-    setLoadingTarget(true);
-
-    // Try API first (covers the full 2160-monster DB)
-    fetch(`/api/monsters/search?q=${encodeURIComponent(target)}`)
-      .then((r) => r.ok ? r.json() : Promise.reject())
-      .then((results: DbMonster[]) => {
-        // Exact match preferred, otherwise first result
-        const exact = results.find((m) => m.name.toLowerCase() === target.toLowerCase());
-        const match = exact ?? results[0];
-        if (match) { setSelected(fromDb(match)); return; }
-        // Fall back to local SRD data
-        const local = bestiaryData.find(
-          (m) => m.name.toLowerCase() === target.toLowerCase()
-        );
-        if (local) setSelected(fromLocal(local));
-      })
-      .catch(() => {
-        const local = bestiaryData.find(
-          (m) => m.name.toLowerCase() === target.toLowerCase()
-        );
-        if (local) setSelected(fromLocal(local));
-      })
-      .finally(() => setLoadingTarget(false));
+    const match = lookupByName(target);
+    if (match) {
+      setSelected(match);
+    } else {
+      // No exact dataset match (custom-named combatant like "Goblin Boss
+      // #2"). A silent no-op here looks like a dead click, so fall back to
+      // searching the name: the DM lands on the near-matches list — or the
+      // "No monsters found" empty state — instead of nothing happening.
+      setSelected(null);
+      setQuery(target);
+    }
+    onTargetClear?.();
   }, [target]);
 
   // ── Local list (from the 40-monster SRD seed + DB search results) ────────
   const localFiltered = useMemo(() => {
-    const q = query.toLowerCase();
+    const q = deferredQuery.toLowerCase();
     return bestiaryData
       .filter((m) => {
         const matchQ = !q || m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q);
@@ -252,35 +366,35 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         }
         return matchQ && matchCr;
       })
-      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr));
-  }, [query, sortMode, crFilter]);
+      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
+  }, [deferredQuery, sortMode, crFilter]);
 
-  // ── DB search results ────────────────────────────────────────────────────
-  const [dbResults, setDbResults] = useState<DbMonster[]>([]);
-  const [dbLoading, setDbLoading] = useState(false);
-  useEffect(() => {
-    if (!query.trim()) { setDbResults([]); return; }
-    const t = setTimeout(() => {
-      setDbLoading(true);
-      fetch(`/api/monsters/search?q=${encodeURIComponent(query)}`)
-        .then((r) => r.ok ? r.json() : Promise.resolve([]))
-        .then(setDbResults)
-        .catch(() => setDbResults([]))
-        .finally(() => setDbLoading(false));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [query]);
+  // ── Broader thin-index results when searching ────────────────────────────
+  // Local filter over the 2,158-row monsterIndex; rich entries are excluded
+  // (they already appear via localFiltered). Capped to keep the list short.
+  const thinResults = useMemo(() => {
+    if (!deferredQuery.trim()) return [] as MonsterIndexEntry[];
+    const q = deferredQuery.toLowerCase();
+    const hits: MonsterIndexEntry[] = [];
+    for (const m of monsterIndex) {
+      // Skip names already surfaced as rich entries via `localFiltered`.
+      // Reuse the module-scope `RICH_BY_NAME` map instead of rebuilding a
+      // Set of rich names on every keystroke.
+      if (RICH_BY_NAME.has(m.name.toLowerCase())) continue;
+      if (m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q)) {
+        hits.push(m);
+        if (hits.length >= 200) break;
+      }
+    }
+    return hits;
+  }, [deferredQuery]);
 
-  // Merge DB + local for display when searching
+  // Merge rich + thin for display when searching.
   const displayList: UnifiedMonster[] = useMemo(() => {
-    if (!query.trim()) return localFiltered.map(fromLocal);
-    const localNames = new Set(localFiltered.map((m) => m.name.toLowerCase()));
-    const extra = dbResults
-      .filter((m) => !localNames.has(m.name.toLowerCase()))
-      .map(fromDb);
-    return [...localFiltered.map(fromLocal), ...extra]
-      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crToNumber(a.cr) - crToNumber(b.cr));
-  }, [query, localFiltered, dbResults, sortMode]);
+    if (!deferredQuery.trim()) return localFiltered.map(fromLocal);
+    return [...localFiltered.map(fromLocal), ...thinResults.map(fromIndex)]
+      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
+  }, [deferredQuery, localFiltered, thinResults, sortMode]);
 
   const handleBack = () => {
     setSelected(null);
@@ -288,14 +402,6 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   };
 
   // ── Detail view ──────────────────────────────────────────────────────────
-  if (loadingTarget) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-xs text-purple-400 animate-pulse">Loading monster…</p>
-      </div>
-    );
-  }
-
   if (selected) {
     return (
       <div className="h-full min-h-0 flex flex-col">
@@ -305,18 +411,16 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         >
           ← Back to list
         </button>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="bg-gray-900/80 border border-red-900/40 rounded p-2.5">
-            <h3 className="text-sm font-bold text-white mb-1">{selected.name}</h3>
-            <StatBlock monster={selected} />
-          </div>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-gray-900/80 border border-red-900/40 rounded p-2.5">
+          <h3 className="text-sm font-bold text-white mb-1 shrink-0">{selected.name}</h3>
+          <StatBlock monster={selected} />
         </div>
       </div>
     );
   }
 
   // ── List view ────────────────────────────────────────────────────────────
-  const isFiltered = query.trim() !== "" || crFilter !== "All";
+  const isFiltered = deferredQuery.trim() !== "" || crFilter !== "All";
   const visibleList = isFiltered ? displayList : displayList.slice(0, 7);
 
   return (
@@ -328,7 +432,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search 2,160 monsters…"
+            placeholder={`Search ${MONSTER_COUNT.toLocaleString()} monsters…`}
             className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
           />
         </div>
@@ -350,11 +454,8 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
-        {displayList.length === 0 && !dbLoading && (
+        {displayList.length === 0 && (
           <div className="text-xs text-gray-600 text-center py-4">No monsters found</div>
-        )}
-        {dbLoading && query && (
-          <div className="text-xs text-purple-500 text-center py-1 animate-pulse">Searching database…</div>
         )}
         {visibleList.map((m) => (
           <button

@@ -1,4 +1,27 @@
-export type WidgetType = "compendium" | "initiative" | "notepad" | "oracle" | "bestiary" | "wizard-tome" | "party" | "empty";
+// The runtime array is the source of truth; the type is derived from it.
+// Adding/removing a widget kind here updates both the union and any
+// runtime allowlist (e.g. backup validators, recent-widgets filters).
+export const WIDGET_TYPES = [
+  "compendium",
+  "initiative",
+  "notepad",
+  "oracle",
+  "bestiary",
+  "wizard-tome",
+  "party",
+  "empty",
+] as const;
+
+export type WidgetType = (typeof WIDGET_TYPES)[number];
+
+// Real, placeable widgets — `WIDGET_TYPES` minus the `"empty"` placeholder.
+// Used to validate the recent-widgets list, which only ever holds widgets a
+// DM actually opened (see `pushRecent`, which filters `"empty"` out). Keeping
+// `"empty"` out of the validator stops a hand-edited/backup value from
+// rendering a dead "empty" chip or a redundant-tile restore action.
+export const PLACEABLE_WIDGET_TYPES = WIDGET_TYPES.filter(
+  (w): w is Exclude<WidgetType, "empty"> => w !== "empty",
+);
 
 export type TileEntry = {
   widget: WidgetType;

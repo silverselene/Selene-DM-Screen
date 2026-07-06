@@ -196,6 +196,10 @@ const humanNames = [
   "Davan","Rowan","Aleth","Cormac","Wren","Halden",
 ];
 
+function pickRandom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 const placeNamePatterns = [
   () => pickRandom(placePrefixes) + pickRandom(placeSuffixes),
   () => pickRandom(placePrefixes) + pickRandom(placeSuffixes),

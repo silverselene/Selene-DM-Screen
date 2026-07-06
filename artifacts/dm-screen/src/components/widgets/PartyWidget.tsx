@@ -1,28 +1,42 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
-  Heart, Star, BookOpen, Sword, Search,
+  Heart, Star, BookOpen, Sword, Search, Download, Upload,
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
+import { weaponsData, type Weapon } from "@/data/weapons";
+import { spellData, type Spell } from "@/data/spells";
+import {
+  addCharacter,
+  deleteCharacter,
+  exportPartyAsJson,
+  preparePartyImport,
+  updateCharacter,
+  useParty,
+} from "@/lib/partyStore";
+import {
+  downloadJsonFile,
+  MAX_COMBATANTS,
+  mintCombatantId,
+  promptForJsonFile,
+  validateCombatants,
+} from "@/lib/backup";
+import {
+  appendCombatant,
+  clampInitiative,
+  INITIATIVE_STORAGE_KEY,
+  initiativeFullMessage,
+} from "@/lib/combatant";
+import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
+import { Combobox } from "@/lib/Combobox";
+import { isImeComposing } from "@/lib/keyboard";
+import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
 
-const API = "/api/characters";
-const WEAPONS_SEARCH = "/api/weapons/search";
-const WEAPONS_BY_NAMES = "/api/weapons/by-names";
-
-let idCounter = Date.now();
-const nextId = () => String(++idCounter);
-
-// ── Weapon summary from API ────────────────────────────────────────────────
-interface WeaponInfo {
-  id: number;
-  name: string;
-  category: string | null;
-  damage: string | null;
-  damage_type: string | null;
-  properties: string[];
-  cost: string | null;
-  weight: string | null;
-}
+// ── Weapon summary used by the tag-input and pill components ─────────────
+type WeaponInfo = Pick<
+  Weapon,
+  "id" | "name" | "category" | "damage" | "damage_type" | "properties" | "cost" | "weight"
+>;
 
 // ── Weapon tag-input component ─────────────────────────────────────────────
 function WeaponTagInput({
@@ -42,18 +56,25 @@ function WeaponTagInput({
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!query.trim()) { setSuggestions([]); setOpen(false); return; }
-    timer.current = setTimeout(async () => {
+    // Tiny debounce so each keystroke doesn't churn React; the actual filter
+    // is cheap (251 weapons) and runs synchronously.
+    timer.current = setTimeout(() => {
       setLoading(true);
-      try {
-        const res = await fetch(`${WEAPONS_SEARCH}?q=${encodeURIComponent(query)}&limit=10`);
-        if (res.ok) {
-          const data: WeaponInfo[] = await res.json();
-          // filter out already-selected
-          setSuggestions(data.filter(w => !selected.map(s => s.toLowerCase()).includes(w.name.toLowerCase())));
-          setOpen(true);
-        }
-      } catch { /* silent */ } finally { setLoading(false); }
-    }, 200);
+      const q = query.trim().toLowerCase();
+      const selectedLower = new Set(selected.map(s => s.toLowerCase()));
+      const matches = weaponsData
+        .filter(w => w.name.toLowerCase().includes(q) && !selectedLower.has(w.name.toLowerCase()))
+        .sort((a, b) => {
+          const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          if (ap !== bp) return ap - bp;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 10);
+      setSuggestions(matches);
+      setOpen(true);
+      setLoading(false);
+    }, 80);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [query, selected]);
 
@@ -70,10 +91,13 @@ function WeaponTagInput({
 
   const inputCls = "flex-1 min-w-[120px] bg-transparent text-xs text-gray-200 placeholder-gray-500 outline-none py-0.5";
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="relative">
-      {/* Tags + input row */}
+    <div>
+      {/* Tags + input row (also the dropdown anchor) */}
       <div
+        ref={wrapperRef}
         className="flex flex-wrap gap-1 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded focus-within:border-purple-500 cursor-text min-h-[30px]"
         onClick={() => inputRef.current?.focus()}
       >
@@ -91,6 +115,7 @@ function WeaponTagInput({
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => {
+            if (isImeComposing(e)) return;
             if (e.key === "Enter") { e.preventDefault(); if (query.trim()) add(query.trim()); }
             if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
             if (e.key === "Escape") { setOpen(false); setQuery(""); }
@@ -102,42 +127,42 @@ function WeaponTagInput({
         {loading && <Search className="w-3 h-3 text-gray-600 self-center animate-pulse" />}
       </div>
 
-      {/* Dropdown suggestions */}
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-gray-900 border border-gray-700 rounded shadow-xl max-h-48 overflow-y-auto">
-          {suggestions.map(w => (
-            <button
-              key={w.id}
-              type="button"
-              onMouseDown={e => { e.preventDefault(); add(w.name); }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-amber-900/30 text-left transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-gray-200">{w.name}</span>
-                {w.category && <span className="text-[9px] text-gray-600 ml-1 capitalize">{w.category}</span>}
-              </div>
-              {w.damage && (
-                <span className="text-[10px] text-amber-400 shrink-0 font-mono">
-                  {w.damage}{w.damage_type ? ` ${w.damage_type[0]}` : ""}
-                </span>
-              )}
-              {(w.properties || []).slice(0, 3).map(p => (
-                <span key={p} className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">{p.slice(0, 3)}</span>
-              ))}
-            </button>
-          ))}
-          {/* Allow adding the typed name even if it appears in results */}
-          {query && !suggestions.some(s => s.name.toLowerCase() === query.toLowerCase()) && (
-            <button
-              type="button"
-              onMouseDown={e => { e.preventDefault(); add(query); }}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
-            >
-              <Plus className="w-3 h-3" />Add "{query}" as custom weapon
-            </button>
-          )}
-        </div>
-      )}
+      <AnchoredDropdown
+        anchor={wrapperRef.current}
+        open={open && suggestions.length > 0}
+        onRequestClose={() => setOpen(false)}
+      >
+        {suggestions.map(w => (
+          <button
+            key={w.id}
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(w.name); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-amber-900/30 text-left transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <span className="text-xs text-gray-200">{w.name}</span>
+              {w.category && <span className="text-[9px] text-gray-600 ml-1 capitalize">{w.category}</span>}
+            </div>
+            {w.damage && (
+              <span className="text-[10px] text-amber-400 shrink-0 font-mono">
+                {w.damage}{w.damage_type ? ` ${w.damage_type[0]}` : ""}
+              </span>
+            )}
+            {(w.properties || []).slice(0, 3).map(p => (
+              <span key={p} className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">{p.slice(0, 3)}</span>
+            ))}
+          </button>
+        ))}
+        {query && !suggestions.some(s => s.name.toLowerCase() === query.toLowerCase()) && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(query); }}
+            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
+          >
+            <Plus className="w-3 h-3" />Add "{query}" as custom weapon
+          </button>
+        )}
+      </AnchoredDropdown>
     </div>
   );
 }
@@ -158,172 +183,233 @@ function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, We
   );
 }
 
+// ── Spell tag-input (mirror of WeaponTagInput against the 557-spell dataset)
+type SpellInfo = Pick<
+  Spell,
+  "name" | "level" | "school" | "classes" | "damage" | "healing"
+>;
+
+// Inline pill rendered on a saved character. Mirrors WeaponPill: a "stats at
+// a glance" badge with the spell's damage dice + type when it deals damage,
+// the healing dice (+ heart icon) when it heals, or level + school for
+// utility spells like Mage Hand. A spell can do both — `damage` takes
+// priority for the badge slot.
+function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, SpellInfo> }) {
+  const info = statsMap.get(name.toLowerCase());
+  const levelLabel =
+    info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300">
+      <BookOpen className="w-2.5 h-2.5 shrink-0" />
+      <span>{name}</span>
+      {info?.damage ? (
+        <span
+          className="text-cyan-500 font-mono"
+          title={info.damage.scaling ?? undefined}
+        >
+          {info.damage.dice} {info.damage.type[0]?.toUpperCase()}
+        </span>
+      ) : info?.healing ? (
+        <span
+          className="flex items-center gap-0.5 text-emerald-400 font-mono"
+          title={info.healing.scaling ?? undefined}
+        >
+          <Heart className="w-2.5 h-2.5 shrink-0" />
+          {info.healing.dice}
+        </span>
+      ) : (
+        levelLabel && (
+          <span className="text-cyan-500 font-mono">{levelLabel}</span>
+        )
+      )}
+      {info?.school && (
+        <span className="text-cyan-700">{info.school.slice(0, 3)}</span>
+      )}
+    </span>
+  );
+}
+
+function SpellTagInput({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (names: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SpellInfo[]>([]);
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (!query.trim()) { setSuggestions([]); setOpen(false); return; }
+    timer.current = setTimeout(() => {
+      const q = query.trim().toLowerCase();
+      const selectedLower = new Set(selected.map(s => s.toLowerCase()));
+      const matches = spellData
+        .filter(s => s.name.toLowerCase().includes(q) && !selectedLower.has(s.name.toLowerCase()))
+        .sort((a, b) => {
+          const ap = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const bp = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          if (ap !== bp) return ap - bp;
+          if (a.level !== b.level) return a.level - b.level;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 10);
+      setSuggestions(matches);
+      setOpen(true);
+    }, 80);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [query, selected]);
+
+  const add = (name: string) => {
+    if (!name.trim() || selected.map(s => s.toLowerCase()).includes(name.trim().toLowerCase())) return;
+    onChange([...selected, name.trim()]);
+    setQuery("");
+    setSuggestions([]);
+    setOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const remove = (name: string) => onChange(selected.filter(s => s !== name));
+
+  const inputCls = "flex-1 min-w-[120px] bg-transparent text-xs text-gray-200 placeholder-gray-500 outline-none py-0.5";
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div>
+      <div
+        ref={wrapperRef}
+        className="flex flex-wrap gap-1 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded focus-within:border-purple-500 cursor-text min-h-[30px]"
+        onClick={() => inputRef.current?.focus()}
+      >
+        {selected.map(name => (
+          <span key={name} className="flex items-center gap-1 text-[10px] bg-cyan-900/40 border border-cyan-700/40 text-cyan-300 rounded px-1.5 py-0.5">
+            <BookOpen className="w-2.5 h-2.5 shrink-0" />
+            {name}
+            <button type="button" onClick={e => { e.stopPropagation(); remove(name); }} className="text-cyan-500 hover:text-red-400 transition-colors">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => {
+            if (isImeComposing(e)) return;
+            if (e.key === "Enter") { e.preventDefault(); if (query.trim()) add(query.trim()); }
+            if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
+            if (e.key === "Escape") { setOpen(false); setQuery(""); }
+          }}
+          placeholder={selected.length === 0 ? "Search or type a spell…" : "Add more…"}
+          className={inputCls}
+        />
+      </div>
+
+      <AnchoredDropdown
+        anchor={wrapperRef.current}
+        open={open && suggestions.length > 0}
+        onRequestClose={() => setOpen(false)}
+      >
+        {suggestions.map(s => (
+          <button
+            key={s.name}
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(s.name); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-cyan-900/30 text-left transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <span className="text-xs text-gray-200">{s.name}</span>
+              <span className="text-[9px] text-gray-600 ml-1">
+                {s.level === 0 ? "Cantrip" : `Lvl ${s.level}`} · {s.school}
+              </span>
+            </div>
+            {s.classes && s.classes.length > 0 && (
+              <span className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">
+                {s.classes.slice(0, 3).map(c => c.slice(0, 3)).join("/")}
+              </span>
+            )}
+          </button>
+        ))}
+        {query && !suggestions.some(s => s.name.toLowerCase() === query.toLowerCase()) && (
+          <button
+            type="button"
+            onMouseDown={e => { e.preventDefault(); add(query); }}
+            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
+          >
+            <Plus className="w-3 h-3" />Add "{query}" as custom spell
+          </button>
+        )}
+      </AnchoredDropdown>
+    </div>
+  );
+}
+
 // ── emptyForm with weapons as array ───────────────────────────────────────
 const emptyForm = () => ({
   name: "", race: "", class: "", level: "1",
-  ac: "", hp: "", spells: "",
+  ac: "", hp: "",
+  spells: [] as string[],
   weapons: [] as string[],
 });
 
-// ── Main widget ────────────────────────────────────────────────────────────
-export function PartyWidget() {
-  const [characters, setCharacters] = useState<PlayerCharacter[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type CharacterForm = ReturnType<typeof emptyForm>;
 
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState(emptyForm());
-  const [saving, setSaving] = useState(false);
+const INPUT_CLS =
+  "w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
 
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState(emptyForm());
-
-  // Weapon stats map: lowercase name → WeaponInfo
-  const [weaponStats, setWeaponStats] = useState<Map<string, WeaponInfo>>(new Map());
-
-  // Per-row initiative
-  const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
-  const [initiativeVal, setInitiativeVal] = useState("");
-
-  // ── Load characters ──────────────────────────────────────────────────────
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(API);
-      if (!res.ok) throw new Error("Failed to load");
-      const data: PlayerCharacter[] = await res.json();
-      const parsed = data.map(c => ({
-        ...c,
-        spells: Array.isArray(c.spells) ? c.spells : [],
-        weapons: Array.isArray(c.weapons) ? c.weapons : [],
-      }));
-      setCharacters(parsed);
-
-      // Batch-resolve all weapon names to stats
-      const allNames = [...new Set(parsed.flatMap(c => c.weapons))];
-      if (allNames.length) {
-        const wr = await fetch(WEAPONS_BY_NAMES, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ names: allNames }),
-        });
-        if (wr.ok) {
-          const wdata: WeaponInfo[] = await wr.json();
-          setWeaponStats(new Map(wdata.map(w => [w.name.toLowerCase(), w])));
-        }
-      }
-    } catch {
-      setError("Could not reach the server.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  // ── Save new character ───────────────────────────────────────────────────
-  const save = async () => {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    try {
-      const body = {
-        name: form.name.trim(),
-        race: form.race.trim() || null,
-        class: form.class.trim() || null,
-        level: parseInt(form.level) || 1,
-        ac: form.ac ? parseInt(form.ac) : null,
-        hp: form.hp ? parseInt(form.hp) : null,
-        spells: form.spells.split(",").map(s => s.trim()).filter(Boolean),
-        weapons: form.weapons,
-      };
-      const res = await fetch(API, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error();
-      setForm(emptyForm()); setShowAdd(false);
-      await load();
-    } catch { setError("Failed to save."); } finally { setSaving(false); }
-  };
-
-  // ── Save edit ────────────────────────────────────────────────────────────
-  const saveEdit = async () => {
-    if (editingId === null || !editForm.name.trim()) return;
-    setSaving(true);
-    try {
-      const body = {
-        name: editForm.name.trim(),
-        race: editForm.race.trim() || null,
-        class: editForm.class.trim() || null,
-        level: parseInt(editForm.level) || 1,
-        ac: editForm.ac ? parseInt(editForm.ac) : null,
-        hp: editForm.hp ? parseInt(editForm.hp) : null,
-        spells: editForm.spells.split(",").map(s => s.trim()).filter(Boolean),
-        weapons: editForm.weapons,
-      };
-      const res = await fetch(`${API}/${editingId}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error();
-      setEditingId(null);
-      await load();
-    } catch { setError("Failed to update."); } finally { setSaving(false); }
-  };
-
-  const deleteChar = async (id: number) => {
-    try {
-      await fetch(`${API}/${id}`, { method: "DELETE" });
-      setCharacters(prev => prev.filter(c => c.id !== id));
-    } catch { setError("Failed to delete."); }
-  };
-
-  const startEdit = (c: PlayerCharacter) => {
-    setEditingId(c.id);
-    setEditForm({
-      name: c.name, race: c.race || "", class: c.class || "",
-      level: String(c.level), ac: c.ac != null ? String(c.ac) : "",
-      hp: c.hp != null ? String(c.hp) : "",
-      spells: (c.spells || []).join(", "),
-      weapons: c.weapons || [],
-    });
-  };
-
-  const addToInitiative = (c: PlayerCharacter) => {
-    const combatant: Combatant = {
-      id: nextId(), name: c.name,
-      initiative: parseInt(initiativeVal) || 0,
-      hp: c.hp || 0, maxHp: c.hp || 0,
-      ac: c.ac ?? undefined, isPlayer: true,
-    };
-    window.dispatchEvent(new CustomEvent("dm-add-to-initiative", { detail: { combatant } }));
-    setInitiativeFor(null); setInitiativeVal("");
-  };
-
-  const inputCls = "w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
-
-  // ── Shared form fields ───────────────────────────────────────────────────
-  const FormFields = ({
-    f, setF,
-  }: { f: typeof form; setF: (v: typeof form) => void }) => (
+// Module-scope (not nested inside PartyWidget) so React keeps the same
+// component identity across renders — otherwise every keystroke unmounts
+// and remounts the inputs and the focused field loses focus mid-type.
+function FormFields({
+  f,
+  setF,
+}: {
+  f: CharacterForm;
+  setF: (v: CharacterForm) => void;
+}) {
+  return (
     <div className="space-y-1.5">
       <input placeholder="Name *" value={f.name}
-        onChange={e => setF({ ...f, name: e.target.value })} className={inputCls} />
+        onChange={e => setF({ ...f, name: e.target.value })} className={INPUT_CLS} />
       <div className="flex gap-1">
-        <input placeholder="Race" value={f.race}
-          onChange={e => setF({ ...f, race: e.target.value })} className={`${inputCls} flex-1`} />
-        <input placeholder="Class" value={f.class}
-          onChange={e => setF({ ...f, class: e.target.value })} className={`${inputCls} flex-1`} />
+        <Combobox
+          value={f.race}
+          onChange={(v) => setF({ ...f, race: v })}
+          options={PLAYER_RACES}
+          placeholder="Race"
+          ariaLabel="Race"
+          className="flex-1"
+        />
+        <Combobox
+          value={f.class}
+          onChange={(v) => setF({ ...f, class: v })}
+          options={PLAYER_CLASSES}
+          placeholder="Class"
+          ariaLabel="Class"
+          className="flex-1"
+        />
       </div>
       <div className="flex gap-1">
-        <input placeholder="Level" type="number" min="1" max="20" value={f.level}
-          onChange={e => setF({ ...f, level: e.target.value })}
-          className={`${inputCls} w-16 shrink-0`} />
-        <input placeholder="AC" type="number" value={f.ac}
-          onChange={e => setF({ ...f, ac: e.target.value })} className={`${inputCls} flex-1`} />
-        <input placeholder="Max HP" type="number" value={f.hp}
-          onChange={e => setF({ ...f, hp: e.target.value })} className={`${inputCls} flex-1`} />
+        <div className="w-16 shrink-0">
+          <label className="text-[10px] text-gray-500 block mb-0.5">Level</label>
+          <input type="number" min="1" max="20" value={f.level}
+            onChange={e => setF({ ...f, level: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
+          <input type="number" value={f.ac}
+            onChange={e => setF({ ...f, ac: e.target.value })} className={INPUT_CLS} />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] text-gray-500 block mb-0.5">Max HP</label>
+          <input type="number" value={f.hp}
+            onChange={e => setF({ ...f, hp: e.target.value })} className={INPUT_CLS} />
+        </div>
       </div>
       {/* Weapons — searchable tag input */}
       <div>
@@ -333,10 +419,215 @@ export function PartyWidget() {
           onChange={weapons => setF({ ...f, weapons })}
         />
       </div>
-      <input placeholder="Spells (comma-separated)" value={f.spells}
-        onChange={e => setF({ ...f, spells: e.target.value })} className={inputCls} />
+      {/* Spells — searchable tag input */}
+      <div>
+        <label className="text-[10px] text-gray-500 block mb-0.5">Spells</label>
+        <SpellTagInput
+          selected={f.spells}
+          onChange={spells => setF({ ...f, spells })}
+        />
+      </div>
     </div>
   );
+}
+
+// Lowercased-name lookup for the inline weapon stat pills. Built once.
+const WEAPON_STATS_BY_NAME: Map<string, WeaponInfo> = new Map(
+  weaponsData.map(w => [w.name.toLowerCase(), w]),
+);
+
+// Same idea, but for spell pills.
+const SPELL_STATS_BY_NAME: Map<string, SpellInfo> = new Map(
+  spellData.map(s => [s.name.toLowerCase(), s]),
+);
+
+// ── Main widget ────────────────────────────────────────────────────────────
+export function PartyWidget() {
+  const characters = useParty();
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState(emptyForm());
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState(emptyForm());
+
+  const weaponStats = useMemo(() => WEAPON_STATS_BY_NAME, []);
+  const spellStats = useMemo(() => SPELL_STATS_BY_NAME, []);
+
+  // Auto-dismiss the transient success banner so it doesn't linger.
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  // Per-row initiative
+  const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
+  const [initiativeVal, setInitiativeVal] = useState("");
+
+  // ── Save new character ───────────────────────────────────────────────────
+  const save = () => {
+    if (!form.name.trim()) return;
+    try {
+      addCharacter({
+        name: form.name.trim(),
+        race: form.race.trim() || null,
+        class: form.class.trim() || null,
+        level: parseInt(form.level) || 1,
+        ac: form.ac ? parseInt(form.ac) : null,
+        hp: form.hp ? parseInt(form.hp) : null,
+        spells: form.spells,
+        weapons: form.weapons,
+      });
+      setForm(emptyForm()); setShowAdd(false); setError(null);
+    } catch (e) { setError(`Failed to save: ${(e as Error).message}`); }
+  };
+
+  // ── Save edit ────────────────────────────────────────────────────────────
+  const saveEdit = () => {
+    if (editingId === null || !editForm.name.trim()) return;
+    try {
+      updateCharacter(editingId, {
+        name: editForm.name.trim(),
+        race: editForm.race.trim() || null,
+        class: editForm.class.trim() || null,
+        level: parseInt(editForm.level) || 1,
+        ac: editForm.ac ? parseInt(editForm.ac) : null,
+        hp: editForm.hp ? parseInt(editForm.hp) : null,
+        spells: editForm.spells,
+        weapons: editForm.weapons,
+      });
+      setEditingId(null); setError(null);
+    } catch (e) { setError(`Failed to update: ${(e as Error).message}`); }
+  };
+
+  const deleteChar = (c: PlayerCharacter) => {
+    const label = c.name?.trim() || "this character";
+    if (!window.confirm(`Delete ${label}? This can't be undone.`)) return;
+    try {
+      deleteCharacter(c.id);
+    } catch (e) { setError(`Failed to delete: ${(e as Error).message}`); }
+  };
+
+  const startEdit = (c: PlayerCharacter) => {
+    setEditingId(c.id);
+    setEditForm({
+      name: c.name, race: c.race || "", class: c.class || "",
+      level: String(c.level), ac: c.ac != null ? String(c.ac) : "",
+      hp: c.hp != null ? String(c.hp) : "",
+      spells: c.spells || [],
+      weapons: c.weapons || [],
+    });
+  };
+
+  const exportParty = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadJsonFile(`selene-party-${stamp}.json`, exportPartyAsJson());
+  };
+
+  const importParty = async () => {
+    let text: string;
+    try {
+      text = await promptForJsonFile();
+    } catch (e) {
+      if ((e as DOMException).name === "AbortError") return;
+      setError(`Import failed: ${(e as Error).message}`);
+      return;
+    }
+    let prepared;
+    try {
+      prepared = preparePartyImport(text);
+    } catch (e) {
+      setError(`Import failed: ${(e as Error).message}`);
+      return;
+    }
+    const { summary, commit } = prepared;
+    const charWord = (n: number) => `character${n === 1 ? "" : "s"}`;
+    let prompt =
+      summary.currentCount > 0
+        ? `Replace your current ${summary.currentCount} ${charWord(summary.currentCount)} ` +
+          `with ${summary.accepted} imported ${charWord(summary.accepted)}?`
+        : `Import ${summary.accepted} ${charWord(summary.accepted)}?`;
+    if (summary.dropped > 0) {
+      prompt +=
+        `\n\nNote: the file holds ${summary.dropped} more ${charWord(summary.dropped)} ` +
+        `beyond the party-size limit; they will be skipped.`;
+    }
+    if (!window.confirm(prompt)) return;
+    try {
+      const count = commit();
+      // A successful import replaces the whole roster — drop any in-progress
+      // add/edit so a stale form (e.g. editing an id the import dropped) can't
+      // silently no-op on save.
+      setEditingId(null);
+      setShowAdd(false);
+      setForm(emptyForm());
+      setError(null);
+      setNotice(`Imported ${count} ${charWord(count)}.`);
+    } catch (e) {
+      setError(`Import failed: ${(e as Error).message}`);
+    }
+  };
+
+  const addToInitiative = (c: PlayerCharacter) => {
+    // Read + validate the persisted list ONCE, serving both checks below:
+    // the cap pre-check (the Initiative widget's listener silently drops
+    // adds past MAX_COMBATANTS, so give the DM feedback instead of a
+    // click that looks successful but did nothing) and the not-consumed
+    // fallback write. `null` = unreadable storage — the Initiative
+    // widget's own validator heals that case, so let the dispatch
+    // proceed and only fail if the fallback path actually needs the list.
+    let stored: Combatant[] | null = null;
+    try {
+      const raw = window.localStorage.getItem(INITIATIVE_STORAGE_KEY);
+      stored = validateCombatants(raw ? JSON.parse(raw) : []) ?? [];
+    } catch {
+      stored = null;
+    }
+    if (stored !== null && stored.length >= MAX_COMBATANTS) {
+      window.alert(initiativeFullMessage());
+      return;
+    }
+    const combatant: Combatant = {
+      id: mintCombatantId(), name: c.name,
+      // Same clamp as the Initiative widget's own add forms — a raw
+      // parseInt here was the one entry point a typo'd "2000" could
+      // still sneak through.
+      initiative: clampInitiative(initiativeVal),
+      hp: c.hp || 0, maxHp: c.hp || 0,
+      ac: c.ac ?? undefined, isPlayer: true,
+    };
+    // The event is cancelable so a mounted Initiative widget can signal
+    // consumption via preventDefault(). If nothing consumed it (no
+    // Initiative tile placed, or its lazy chunk hasn't mounted yet), fall
+    // back to writing storage directly — the combatant then appears when
+    // the widget mounts, instead of the click silently doing nothing.
+    // (The widget attaches its listener in a layout effect, so a mounted
+    // widget is always listening by the time a click can dispatch this.)
+    const consumed = !window.dispatchEvent(
+      new CustomEvent("dm-add-to-initiative", {
+        detail: { combatant },
+        cancelable: true,
+      }),
+    );
+    if (!consumed) {
+      try {
+        if (stored === null) throw new Error("unreadable initiative list");
+        window.localStorage.setItem(
+          INITIATIVE_STORAGE_KEY,
+          JSON.stringify(appendCombatant(stored, combatant)),
+        );
+      } catch {
+        window.alert(
+          "Couldn't add to initiative — place the Initiative tile and try again.",
+        );
+        return;
+      }
+    }
+    setInitiativeFor(null); setInitiativeVal("");
+  };
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -345,12 +636,29 @@ export function PartyWidget() {
         <span className="text-xs text-gray-400">
           {characters.length} character{characters.length !== 1 ? "s" : ""}
         </span>
-        <button
-          onClick={() => { setShowAdd(v => !v); setForm(emptyForm()); }}
-          className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
-        >
-          <Plus className="w-3 h-3" />Add Character
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={exportParty}
+            disabled={characters.length === 0}
+            title="Export party to JSON"
+            className="w-6 h-6 flex items-center justify-center text-emerald-500 hover:text-emerald-300 hover:bg-emerald-900/30 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Download className="w-3 h-3" />
+          </button>
+          <button
+            onClick={importParty}
+            title="Import party from JSON (replaces current roster)"
+            className="w-6 h-6 flex items-center justify-center text-emerald-500 hover:text-emerald-300 hover:bg-emerald-900/30 rounded transition-colors"
+          >
+            <Upload className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => setShowAdd(v => !v)}
+            className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
+          >
+            <Plus className="w-3 h-3" />Add Character
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -359,17 +667,23 @@ export function PartyWidget() {
         </div>
       )}
 
+      {notice && (
+        <div className="text-xs text-emerald-300 bg-emerald-900/20 border border-emerald-800/40 rounded px-2 py-1 mb-2 shrink-0">
+          {notice}
+        </div>
+      )}
+
       {/* Add form */}
       {showAdd && (
         <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded shrink-0">
-          <p className="text-xs font-semibold text-emerald-400 mb-2">New Character</p>
+          <p className="text-xs font-semibold text-emerald-400 mb-2">New character</p>
           <FormFields f={form} setF={setForm} />
           <div className="flex gap-1 mt-2">
-            <button onClick={save} disabled={saving || !form.name.trim()}
+            <button onClick={save} disabled={!form.name.trim()}
               className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
-              {saving ? "Saving…" : "Save Character"}
+              Save Character
             </button>
-            <button onClick={() => setShowAdd(false)}
+            <button onClick={() => { setShowAdd(false); setForm(emptyForm()); }}
               className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">
               Cancel
             </button>
@@ -379,9 +693,7 @@ export function PartyWidget() {
 
       {/* Character list */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
-        {loading && <div className="text-center py-4 text-gray-500 text-xs">Loading…</div>}
-
-        {!loading && characters.length === 0 && !showAdd && (
+        {characters.length === 0 && !showAdd && (
           <div className="text-center py-6 flex flex-col items-center gap-2">
             <Users className="w-8 h-8 text-gray-700" />
             <p className="text-xs text-gray-500">No characters yet</p>
@@ -395,9 +707,9 @@ export function PartyWidget() {
               <div className="p-2">
                 <FormFields f={editForm} setF={setEditForm} />
                 <div className="flex gap-1 mt-2">
-                  <button onClick={saveEdit} disabled={saving}
+                  <button onClick={saveEdit}
                     className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold">
-                    {saving ? "Saving…" : "Save"}
+                    Save
                   </button>
                   <button onClick={() => setEditingId(null)}
                     className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400">
@@ -446,7 +758,8 @@ export function PartyWidget() {
                       className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 hover:bg-gray-700/40 rounded transition-colors">
                       <Pencil className="w-3 h-3" />
                     </button>
-                    <button onClick={() => deleteChar(c.id)}
+                    <button onClick={() => deleteChar(c)}
+                      title="Delete character"
                       className="w-6 h-6 flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors">
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -459,7 +772,7 @@ export function PartyWidget() {
                     <span className="text-[10px] text-purple-400 shrink-0">Initiative roll:</span>
                     <input type="number" autoFocus value={initiativeVal}
                       onChange={e => setInitiativeVal(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && addToInitiative(c)}
+                      onKeyDown={e => { if (e.key === "Enter" && !isImeComposing(e)) addToInitiative(c); }}
                       placeholder="e.g. 14"
                       className="w-16 px-1.5 py-0.5 bg-gray-900 border border-purple-700 rounded text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500" />
                     <button onClick={() => addToInitiative(c)}
@@ -483,9 +796,10 @@ export function PartyWidget() {
                       </div>
                     )}
                     {(c.spells?.length ?? 0) > 0 && (
-                      <div className="flex items-start gap-1">
-                        <BookOpen className="w-2.5 h-2.5 text-cyan-600 mt-0.5 shrink-0" />
-                        <span className="text-[10px] text-gray-500 leading-tight">{c.spells.join(", ")}</span>
+                      <div className="flex items-start gap-1 flex-wrap">
+                        {c.spells.map(s => (
+                          <SpellPill key={s} name={s} statsMap={spellStats} />
+                        ))}
                       </div>
                     )}
                   </div>

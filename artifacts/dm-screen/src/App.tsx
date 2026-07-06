@@ -1,32 +1,136 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DragonHeader } from "@/components/DragonHeader";
 import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
 import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  MAX_TILES,
+  validateArrayOfEnum,
+  validateBoundedInt,
+  validateTiles,
+} from "@/lib/backup";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
-import type { TileEntry, WidgetType } from "@/types";
+import { PLACEABLE_WIDGET_TYPES, type TileEntry, type WidgetType } from "@/types";
 
 const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
 
 const getDefaultTiles = (cols: number, rows: number): TileEntry[] =>
   Array.from({ length: cols * rows }, empty);
 
+// Validators paired with each persistent key. Same shape checks the
+// backup-import path runs — so a malformed stored value (DevTools edit,
+// SW cache mismatch, future write bug) falls back to defaults instead of
+// crashing render.
+const validateGridDim = validateBoundedInt(2, 4);
+const validateRecentWidgets = validateArrayOfEnum(PLACEABLE_WIDGET_TYPES, MAX_TILES);
+
+// Re-pack the non-empty widgets from `tiles` into a fresh cols×rows grid,
+// preserving each widget's span where it still fits (falling back to 1×1)
+// and reporting the widgets that don't fit at all. Pure — shared by the
+// sidebar's grid-resize handler AND the read-path consistency guard in
+// AppContent, so the two can never disagree about how a layout is
+// repaired.
+function repackTiles(
+  tiles: TileEntry[],
+  newCols: number,
+  newRows: number,
+): { next: TileEntry[]; dropped: WidgetType[] } {
+  const newCount = newCols * newRows;
+
+  // Real (non-empty) widgets currently placed, in order. `null` entries are
+  // span placeholders, not content, so they're skipped here.
+  const placed = tiles
+    .filter((t): t is NonNullable<TileEntry> => t !== null && t.widget !== "empty")
+    .map((t) => ({ widget: t.widget, colSpan: t.colSpan, rowSpan: t.rowSpan }));
+
+  // occupied[] tracks cells already claimed by an earlier widget's span so
+  // a later one can't overlap it.
+  const next: TileEntry[] = Array.from({ length: newCount }, () => empty());
+  const occupied = new Array<boolean>(newCount).fill(false);
+
+  const fits = (start: number, cSpan: number, rSpan: number): boolean => {
+    const startCol = start % newCols;
+    const startRow = Math.floor(start / newCols);
+    if (startCol + cSpan > newCols || startRow + rSpan > newRows) return false;
+    for (let r = 0; r < rSpan; r++)
+      for (let c = 0; c < cSpan; c++)
+        if (occupied[start + r * newCols + c]) return false;
+    return true;
+  };
+
+  const dropped: WidgetType[] = [];
+  for (const w of placed) {
+    // Try the widget at its current span first, then fall back to 1×1 so a
+    // spanned widget is only discarded when the grid is genuinely full.
+    let slot = -1;
+    let cSpan: 1 | 2 = w.colSpan;
+    let rSpan: 1 | 2 = w.rowSpan;
+    const attempts: [1 | 2, 1 | 2][] =
+      w.colSpan === 1 && w.rowSpan === 1
+        ? [[1, 1]]
+        : [[w.colSpan, w.rowSpan], [1, 1]];
+    for (const [cs, rs] of attempts) {
+      for (let i = 0; i < newCount; i++) {
+        if (!occupied[i] && fits(i, cs, rs)) {
+          slot = i;
+          cSpan = cs;
+          rSpan = rs;
+          break;
+        }
+      }
+      if (slot !== -1) break;
+    }
+    if (slot === -1) {
+      dropped.push(w.widget);
+      continue;
+    }
+    next[slot] = { widget: w.widget, colSpan: cSpan, rowSpan: rSpan };
+    for (let r = 0; r < rSpan; r++)
+      for (let c = 0; c < cSpan; c++) {
+        const idx = slot + r * newCols + c;
+        occupied[idx] = true;
+        if (idx !== slot) next[idx] = null;
+      }
+  }
+
+  return { next, dropped };
+}
+
 function AppContent() {
   const { isDark } = useTheme();
-  const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3);
-  const [rows, setRows] = useLocalStorage<number>("dm-grid-rows", 3);
+  const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3, validateGridDim);
+  const [rows, setRows] = useLocalStorage<number>("dm-grid-rows", 3, validateGridDim);
   const [tiles, setTiles] = useLocalStorage<TileEntry[]>(
     "dm-tiles-v3",
-    getDefaultTiles(3, 3)
+    getDefaultTiles(3, 3),
+    validateTiles,
   );
   const [recentWidgets, setRecentWidgets] = useLocalStorage<WidgetType[]>(
     "dm-recent-widgets",
-    []
+    [],
+    validateRecentWidgets,
   );
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [bestiaryTarget, setBestiaryTarget] = useState<string | null>(null);
+
+  // Cross-key consistency guard, mirroring the import path's grid-triple
+  // eviction in backup.ts: cols/rows/tiles are three independent setItem
+  // writes (and useLocalStorage swallows a quota throw per key), so a
+  // failure between them — or a DevTools edit — can persist dimensions
+  // that disagree with tiles.length. Each key validates fine in isolation,
+  // then the span math (`i + cols`) nulls the wrong cells. Render from a
+  // reconciled array (re-packing the placed widgets into the cols×rows
+  // grid, same repair the resize handler applies) and heal storage below.
+  const gridTiles = useMemo(
+    () =>
+      tiles.length === cols * rows ? tiles : repackTiles(tiles, cols, rows).next,
+    [tiles, cols, rows],
+  );
+  useEffect(() => {
+    if (gridTiles !== tiles) setTiles(gridTiles);
+  }, [gridTiles, tiles, setTiles]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -139,15 +243,19 @@ function AppContent() {
   };
 
   const handleGridResize = (newCols: number, newRows: number) => {
-    const newCount = newCols * newRows;
-    const existing: WidgetType[] = tiles
-      .filter((t): t is NonNullable<TileEntry> => t !== null)
-      .map((t) => (t as { widget: WidgetType; colSpan: number; rowSpan: number }).widget);
-    const next: TileEntry[] = Array.from({ length: newCount }, (_, i) => ({
-      widget: existing[i] ?? "empty",
-      colSpan: 1 as const,
-      rowSpan: 1 as const,
-    }));
+    const { next, dropped: droppedWidgets } = repackTiles(tiles, newCols, newRows);
+
+    if (droppedWidgets.length > 0) {
+      const ok = window.confirm(
+        `Resizing to ${newCols}×${newRows} doesn't leave room for ${droppedWidgets.length} widget${droppedWidgets.length === 1 ? "" : "s"}, which will be discarded. Continue?`,
+      );
+      if (!ok) return;
+      // Past the early-return guard: the resize is committing, so leave each
+      // discarded widget in the "recently removed" list (mirrors handleClear)
+      // for one-click restore. Skipped on Cancel so no state mutates there.
+      droppedWidgets.forEach(pushRecent);
+    }
+
     setCols(newCols);
     setRows(newRows);
     setTiles(next);
@@ -155,7 +263,9 @@ function AppContent() {
 
   return (
     <div
-      className={`h-screen w-screen flex flex-col overflow-hidden transition-colors duration-300${!isDark ? " light-mode" : ""}`}
+      // `light-mode` itself is applied to <html> by ThemeProvider so
+      // portaled dropdowns (document.body) pick up the theme too.
+      className="h-screen w-screen flex flex-col overflow-hidden transition-colors duration-300"
       style={{
         background: isDark
           ? "linear-gradient(135deg, #090010 0%, #0d0018 50%, #080012 100%)"
@@ -186,7 +296,7 @@ function AppContent() {
               gap: "10px",
             }}
           >
-            {tiles.map((entry, i) => {
+            {gridTiles.map((entry, i) => {
               if (entry === null) return null;
               const tileRow = Math.floor(i / cols) + 1;
               const tileCol = (i % cols) + 1;
@@ -196,19 +306,27 @@ function AppContent() {
               const canExpandRight =
                 colSpan === 1 &&
                 tileCol < cols &&
-                (tiles[i + 1] === null || tiles[i + 1]?.widget === "empty");
+                (gridTiles[i + 1] === null || gridTiles[i + 1]?.widget === "empty");
               const canExpandDown =
                 rowSpan === 1 &&
                 tileRow < rows &&
-                i + cols < tiles.length &&
-                (tiles[i + cols] === null || tiles[i + cols]?.widget === "empty");
+                i + cols < gridTiles.length &&
+                (gridTiles[i + cols] === null || gridTiles[i + cols]?.widget === "empty");
 
               return (
                 <div
                   key={i}
+                  // minHeight/minWidth: 0 turn off the CSS Grid item default
+                  // (`auto` = `min-content`) which would otherwise let a tall
+                  // widget grow the row past its `1fr` track size. overflow:
+                  // hidden clips anything the widget can't fit, so content
+                  // overflow visually respects the grid cell boundary.
                   style={{
                     gridColumn: `${tileCol} / span ${colSpan}`,
                     gridRow: `${tileRow} / span ${rowSpan}`,
+                    minHeight: 0,
+                    minWidth: 0,
+                    overflow: "hidden",
                   }}
                 >
                   <DMTile
