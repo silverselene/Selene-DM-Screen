@@ -162,12 +162,25 @@
 .light-mode [class~="text-gray-500"] { color: var(--dm-t3); }
 .light-mode [class~="text-gray-600"],
 .light-mode [class~="text-gray-700"] { color: var(--dm-t4); }
+.light-mode [class~="text-gray-100"] { color: var(--dm-thead); }
+
 /* Only flip text-white on non-button, non-gradient elements */
 .light-mode h1[class~="text-white"],
 .light-mode h2[class~="text-white"],
 .light-mode h3[class~="text-white"],
 .light-mode div:not([class*="from-"])[class~="text-white"],
 .light-mode p[class~="text-white"]   { color: var(--dm-thead); }
+/* Bare <span> text-white (round counters, character names, place names) needs
+ * flipping too, but only when the span itself isn't a solid-color badge/chip
+ * (those carry their own bg-* class and must keep white text for contrast). */
+.light-mode span[class~="text-white"]:not([class*="bg-"]) { color: var(--dm-thead); }
+.light-mode [class~="text-white/60"] { color: var(--dm-t2); }
+.light-mode [class~="text-white/80"] { color: var(--dm-thead); }
+
+/* Row-hover states: dark-mode rows brighten text to white on hover; in light
+ * mode the hover backgrounds (translucent -950/-900 tints) end up pale, so
+ * white text there is invisible. Darken it instead. */
+.light-mode .group:hover [class~="group-hover:text-white"] { color: var(--dm-thead); }
 
 /* Background */
 .light-mode [class~="bg-gray-950/80"],
@@ -198,6 +211,7 @@
  * purple-300/400/500 fail AA, so remap the base (non-hover) accent text
  * utilities to the darker --dm-accent token. Hover variants are left to
  * Tailwind so they only apply on :hover. */
+.light-mode [class~="text-purple-200"] { color: var(--dm-accent-strong); }
 .light-mode [class~="text-purple-300"],
 .light-mode [class~="text-purple-400"],
 .light-mode [class~="text-purple-500"] { color: var(--dm-accent); }
@@ -209,6 +223,20 @@
 
 /* Input/select option colours (can't style with Tailwind) */
 .light-mode select option { background-color: #EBE5D8; color: #1a1228; }
+
+/* Widget-selector cards: the per-widget colour gradients (from-*-900/60 to
+ * -800/40) are translucent tints designed to read as "dark" over the dark
+ * page. Over the light page they wash out pale, so the white/gray-100 icon
+ * and label baked into each card become unreadable. Flip to a flat card
+ * background and dark text; the coloured border still identifies the hue. */
+.light-mode button[class~="bg-gradient-to-br"] {
+  background-image: none;
+  background-color: var(--dm-bg-card);
+}
+.light-mode button[class~="bg-gradient-to-br"] [class~="text-white/80"],
+.light-mode button[class~="bg-gradient-to-br"] [class~="text-gray-100"] {
+  color: var(--dm-thead);
+}
 
 /* ── Base layer ─────────────────────────────────────────── */
 @layer base {
