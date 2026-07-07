@@ -1,14 +1,13 @@
-// Unified monster search: combines the rich 40-row bestiaryData (full stat
-// blocks for the Bestiary widget) with the 2,158-row monsterIndex (thin
-// autocomplete index for the Initiative widget). Both widgets share this
-// helper so a name typed in either reaches the same dataset.
+// Unified monster search over the single 2,160-row monsters dataset: a
+// handful of entries carry a full stat block (Bestiary widget), the rest are
+// thin autocomplete rows (Initiative widget). Both widgets share this helper
+// so a name typed in either reaches the same dataset.
 
-import { bestiaryData, type Monster } from "@/data/bestiary";
-import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
+import { monsters, type MonsterEntry } from "@/data/monsters";
 
 // A thin summary suitable for autocomplete lists (Initiative widget) and
-// the result rows of Bestiary search. Wider records (the full Monster
-// from bestiaryData) are looked up by name when the user picks one.
+// the result rows of Bestiary search. The full MonsterEntry (with its rich
+// fields) is looked up by name when the user picks one.
 export interface MonsterSearchHit {
   id: string;
   name: string;
@@ -21,13 +20,14 @@ export interface MonsterSearchHit {
   source: string;
   isLegendary: boolean;
   initiativeModifier: number;
-  /** true when bestiaryData carries a full stat block for this name. */
+  /** true when this entry carries a full stat block. */
   hasFullStatBlock: boolean;
 }
 
-function fromMonster(m: Monster): MonsterSearchHit {
+function toHit(m: MonsterEntry): MonsterSearchHit {
+  const hasFullStatBlock = m.actions !== undefined;
   return {
-    id: `bestiary:${m.name}`,
+    id: hasFullStatBlock ? `bestiary:${m.name}` : `index:${m.name}:${m.source}`,
     name: m.name,
     size: m.size,
     type: m.type,
@@ -35,45 +35,29 @@ function fromMonster(m: Monster): MonsterSearchHit {
     acType: m.acType,
     hp: m.hp,
     cr: m.cr,
-    source: "5etools",
-    isLegendary: (m.legendaryActions?.length ?? 0) > 0,
-    initiativeModifier: Math.floor((m.dex - 10) / 2),
-    hasFullStatBlock: true,
-  };
-}
-
-function fromIndex(m: MonsterIndexEntry): MonsterSearchHit {
-  return {
-    id: `index:${m.name}:${m.source}`,
-    name: m.name,
-    size: m.size,
-    type: m.type,
-    ac: m.ac,
-    acType: "",
-    hp: m.hp,
-    cr: m.cr,
     source: m.source,
     isLegendary: m.isLegendary,
     initiativeModifier: m.initiativeModifier,
-    hasFullStatBlock: false,
+    hasFullStatBlock,
   };
 }
 
-const richByLowerName = new Map<string, Monster>(
-  bestiaryData.map((m) => [m.name.toLowerCase(), m]),
+const byLowerName = new Map<string, MonsterEntry>(
+  monsters.map((m) => [m.name.toLowerCase(), m]),
 );
 
 /** Look up the full stat block for a name, or null if only thin data exists. */
-export function findRichMonster(name: string): Monster | null {
-  return richByLowerName.get(name.toLowerCase()) ?? null;
+export function findRichMonster(name: string): MonsterEntry | null {
+  const m = byLowerName.get(name.toLowerCase());
+  return m && m.actions !== undefined ? m : null;
 }
 
 const RESULT_LIMIT = 60;
 
 /**
- * Search both datasets for {query}. Returns up to {limit} hits ordered by
- * relevance (prefix > substring), with rich-stat-block monsters listed
- * before thin ones at equal relevance.
+ * Search {query} across the unified dataset. Returns up to {limit} hits
+ * ordered by relevance (prefix > substring), with full-stat-block monsters
+ * listed before thin ones at equal relevance.
  */
 export function searchMonsters(
   query: string,
@@ -81,9 +65,10 @@ export function searchMonsters(
 ): MonsterSearchHit[] {
   const q = query.trim().toLowerCase();
   if (!q) {
-    return bestiaryData
+    return monsters
+      .filter((m) => m.actions !== undefined)
       .slice(0, limit)
-      .map(fromMonster)
+      .map(toHit)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -95,20 +80,14 @@ export function searchMonsters(
     return 0;
   };
 
-  const rich = bestiaryData
+  return monsters
     .map((m) => ({ m, s: score(m.name) }))
     .filter((x) => x.s > 0)
-    .map((x) => ({ hit: fromMonster(x.m), score: x.s, rich: 1 }));
-
-  const richNames = new Set(rich.map((r) => r.hit.name.toLowerCase()));
-
-  const thin = monsterIndex
-    .filter((m) => !richNames.has(m.name.toLowerCase()))
-    .map((m) => ({ m, s: score(m.name) }))
-    .filter((x) => x.s > 0)
-    .map((x) => ({ hit: fromIndex(x.m), score: x.s, rich: 0 }));
-
-  return [...rich, ...thin]
+    .map((x) => ({
+      hit: toHit(x.m),
+      score: x.s,
+      rich: x.m.actions !== undefined ? 1 : 0,
+    }))
     .sort((a, b) => {
       if (a.score !== b.score) return b.score - a.score;
       if (a.rich !== b.rich) return b.rich - a.rich;

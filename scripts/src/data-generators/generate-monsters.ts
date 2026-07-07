@@ -1,17 +1,35 @@
-// Refresh the curated bestiary subset. The list of *which* monsters to ship
-// comes from the existing artifacts/dm-screen/src/data/bestiary.ts (40 names)
-// — same set, refreshed against 5etools v2.31.0 stat blocks so wording and
-// values track the 2024 rules where the XMM (2024 Monster Manual) entry
-// exists, falling back to MM and friends otherwise.
-//
-// The output keeps the existing local Monster shape so the Bestiary widget
-// doesn't need to change.
+// Build the single unified monster dataset the Bestiary and Initiative
+// widgets both read from: attached_assets/Monsters_&_Beasts_*.csv supplies
+// the thin index (name/AC/HP/CR/size/type/source/environment/page/initiative
+// — 2,158 rows). Rich fields (traits/actions/reactions/legendary actions,
+// ability scores, etc.) come from two places:
+//   1. 5etools v2.31.0 stat blocks — always for CANONICAL_RICH_NAMES (a
+//      curated 40-monster subset refreshed against the 2024 rules where the
+//      XMM entry exists, falling back to MM and friends otherwise), and
+//      additionally for any other CSV row whose name (or a close variant —
+//      see resolveFiveToolsKey) matches an official monster. 5etools-src
+//      mirrors WotC content only.
+//   2. Open5e's structured data (open5e/open5e-api, pinned to v1.12.0) for
+//      CSV rows sourced from Kobold Press's Tome of Beasts I–III / Creature
+//      Codex or EN Publishing's Level Up A5e Monstrous Menagerie — Open Game
+//      Content under the Open Gaming License v1.0a (see OGL-NOTICE.md at the
+//      repo root). Matched first against the CSV row's own source book, then
+//      against the other four as a fallback.
+// A CSV row with no match in either source (custom/homebrew entries, or a
+// handful of adventure-specific variants) stays thin — that's expected, not
+// a bug. Where a name matches, the rich stat block's ac/hp/cr/size/type/
+// alignment win (they're derived straight from the matching rules text); the
+// CSV's source/environment/pageNumber/initiativeRoll are kept. Canonical
+// 5etools names absent from the CSV entirely (Beholder, Mind Flayer) are
+// appended as new entries.
 
 import fs from "node:fs";
 import path from "node:path";
 
 import {
   FIVETOOLS_DATA_DIR,
+  OPEN5E_DATA_DIR,
+  REPO_ROOT,
   DM_DATA_DIR,
   readJSON,
   renderEntries,
@@ -20,6 +38,20 @@ import {
   tsLiteral,
   writeOutput,
 } from "./lib.js";
+
+// The curated set of monsters that ship with full stat blocks. Editorial
+// choice, not derived data — extend by adding a name here (it must exist in
+// the 5etools bestiary JSON).
+const CANONICAL_RICH_NAMES = [
+  "Aboleth", "Adult Red Dragon", "Ancient Black Dragon", "Bandit",
+  "Bandit Captain", "Beholder", "Bugbear", "Dire Wolf", "Dragon Turtle",
+  "Drow", "Flesh Golem", "Gelatinous Cube", "Gnoll", "Goblin",
+  "Goblin Boss", "Harpy", "Hill Giant", "Hobgoblin", "Hydra", "Imp",
+  "Kobold", "Lich", "Merrow", "Mimic", "Mind Flayer", "Ogre", "Orc",
+  "Owlbear", "Rakshasa", "Roc", "Skeleton", "Specter", "Tarrasque",
+  "Troll", "Vampire", "Werewolf", "Wight", "Wraith", "Young Red Dragon",
+  "Zombie",
+];
 
 // Preferred sources, highest first. XMM = 2024 Monster Manual; MM = 2014.
 const SOURCE_PRIORITY = ["XMM", "MM", "MPMM", "VGM", "MTF", "MM2"];
@@ -64,7 +96,9 @@ const SKILL_NAMES: Record<string, string> = {
   survival: "Survival",
 };
 
-const ABILITY_LABEL: Record<string, string> = {
+const ABILITY_KEYS = ["str", "dex", "con", "int", "wis", "cha"] as const;
+
+const ABILITY_LABEL: Record<(typeof ABILITY_KEYS)[number], string> = {
   str: "Str",
   dex: "Dex",
   con: "Con",
@@ -132,32 +166,42 @@ interface MonsterTrait {
   desc: string;
 }
 
-interface Monster {
+// Thin fields are always present (sourced from the CSV, or defaulted for a
+// canonical monster the CSV doesn't carry). Rich fields are only present for
+// CANONICAL_RICH_NAMES — check `actions` to tell full stat blocks apart from
+// thin entries.
+interface MonsterEntry {
   name: string;
-  size: string;
-  type: string;
-  alignment: string;
   ac: number;
   acType: string;
   hp: string;
-  speed: string;
-  str: number;
-  dex: number;
-  con: number;
-  int: number;
-  wis: number;
-  cha: number;
+  cr: string;
+  size: string;
+  type: string;
+  alignment: string;
+  source: string;
+  environment: string;
+  pageNumber: number | null;
+  isLegendary: boolean;
+  initiativeModifier: number;
+  initiativeRoll: number;
+  speed?: string;
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
   savingThrows?: string;
   skills?: string;
   damageImmunities?: string;
   damageResistances?: string;
   damageVulnerabilities?: string;
   conditionImmunities?: string;
-  senses: string;
-  languages: string;
-  cr: string;
+  senses?: string;
+  languages?: string;
   traits?: MonsterTrait[];
-  actions: MonsterTrait[];
+  actions?: MonsterTrait[];
   reactions?: MonsterTrait[];
   legendaryActions?: MonsterTrait[];
 }
@@ -177,9 +221,7 @@ function formatType(type: FiveToolsMonster["type"]): string {
   return tags.length > 0 ? `${base} (${tags.join(", ")})` : base;
 }
 
-function formatAlignment(
-  alignment: FiveToolsMonster["alignment"],
-): string {
+function formatAlignment(alignment: FiveToolsMonster["alignment"]): string {
   if (!alignment?.length) return "unaligned";
   const parts = alignment
     .map((a) => {
@@ -193,10 +235,7 @@ function formatAlignment(
   return parts.join(" ") || "unaligned";
 }
 
-function formatAC(ac: FiveToolsMonster["ac"]): {
-  ac: number;
-  acType: string;
-} {
+function formatAC(ac: FiveToolsMonster["ac"]): { ac: number; acType: string } {
   if (!ac?.length) return { ac: 10, acType: "" };
   const first = ac[0]!;
   if (typeof first === "number") return { ac: first, acType: "" };
@@ -215,10 +254,7 @@ function formatHP(hp: FiveToolsMonster["hp"]): string {
   return "0";
 }
 
-function speedSegment(
-  label: string,
-  v: unknown,
-): string | null {
+function speedSegment(label: string, v: unknown): string | null {
   if (v == null) return null;
   if (typeof v === "number") {
     return label === "walk" ? `${v} ft.` : `${label} ${v} ft.`;
@@ -242,7 +278,11 @@ function formatSpeed(speed: FiveToolsMonster["speed"]): string {
     const seg = speedSegment(key, (speed as Record<string, unknown>)[key]);
     if (seg) segments.push(seg);
   }
-  if (speed.canHover) segments.push("hover");
+  // Some sources set canHover *and* a "(hover)" condition on the fly segment
+  // itself — avoid stating it twice.
+  if (speed.canHover && !segments.some((s) => s.includes("(hover)"))) {
+    segments.push("hover");
+  }
   return segments.join(", ") || "0 ft.";
 }
 
@@ -255,9 +295,7 @@ function formatSaves(save: Record<string, string> | undefined): string | null {
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
-function formatSkills(
-  skill: Record<string, string> | undefined,
-): string | null {
+function formatSkills(skill: Record<string, string> | undefined): string | null {
   if (!skill) return null;
   const parts: string[] = [];
   for (const [name, bonus] of Object.entries(skill)) {
@@ -284,8 +322,7 @@ function formatDamageList(list: unknown[] | undefined): string | null {
         preNote?: string;
         cond?: boolean;
       };
-      const inner =
-        obj.immune ?? obj.resist ?? obj.vulnerable ?? [];
+      const inner = obj.immune ?? obj.resist ?? obj.vulnerable ?? [];
       const innerText = inner.join(", ");
       const note = obj.note ? ` ${stripTags(obj.note)}` : "";
       const pre = obj.preNote ? `${stripTags(obj.preNote)} ` : "";
@@ -317,9 +354,7 @@ function formatCR(cr: FiveToolsMonster["cr"]): string {
   return cr.cr ?? "0";
 }
 
-function renderTraits(
-  traits: FiveToolsTrait[] | undefined,
-): MonsterTrait[] {
+function renderTraits(traits: FiveToolsTrait[] | undefined): MonsterTrait[] {
   if (!traits?.length) return [];
   return traits
     .filter((t) => t.name)
@@ -347,18 +382,51 @@ function pickMonster(
   return best;
 }
 
-function transform(
-  src: FiveToolsMonster,
-): Monster {
+// Rich fields only — merged onto (or used to create) a MonsterEntry by the
+// caller, which owns the thin fields (source/environment/pageNumber/...).
+type RichFields = Pick<
+  MonsterEntry,
+  | "ac"
+  | "acType"
+  | "hp"
+  | "size"
+  | "type"
+  | "alignment"
+  | "cr"
+  | "speed"
+  | "senses"
+  | "languages"
+  | "actions"
+  | "savingThrows"
+  | "skills"
+  | "damageImmunities"
+  | "damageResistances"
+  | "damageVulnerabilities"
+  | "conditionImmunities"
+  | "traits"
+  | "reactions"
+  | "legendaryActions"
+> & {
+  // transformRich always defaults these to 10, so — unlike MonsterEntry,
+  // where they're optional — they're never undefined here.
+  str: number;
+  dex: number;
+  con: number;
+  int: number;
+  wis: number;
+  cha: number;
+};
+
+function transformRich(src: FiveToolsMonster): RichFields {
   const { ac, acType } = formatAC(src.ac);
-  const out: Monster = {
-    name: src.name,
-    size: formatSize(src.size),
-    type: formatType(src.type),
-    alignment: formatAlignment(src.alignment),
+  const out: RichFields = {
     ac,
     acType,
     hp: formatHP(src.hp),
+    size: formatSize(src.size),
+    type: formatType(src.type),
+    alignment: formatAlignment(src.alignment),
+    cr: formatCR(src.cr),
     speed: formatSpeed(src.speed),
     str: src.str ?? 10,
     dex: src.dex ?? 10,
@@ -368,7 +436,6 @@ function transform(
     cha: src.cha ?? 10,
     senses: formatSenses(src.senses, src.passive),
     languages: formatLanguages(src.languages),
-    cr: formatCR(src.cr),
     actions: renderTraits(src.action),
   };
   const saves = formatSaves(src.save);
@@ -392,36 +459,12 @@ function transform(
   return out;
 }
 
-function extractCanonicalNames(): string[] {
-  // Pull the canonical 40-name list. This script overwrites bestiary.ts, so
-  // we need to find outer-level `name:` lines deterministically:
-  //   - in the original hand-written file (5-space indent: "    name:")
-  //   - in our own generated layout (4-space indent: "    name:")
-  // Both happen to be exactly 4 leading spaces, so anchor to that and
-  // explicitly exclude deeper-nested `name:` keys.
-  const p = path.join(DM_DATA_DIR, "bestiary.ts");
-  const text = fs.readFileSync(p, "utf-8");
-  const set = new Set<string>();
-  for (const m of text.matchAll(/^ {4}name: "([^"]+)",/gm)) {
-    set.add(m[1]!);
-  }
-  return [...set].sort();
-}
-
-function indexBestiary(): Map<
-  string,
-  Array<FiveToolsMonster & { _file: string }>
-> {
+function indexBestiary(): Map<string, Array<FiveToolsMonster & { _file: string }>> {
   const dir = path.join(FIVETOOLS_DATA_DIR, "bestiary");
   const files = fs.readdirSync(dir).filter((f) => f.startsWith("bestiary-"));
-  const index = new Map<
-    string,
-    Array<FiveToolsMonster & { _file: string }>
-  >();
+  const index = new Map<string, Array<FiveToolsMonster & { _file: string }>>();
   for (const f of files) {
-    const json = readJSON<{ monster?: FiveToolsMonster[] }>(
-      path.join(dir, f),
-    );
+    const json = readJSON<{ monster?: FiveToolsMonster[] }>(path.join(dir, f));
     for (const m of json.monster ?? []) {
       const key = m.name.toLowerCase();
       const arr = index.get(key) ?? [];
@@ -432,18 +475,38 @@ function indexBestiary(): Map<
   return index;
 }
 
-function main() {
-  console.log("Reading curated monster list from bestiary.ts");
-  const names = extractCanonicalNames();
-  console.log(`  ${names.length} canonical names`);
+// Try a name as-is, then a few common CSV-vs-5etools naming variants:
+// trailing "(+)" (a CSV reprint marker), the segment before a "/" (combined
+// entries like "Succubus/Incubus"), and a trailing parenthetical qualifier
+// (e.g. "Giant Rat (Diseased)"). Returns the matching index key, or null.
+function resolveFiveToolsKey(
+  name: string,
+  index: Map<string, unknown>,
+): string | null {
+  const tries = [name];
+  const noPlus = name.replace(/\s*\(\+\)\s*$/, "").trim();
+  if (noPlus !== name) tries.push(noPlus);
+  const beforeSlash = name.split("/")[0]!.trim();
+  if (beforeSlash !== name) tries.push(beforeSlash);
+  const noParen = name.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  if (noParen !== name && !tries.includes(noParen)) tries.push(noParen);
+  for (const t of tries) {
+    if (index.has(t.toLowerCase())) return t.toLowerCase();
+  }
+  return null;
+}
 
+function loadRichByName(thinNames: string[]): Map<string, RichFields> {
   console.log(`Indexing 5etools bestiary at ${FIVETOOLS_DATA_DIR}/bestiary/`);
   const index = indexBestiary();
   console.log(`  ${index.size} unique monster names across all sources`);
 
-  const refreshed: Monster[] = [];
+  const rich = new Map<string, RichFields>();
+
+  // 1) The curated flagship subset. Hand-picked, so a miss is a hard error —
+  // it means the name changed upstream and CANONICAL_RICH_NAMES needs a fix.
   const missing: string[] = [];
-  for (const name of names) {
+  for (const name of CANONICAL_RICH_NAMES) {
     const candidates = index.get(name.toLowerCase());
     if (!candidates?.length) {
       missing.push(name);
@@ -452,7 +515,7 @@ function main() {
     }
     const picked = pickMonster(candidates);
     console.log(`  ✓ ${name}  ← ${picked._file} (${picked.source})`);
-    refreshed.push(transform(picked));
+    rich.set(name.toLowerCase(), transformRich(picked));
   }
 
   if (missing.length > 0) {
@@ -461,12 +524,431 @@ function main() {
     process.exit(1);
   }
 
-  refreshed.sort((a, b) => a.name.localeCompare(b.name));
+  // 2) Best-effort bulk match: every other thin CSV row whose name (or a
+  // close variant) exists in the official 5etools data also gets a full stat
+  // block. A miss here is expected and silent — most of the CSV is
+  // third-party content (Tome of Beasts, Creature Codex, A5e Monstrous
+  // Menagerie) that 5etools-src, an official-WotC-content mirror, doesn't
+  // carry at all.
+  let bulkMatched = 0;
+  for (const name of thinNames) {
+    const key = name.toLowerCase();
+    if (rich.has(key)) continue;
+    const resolvedKey = resolveFiveToolsKey(name, index);
+    if (!resolvedKey) continue;
+    const candidates = index.get(resolvedKey)!;
+    const picked = pickMonster(candidates as Array<FiveToolsMonster & { _file: string }>);
+    rich.set(key, transformRich(picked));
+    bulkMatched++;
+  }
+  console.log(`  bulk-matched ${bulkMatched} additional thin entries against official 5etools data`);
+
+  return rich;
+}
+
+// ── Open5e (Kobold Press / Level Up A5e third-party content) ────────────────
+// Open5e ships its monster data as Django fixtures: an array of
+// `{ model, pk, fields }` records, one per source book, with several fields
+// JSON-encoded as strings (suffixed `_json`) rather than nested natively.
+
+const OPEN5E_SLUGS = ["tob", "cc", "tob2", "tob3", "menagerie"] as const;
+type Open5eSlug = (typeof OPEN5E_SLUGS)[number];
+
+// CSV "Source" column value → Open5e document slug.
+const OPEN5E_SLUG_BY_CSV_SOURCE: Record<string, Open5eSlug> = {
+  "Tome of Beasts": "tob",
+  "Creature Codex": "cc",
+  "Tome of Beasts 2": "tob2",
+  "Tome of Beasts 3": "tob3",
+  "A5e Monstrous Menagerie": "menagerie",
+};
+
+interface Open5eFields {
+  name: string;
+  size?: string;
+  type?: string;
+  subtype?: string;
+  alignment?: string;
+  armor_class?: number;
+  armor_desc?: string;
+  hit_points?: number;
+  hit_dice?: string;
+  speed_json?: string;
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+  strength_save?: number | null;
+  dexterity_save?: number | null;
+  constitution_save?: number | null;
+  intelligence_save?: number | null;
+  wisdom_save?: number | null;
+  charisma_save?: number | null;
+  skills_json?: string;
+  damage_vulnerabilities?: string;
+  damage_resistances?: string;
+  damage_immunities?: string;
+  condition_immunities?: string;
+  senses?: string;
+  languages?: string;
+  challenge_rating?: string;
+  special_abilities_json?: string;
+  actions_json?: string;
+  bonus_actions_json?: string;
+  reactions_json?: string;
+  legendary_actions_json?: string;
+}
+
+function parseJsonField<T>(raw: string | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function indexOpen5e(): Map<string, Array<{ slug: Open5eSlug; fields: Open5eFields }>> {
+  const index = new Map<string, Array<{ slug: Open5eSlug; fields: Open5eFields }>>();
+  for (const slug of OPEN5E_SLUGS) {
+    const file = path.join(OPEN5E_DATA_DIR, slug, "Monster.json");
+    const records = readJSON<Array<{ fields: Open5eFields }>>(file);
+    for (const r of records) {
+      const key = r.fields.name.toLowerCase();
+      const arr = index.get(key) ?? [];
+      arr.push({ slug, fields: r.fields });
+      index.set(key, arr);
+    }
+  }
+  return index;
+}
+
+function formatOpen5eHP(fields: Open5eFields): string {
+  const hp = fields.hit_points ?? 0;
+  const dice = fields.hit_dice?.trim();
+  if (!dice) return String(hp);
+  // "18d10+36" → "18d10 + 36" to match the 5etools-sourced entries' style.
+  return `${hp} (${dice.replace(/\s*([+-])\s*/g, " $1 ").trim()})`;
+}
+
+function formatOpen5eSpeed(raw: string | undefined): string {
+  const speed = parseJsonField<Record<string, number | boolean | undefined>>(raw, {});
+  const segments: string[] = [];
+  for (const key of ["walk", "burrow", "climb", "fly", "swim"] as const) {
+    const v = speed[key];
+    if (typeof v !== "number") continue;
+    segments.push(key === "walk" ? `${v} ft.` : `${key} ${v} ft.`);
+  }
+  if (speed["hover"] === true) segments.push("hover");
+  return segments.join(", ") || "0 ft.";
+}
+
+function formatOpen5eSaves(fields: Open5eFields): string | undefined {
+  const map: Record<(typeof ABILITY_KEYS)[number], number | null | undefined> = {
+    str: fields.strength_save,
+    dex: fields.dexterity_save,
+    con: fields.constitution_save,
+    int: fields.intelligence_save,
+    wis: fields.wisdom_save,
+    cha: fields.charisma_save,
+  };
+  const parts: string[] = [];
+  for (const key of ABILITY_KEYS) {
+    const v = map[key];
+    if (v == null) continue;
+    parts.push(`${ABILITY_LABEL[key]} ${v >= 0 ? "+" : ""}${v}`);
+  }
+  return parts.length > 0 ? parts.join(", ") : undefined;
+}
+
+function formatOpen5eSkills(raw: string | undefined): string | undefined {
+  const skills = parseJsonField<Record<string, number>>(raw, {});
+  const parts: string[] = [];
+  for (const [name, bonus] of Object.entries(skills)) {
+    const label = SKILL_NAMES[name.toLowerCase()] ?? name;
+    parts.push(`${label} ${bonus >= 0 ? "+" : ""}${bonus}`);
+  }
+  return parts.length > 0 ? parts.join(", ") : undefined;
+}
+
+function nonEmpty(s: string | undefined): string | undefined {
+  const trimmed = s?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function open5eTraits(raw: string | undefined): MonsterTrait[] {
+  const arr = parseJsonField<Array<{ name?: string; desc?: string }>>(raw, []);
+  return arr
+    .filter((t) => t.name)
+    .map((t) => ({ name: t.name!, desc: t.desc ?? "" }));
+}
+
+function transformOpen5e(fields: Open5eFields): RichFields {
+  const type = fields.type ?? "unknown";
+  const subtype = fields.subtype?.trim();
+  const actions = open5eTraits(fields.actions_json);
+  // Open5e models bonus actions as their own list; our schema doesn't have a
+  // separate bucket for them (no widget UI for a 5th tab), so fold them into
+  // Actions with a name suffix rather than dropping them.
+  const bonusActions = open5eTraits(fields.bonus_actions_json).map((t) => ({
+    name: `${t.name} (Bonus Action)`,
+    desc: t.desc,
+  }));
+
+  const out: RichFields = {
+    ac: fields.armor_class ?? 10,
+    acType: fields.armor_desc ?? "",
+    hp: formatOpen5eHP(fields),
+    size: fields.size ?? "Medium",
+    type: subtype ? `${type} (${subtype})` : type,
+    alignment: fields.alignment ?? "unaligned",
+    cr: fields.challenge_rating ?? "0",
+    speed: formatOpen5eSpeed(fields.speed_json),
+    str: fields.strength ?? 10,
+    dex: fields.dexterity ?? 10,
+    con: fields.constitution ?? 10,
+    int: fields.intelligence ?? 10,
+    wis: fields.wisdom ?? 10,
+    cha: fields.charisma ?? 10,
+    senses: nonEmpty(fields.senses) ?? "—",
+    languages: nonEmpty(fields.languages) ?? "—",
+    actions: [...actions, ...bonusActions],
+  };
+  const saves = formatOpen5eSaves(fields);
+  if (saves) out.savingThrows = saves;
+  const skills = formatOpen5eSkills(fields.skills_json);
+  if (skills) out.skills = skills;
+  const immune = nonEmpty(fields.damage_immunities);
+  if (immune) out.damageImmunities = immune;
+  const resist = nonEmpty(fields.damage_resistances);
+  if (resist) out.damageResistances = resist;
+  const vuln = nonEmpty(fields.damage_vulnerabilities);
+  if (vuln) out.damageVulnerabilities = vuln;
+  const condImmune = nonEmpty(fields.condition_immunities);
+  if (condImmune) out.conditionImmunities = condImmune;
+  const traits = open5eTraits(fields.special_abilities_json);
+  if (traits.length > 0) out.traits = traits;
+  const reactions = open5eTraits(fields.reactions_json);
+  if (reactions.length > 0) out.reactions = reactions;
+  const legendary = open5eTraits(fields.legendary_actions_json);
+  if (legendary.length > 0) out.legendaryActions = legendary;
+  return out;
+}
+
+// Best-effort fill for CSV rows loadRichByName's 5etools pass left thin:
+// match against the CSV row's own source book first, then fall back across
+// the other four Open5e books. Mutates `rich` in place (shared with the
+// 5etools pass) so main()'s single merge loop sees both sources uniformly.
+function loadOpen5eRichByName(
+  thin: Array<{ name: string; source: string }>,
+  rich: Map<string, RichFields>,
+): void {
+  console.log(`Indexing Open5e third-party bestiary at ${OPEN5E_DATA_DIR}/`);
+  const index = indexOpen5e();
+  console.log(`  ${index.size} unique monster names across all Open5e books`);
+
+  let matched = 0;
+  for (const entry of thin) {
+    const key = entry.name.toLowerCase();
+    if (rich.has(key)) continue;
+
+    const ownSlug = OPEN5E_SLUG_BY_CSV_SOURCE[entry.source];
+    const resolvedKey = resolveFiveToolsKey(entry.name, index);
+    if (!resolvedKey) continue;
+    const candidates = index.get(resolvedKey)!;
+    const picked =
+      (ownSlug && candidates.find((c) => c.slug === ownSlug)) ?? candidates[0]!;
+    rich.set(key, transformOpen5e(picked.fields));
+    matched++;
+  }
+  console.log(`  matched ${matched} additional thin entries against Open5e third-party data`);
+}
+
+function parseCSV(content: string): string[][] {
+  // Minimal RFC4180-ish parser; tolerates quoted fields containing commas
+  // and escaped double quotes ("").
+  const rows: string[][] = [];
+  let cur = "";
+  let inQuotes = false;
+  let row: string[] = [];
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (content[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        row.push(cur);
+        cur = "";
+      } else if (ch === "\r") {
+        // ignore
+      } else if (ch === "\n") {
+        row.push(cur);
+        cur = "";
+        if (row.some((c) => c.length > 0)) rows.push(row);
+        row = [];
+      } else {
+        cur += ch;
+      }
+    }
+  }
+  if (cur.length || row.length) {
+    row.push(cur);
+    if (row.some((c) => c.length > 0)) rows.push(row);
+  }
+  return rows;
+}
+
+// Thin fields only, straight from a CSV row (or defaulted, for acType which
+// the CSV doesn't carry).
+type ThinFields = Pick<
+  MonsterEntry,
+  | "name"
+  | "ac"
+  | "acType"
+  | "hp"
+  | "cr"
+  | "size"
+  | "type"
+  | "alignment"
+  | "source"
+  | "environment"
+  | "pageNumber"
+  | "isLegendary"
+  | "initiativeModifier"
+  | "initiativeRoll"
+>;
+
+function loadThinEntries(): ThinFields[] {
+  const csvPath = path.join(
+    REPO_ROOT,
+    "attached_assets/Monsters_&_Beasts_6f2f1d558fe144f8a49d17886a893051_all_1776621271153.csv",
+  );
+  console.log(`Reading ${path.relative(REPO_ROOT, csvPath)}`);
+
+  const raw = fs.readFileSync(csvPath, "utf-8").replace(/^﻿/, "");
+  const rows = parseCSV(raw);
+  const header = rows[0]!;
+  const idx = (name: string) => header.indexOf(name);
+
+  const iName = idx("Name");
+  const iAC = idx("AC");
+  const iAlign = idx("Alignment");
+  const iCR = idx("CR");
+  const iHP = idx("Hit Points");
+  const iSize = idx("Size");
+  const iSource = idx("Source");
+  const iType = idx("Type");
+  const iLegendary = idx("Legendary");
+  const iPage = idx("Page Number");
+  const iInit = idx("Initiative");
+  const iInitRoll = idx("Initiative Roll");
+  const iEnv = idx("Environment");
+
+  console.log(`  ${rows.length - 1} data rows`);
+
+  const entries: ThinFields[] = [];
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r]!;
+    const name = row[iName]?.trim();
+    if (!name) continue;
+    entries.push({
+      name,
+      ac: parseInt(row[iAC] ?? "0", 10) || 0,
+      acType: "",
+      hp: row[iHP]?.trim() || "0",
+      cr: row[iCR]?.trim() || "0",
+      size: row[iSize]?.trim() ?? "",
+      type: row[iType]?.trim() ?? "",
+      alignment: row[iAlign]?.trim() ?? "",
+      source: row[iSource]?.trim() ?? "",
+      environment: row[iEnv]?.trim() ?? "",
+      pageNumber: parseInt(row[iPage] ?? "", 10) || null,
+      isLegendary: (row[iLegendary] ?? "").trim().toLowerCase() === "legendary",
+      initiativeModifier: parseInt(row[iInit] ?? "0", 10) || 0,
+      initiativeRoll: parseInt(row[iInitRoll] ?? "10", 10) || 10,
+    });
+  }
+
+  // Dedup by case-insensitive name; first occurrence wins.
+  const seen = new Set<string>();
+  const unique = entries.filter((e) => {
+    const key = e.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  console.log(`  ${unique.length} unique entries after dedup`);
+  return unique;
+}
+
+function main() {
+  const thin = loadThinEntries();
+  const richByName = loadRichByName(thin.map((t) => t.name));
+  loadOpen5eRichByName(thin, richByName);
+
+  const merged: MonsterEntry[] = [];
+  const usedRich = new Set<string>();
+
+  for (const entry of thin) {
+    const key = entry.name.toLowerCase();
+    const rich = richByName.get(key);
+    if (!rich) {
+      merged.push(entry as MonsterEntry);
+      continue;
+    }
+    usedRich.add(key);
+    // Rich stat block wins on ac/hp/cr/size/type/alignment (it's derived
+    // straight from the matching rules text); thin fields the rich source
+    // doesn't carry (source/environment/pageNumber/initiativeRoll) pass
+    // through from the CSV. initiativeModifier is recomputed from the rich
+    // dex score to stay consistent with it.
+    merged.push({
+      ...entry,
+      ...rich,
+      initiativeModifier: Math.floor((rich.dex - 10) / 2),
+      isLegendary: (rich.legendaryActions?.length ?? 0) > 0 || entry.isLegendary,
+    });
+  }
+
+  // Canonical rich monsters the CSV doesn't carry at all (e.g. Beholder,
+  // Mind Flayer) — append as new thin+rich entries.
+  for (const name of CANONICAL_RICH_NAMES) {
+    const key = name.toLowerCase();
+    if (usedRich.has(key)) continue;
+    const rich = richByName.get(key)!;
+    merged.push({
+      name,
+      source: "5etools",
+      environment: "",
+      pageNumber: null,
+      initiativeRoll: 10,
+      initiativeModifier: Math.floor((rich.dex - 10) / 2),
+      isLegendary: (rich.legendaryActions?.length ?? 0) > 0,
+      ...rich,
+    });
+  }
+
+  merged.sort((a, b) => a.name.localeCompare(b.name));
 
   const header = generatedHeader({
-    source: "../5etools-src/data/bestiary/bestiary-*.json",
+    source:
+      "attached_assets/Monsters_&_Beasts_*.csv (curated by the project owner) + ../5etools-src/data/bestiary/bestiary-*.json + ../open5e-api/data/v1/{tob,cc,tob2,tob3,menagerie}/Monster.json (OGL — see OGL-NOTICE.md)",
     generator: "generate-monsters.ts",
-    count: refreshed.length,
+    count: merged.length,
   });
 
   const body = `
@@ -475,32 +957,42 @@ export interface MonsterTrait {
   desc: string;
 }
 
-export interface Monster {
+// Thin fields are always present. Rich fields (speed, ability scores,
+// senses/languages, traits/actions/reactions/legendaryActions, ...) are only
+// present for the curated subset with a full stat block — check \`actions\`
+// to tell them apart from thin-only entries.
+export interface MonsterEntry {
   name: string;
-  size: string;
-  type: string;
-  alignment: string;
   ac: number;
   acType: string;
   hp: string;
-  speed: string;
-  str: number;
-  dex: number;
-  con: number;
-  int: number;
-  wis: number;
-  cha: number;
+  cr: string;
+  size: string;
+  type: string;
+  alignment: string;
+  source: string;
+  environment: string;
+  pageNumber: number | null;
+  isLegendary: boolean;
+  initiativeModifier: number;
+  initiativeRoll: number;
+  speed?: string;
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
   savingThrows?: string;
   skills?: string;
   damageImmunities?: string;
   damageResistances?: string;
   damageVulnerabilities?: string;
   conditionImmunities?: string;
-  senses: string;
-  languages: string;
-  cr: string;
+  senses?: string;
+  languages?: string;
   traits?: MonsterTrait[];
-  actions: MonsterTrait[];
+  actions?: MonsterTrait[];
   reactions?: MonsterTrait[];
   legendaryActions?: MonsterTrait[];
 }
@@ -527,10 +1019,10 @@ export function crToNumber(cr: string): number {
   return /^\\d+(\\.\\d+)?$/.test(cr) ? parseFloat(cr) : Number.POSITIVE_INFINITY;
 }
 
-export const bestiaryData: Monster[] = ${tsLiteral(refreshed)};
+export const monsters: MonsterEntry[] = ${tsLiteral(merged)};
 `;
 
-  writeOutput(path.join(DM_DATA_DIR, "bestiary.ts"), header + body);
+  writeOutput(path.join(DM_DATA_DIR, "monsters.ts"), header + body);
 }
 
 main();

@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
-import { bestiaryData, mod, crToNumber, type Monster } from "@/data/bestiary";
-import { monsterIndex, type MonsterIndexEntry } from "@/data/monsterIndex";
+import { monsters, mod, crToNumber, type MonsterEntry } from "@/data/monsters";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   BESTIARY_CR_FILTERS,
@@ -13,10 +12,11 @@ import {
 } from "@/lib/backup";
 
 // ── Unified display type ─────────────────────────────────────────────────────
-// The widget combines two sources: bestiaryData (40 rich stat blocks) and
-// monsterIndex (2,158 thin entries — name/AC/HP/CR/size/type/source). Thin
-// entries render the header but the body falls back to "Full stat block not
-// available" — same UX as the old DB fallback, just sourced locally.
+// The widget reads the single monsters dataset (2,160 entries): a curated
+// subset carries a full stat block (`actions` is defined), the rest are thin
+// entries — name/AC/HP/CR/size/type/source. Thin entries render the header
+// but the body falls back to "Full stat block not available" — same UX as
+// the old DB fallback, just sourced locally.
 interface UnifiedMonster {
   name: string;
   size: string;
@@ -43,54 +43,52 @@ interface UnifiedMonster {
   source?: string;
 }
 
-function fromLocal(m: Monster): UnifiedMonster {
-  return {
-    ...m, acType: m.acType ?? "",
-    traits: m.traits ?? [], reactions: m.reactions ?? [],
-    legendaryActions: m.legendaryActions ?? [],
-    source: "5etools",
-  };
+function hasFullStatBlock(m: MonsterEntry): boolean {
+  return m.actions !== undefined;
 }
 
-function fromIndex(m: MonsterIndexEntry): UnifiedMonster {
+function toUnified(m: MonsterEntry): UnifiedMonster {
   return {
-    name: m.name, size: m.size, type: m.type, alignment: m.alignment,
-    ac: m.ac, acType: "", hp: m.hp, speed: "",
-    str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
-    senses: "", languages: "", cr: m.cr,
-    traits: [], actions: [], reactions: [], legendaryActions: [],
+    name: m.name,
+    size: m.size,
+    type: m.type,
+    alignment: m.alignment,
+    ac: m.ac,
+    acType: m.acType,
+    hp: m.hp,
+    speed: m.speed ?? "",
+    str: m.str ?? 10, dex: m.dex ?? 10, con: m.con ?? 10,
+    int: m.int ?? 10, wis: m.wis ?? 10, cha: m.cha ?? 10,
+    savingThrows: m.savingThrows,
+    skills: m.skills,
+    damageImmunities: m.damageImmunities,
+    damageResistances: m.damageResistances,
+    damageVulnerabilities: m.damageVulnerabilities,
+    conditionImmunities: m.conditionImmunities,
+    senses: m.senses ?? "",
+    languages: m.languages ?? "",
+    cr: m.cr,
+    traits: m.traits ?? [],
+    actions: m.actions ?? [],
+    reactions: m.reactions ?? [],
+    legendaryActions: m.legendaryActions ?? [],
     source: m.source,
   };
 }
 
-// Lowercased-name → rich Monster lookup, built once.
-const RICH_BY_NAME = new Map<string, Monster>(
-  bestiaryData.map(m => [m.name.toLowerCase(), m]),
+// Lowercased-name → dataset entry, built once. Names are unique in the
+// merged dataset, so no dedup pass is needed here.
+const BY_NAME = new Map<string, MonsterEntry>(
+  monsters.map(m => [m.name.toLowerCase(), m]),
 );
 
-// Lowercased-name → first thin index hit, built once.
-const THIN_BY_NAME = new Map<string, MonsterIndexEntry>();
-for (const m of monsterIndex) {
-  const key = m.name.toLowerCase();
-  if (!THIN_BY_NAME.has(key)) THIN_BY_NAME.set(key, m);
-}
-
-// Count of distinct searchable monsters across both datasets (rich entries
-// that also appear in the thin index aren't double-counted). Computed so the
-// search placeholder never drifts from the data the way a hardcoded number
-// does on every regen.
-const MONSTER_COUNT = new Set<string>([
-  ...RICH_BY_NAME.keys(),
-  ...THIN_BY_NAME.keys(),
-]).size;
+// Total searchable monster count for the search placeholder — reads
+// straight off the live dataset so it never drifts from the data.
+const MONSTER_COUNT = monsters.length;
 
 function lookupByName(name: string): UnifiedMonster | null {
-  const key = name.toLowerCase();
-  const rich = RICH_BY_NAME.get(key);
-  if (rich) return fromLocal(rich);
-  const thin = THIN_BY_NAME.get(key);
-  if (thin) return fromIndex(thin);
-  return null;
+  const m = BY_NAME.get(name.toLowerCase());
+  return m ? toUnified(m) : null;
 }
 
 // ── CR colour ────────────────────────────────────────────────────────────────
@@ -301,8 +299,8 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
     validateStringMax(WIDGET_QUERY_MAX),
   );
   // The input stays driven by `query` (instant echo); the heavier filters over
-  // the 2,158-row index run off the deferred value, so a fast typist doesn't
-  // re-scan the whole index on every keystroke. Matches the debounce the
+  // the 2,160-row dataset run off the deferred value, so a fast typist doesn't
+  // re-scan the whole dataset on every keystroke. Matches the debounce the
   // Initiative/Party search inputs already use.
   const deferredQuery = useDeferredValue(query);
   const [sortMode, setSortMode] = useLocalStorage<SortMode>(
@@ -349,10 +347,11 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
     onTargetClear?.();
   }, [target]);
 
-  // ── Local list (from the 40-monster SRD seed + DB search results) ────────
+  // ── Local list (curated full-stat-block subset) ──────────────────────────
   const localFiltered = useMemo(() => {
     const q = deferredQuery.toLowerCase();
-    return bestiaryData
+    return monsters
+      .filter(hasFullStatBlock)
       .filter((m) => {
         const matchQ = !q || m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q);
         let matchCr = true;
@@ -369,18 +368,16 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
       .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
   }, [deferredQuery, sortMode, crFilter]);
 
-  // ── Broader thin-index results when searching ────────────────────────────
-  // Local filter over the 2,158-row monsterIndex; rich entries are excluded
-  // (they already appear via localFiltered). Capped to keep the list short.
+  // ── Broader thin-entry results when searching ────────────────────────────
+  // Local filter over the ~2,120 thin entries; full-stat-block entries are
+  // excluded (they already appear via localFiltered). Capped to keep the
+  // list short.
   const thinResults = useMemo(() => {
-    if (!deferredQuery.trim()) return [] as MonsterIndexEntry[];
+    if (!deferredQuery.trim()) return [] as MonsterEntry[];
     const q = deferredQuery.toLowerCase();
-    const hits: MonsterIndexEntry[] = [];
-    for (const m of monsterIndex) {
-      // Skip names already surfaced as rich entries via `localFiltered`.
-      // Reuse the module-scope `RICH_BY_NAME` map instead of rebuilding a
-      // Set of rich names on every keystroke.
-      if (RICH_BY_NAME.has(m.name.toLowerCase())) continue;
+    const hits: MonsterEntry[] = [];
+    for (const m of monsters) {
+      if (hasFullStatBlock(m)) continue;
       if (m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q)) {
         hits.push(m);
         if (hits.length >= 200) break;
@@ -391,8 +388,8 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
 
   // Merge rich + thin for display when searching.
   const displayList: UnifiedMonster[] = useMemo(() => {
-    if (!deferredQuery.trim()) return localFiltered.map(fromLocal);
-    return [...localFiltered.map(fromLocal), ...thinResults.map(fromIndex)]
+    if (!deferredQuery.trim()) return localFiltered.map(toUnified);
+    return [...localFiltered.map(toUnified), ...thinResults.map(toUnified)]
       .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
   }, [deferredQuery, localFiltered, thinResults, sortMode]);
 
