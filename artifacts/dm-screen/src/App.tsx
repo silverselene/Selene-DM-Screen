@@ -351,13 +351,6 @@ function AppContent() {
         </main>
       </div>
 
-      <footer className="shrink-0 h-5 flex items-center justify-center relative">
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        <span className="text-[10px] tracking-widest" style={{ color: "var(--dm-t3)" }}>
-          Selene's DM Screen · D&amp;D 5.5e 2024 · All data local &amp; persistent
-        </span>
-      </footer>
-
       {selectingTile !== null && (
         <WidgetSelectorModal
           onSelect={handleSelectWidget}
