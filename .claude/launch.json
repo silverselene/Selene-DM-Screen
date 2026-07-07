@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dm-screen-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "port": 38080,
+      "autoPort": true
+    },
+    {
+      "name": "dm-screen-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["preview"],
+      "port": 38080,
+      "autoPort": true
+    }
+  ]
+}

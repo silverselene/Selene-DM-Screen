@@ -164,8 +164,8 @@ pnpm workspace with one deployable plus an offline tooling package:
 
 ```
 artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only deployable)
-  src/data/                  Bundled reference data: spells, bestiary,
-                             monsterIndex, weapons, generators, compendium
+  src/data/                  Bundled reference data: spells, monsters,
+                             weapons, generators, compendium
   src/lib/                   localStorage stores, backup/restore, shared UI primitives
   src/components/widgets/    The seven widgets
   public/                    PWA icons + static assets

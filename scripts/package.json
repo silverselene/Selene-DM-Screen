@@ -8,9 +8,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "generate:spells": "tsx ./src/data-generators/generate-spells.ts",
     "generate:monsters": "tsx ./src/data-generators/generate-monsters.ts",
-    "generate:monster-index": "tsx ./src/data-generators/generate-monster-index.ts",
     "generate:weapons": "tsx ./src/data-generators/generate-weapons.ts",
-    "generate:all": "tsx ./src/data-generators/generate-spells.ts && tsx ./src/data-generators/generate-monsters.ts && tsx ./src/data-generators/generate-monster-index.ts && tsx ./src/data-generators/generate-weapons.ts"
+    "generate:compendium": "tsx ./src/data-generators/generate-compendium.ts",
+    "generate:all": "tsx ./src/data-generators/generate-spells.ts && tsx ./src/data-generators/generate-monsters.ts && tsx ./src/data-generators/generate-weapons.ts && tsx ./src/data-generators/generate-compendium.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
