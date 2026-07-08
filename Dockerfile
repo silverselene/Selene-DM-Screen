@@ -20,14 +20,23 @@ RUN corepack enable
 WORKDIR /app
 
 # Copy the manifest set first so the dependency-resolution layer cache
-# survives source-only edits.
+# survives source-only edits. services/ai-bridge's manifest is copied only so
+# `--frozen-lockfile` can validate the full workspace against the lockfile — the
+# install below is filtered to exclude it, so its Agent-SDK dependency (and the
+# native Claude Code binary it bundles) never enters the image build. The bridge
+# is an optional local service, not part of this deployable artifact.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY artifacts/dm-screen/package.json ./artifacts/dm-screen/
 COPY scripts/package.json ./scripts/
+COPY services/ai-bridge/package.json ./services/ai-bridge/
 
 # `--frozen-lockfile` fails the build if the lockfile would drift; that's
-# what we want for reproducible images.
-RUN pnpm install --frozen-lockfile
+# what we want for reproducible images. The `--filter`s install only the
+# deployable app and the offline data generators — the same dependency set as
+# before services/ai-bridge existed.
+RUN pnpm install --frozen-lockfile \
+  --filter @workspace/dm-screen \
+  --filter @workspace/scripts
 
 # Everything else (source, tsconfigs, vite config, public assets, generated
 # data files). .dockerignore keeps node_modules / .git / dist out.

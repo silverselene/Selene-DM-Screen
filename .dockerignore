@@ -45,9 +45,10 @@ docker-compose.yml
 docker-compose.*.yml
 
 # Project intake docs — not needed inside the image. CLAUDE.md, README,
-# the handover doc, etc. stay in the repo but don't bloat the build
-# context.
-HANDOVER-self-hosting.md
+# the handover docs, etc. stay in the repo but don't bloat the build
+# context. Glob the HANDOVER-*.md set so new handover docs are excluded
+# without having to touch this file each time one is added.
+HANDOVER-*.md
 CLAUDE.md
 
 # Data-generation script outputs that aren't part of the source tree

@@ -1,0 +1,21 @@
+{
+  "name": "@workspace/ai-bridge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional local bridge: Claude Agent SDK + ddb-mcp, powering the dm-screen AI Chat widget. Not part of the static build.",
+  "scripts": {
+    "start": "tsx ./src/index.ts",
+    "dev": "tsx watch ./src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "tsx ./src/smoke.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.201",
+    "@iamjameslennon/ddb-mcp": "2.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

@@ -30,6 +30,7 @@ minimumReleaseAge: 1440
 packages:
   - artifacts/*
   - scripts
+  - services/*
 
 catalog:
   '@tailwindcss/vite': ^4.1.14

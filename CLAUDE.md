@@ -21,13 +21,18 @@ Always use `pnpm` — the root `preinstall` script rejects npm/yarn.
 pnpm install
 
 # Dev / build / preview (all from the repo root)
-pnpm dev          # Vite dev server on http://localhost:38080
+pnpm dev          # SPA (:38080) + optional AI bridge (:38900) in parallel
+pnpm dev:app      # SPA only (Vite dev server on http://localhost:38080)
+pnpm dev:ai       # AI bridge only (services/ai-bridge; see its README)
 pnpm build        # typecheck + vite build → artifacts/dm-screen/dist/public/
 pnpm preview      # vite preview of the built bundle
 
 # Typecheck only
-pnpm typecheck                                       # whole workspace, project-references-aware
+pnpm typecheck                                       # whole workspace (incl. services/ai-bridge)
 pnpm --filter @workspace/dm-screen run typecheck     # single package
+# `pnpm build` runs `typecheck:deployable` (artifacts + scripts only) — NOT the
+# bridge — because the Docker build image never installs the bridge's Agent-SDK
+# deps. Use `pnpm typecheck` to type-check the bridge locally.
 
 # Tests (Vitest — dm-screen pure logic; Node env, no jsdom)
 pnpm test                                            # all packages that define a test script
