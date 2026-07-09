@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import {
-  Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users,
+  Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, Sparkles,
   ArrowRight, ArrowDown, Minimize2, MonitorPlay,
 } from "lucide-react";
 import type { TileEntry, WidgetType } from "@/types";
@@ -26,6 +26,8 @@ const PartyWidget = lazy(() =>
   import("./widgets/PartyWidget").then((m) => ({ default: m.PartyWidget })));
 const PortalWidget = lazy(() =>
   import("./widgets/PortalWidget").then((m) => ({ default: m.PortalWidget })));
+const AIChatWidget = lazy(() =>
+  import("./widgets/AIChatWidget").then((m) => ({ default: m.AIChatWidget })));
 
 function WidgetLoading() {
   return (
@@ -92,6 +94,11 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
     icon: <MonitorPlay className="w-3 h-3" />,
     accent: "border-fuchsia-800/60 shadow-[inset_0_0_20px_rgba(217,70,239,0.05)]",
   },
+  "ai-chat": {
+    label: "AI Chat",
+    icon: <Sparkles className="w-3 h-3" />,
+    accent: "border-amber-700/60 shadow-[inset_0_0_20px_rgba(245,158,11,0.06)]",
+  },
 };
 
 function WidgetContent({
@@ -120,6 +127,7 @@ function WidgetContent({
         {widget === "wizard-tome" && <WizardsTomeWidget />}
         {widget === "party" && <PartyWidget />}
         {widget === "portal" && <PortalWidget />}
+        {widget === "ai-chat" && <AIChatWidget />}
       </Suspense>
     </ErrorBoundary>
   );

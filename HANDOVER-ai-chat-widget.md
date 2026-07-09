@@ -1,10 +1,11 @@
 # Epic: AI Chat widget (Claude + ddb-mcp)
 
-Status: **Phase 1 (bridge scaffold) complete** — 2026-07-08. Phases 2–9 not started. The
-original plan below is preserved as the record; see the **Progress log** immediately after
-the Summary for what was actually built and which "Recommended" positions changed. Inline
-`UPDATE`/`RESOLVED` notes flag the specific items that moved so nothing gets built on the
-stale versions.
+Status: **Phases 1–2 complete + a Phase-2 hardening/code-review pass** — last touched
+2026-07-09. Phases 3–7 and 9 not started; Phase 8 (unit tests) partially landed for the pure
+client logic. The original plan below is preserved as the record; see the **Progress log**
+immediately after the Summary for what was actually built and which "Recommended" positions
+changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items that moved so nothing gets
+built on the stale versions.
 
 ## Summary
 
@@ -82,6 +83,74 @@ instruction to "come back and say so"):
 **Not yet exercised:** a *live* ddb tool call (needs a valid ddb session on disk — the DM runs
 `ddb_login` once themselves; out of Phase-1 scope). Token-level streaming (block-level for
 now), structured tool-result events, and unit tests are Phases 3/8.
+
+### Phase 2 — chat widget shell ✅ (2026-07-08, Claude Code)
+
+Eighth widget added and registered everywhere a widget kind lives; typechecked, full suite
+(48 tests) green, production build clean (no `/api/` in the bundle). Verified end-to-end
+against a live bridge (subscription auth) **and** with the bridge stopped.
+
+- **New client** `artifacts/dm-screen/src/lib/aiBridge.ts` — the browser side of the bridge
+  contract: `checkHealth()` (short-timeout reachability/billing probe), `streamChat()` (POST
+  `/chat`, reads the `ReadableStream`, splits SSE records on `\n\n`), a pure `parseSseRecord()`
+  (structured for a Phase-8 unit test), `friendlyToolName()`, and a `BridgeUnreachableError`
+  the widget uses to distinguish "bridge down" from a bridge-reported error. `BRIDGE_URL` is a
+  plain const (`http://127.0.0.1:38900`) — no `import.meta.env`, since `vite/client` types
+  aren't wired up in this package.
+- **New widget** `src/components/widgets/AIChatWidget.tsx` — three states: `checking` (probe on
+  mount), `offline` (clear "AI bridge not running · start with `pnpm dev:ai`" + Retry), and the
+  chat view (streamed assistant text, a lightweight per-message tool-call indicator, a
+  Stop/Send composer with Enter-to-send, and an "online · <billing>" footer). **No persistence**
+  — session React state only (Phase 6 decides history persistence). Aborts the in-flight turn on
+  unmount and on Stop.
+- **Registration** (each widget kind lives in five places): `types.ts` `WIDGET_TYPES`
+  (`"ai-chat"` — this also makes it valid in `validateTiles`/backup automatically),
+  `DMTile.tsx` (lazy import + `widgetMeta` + render; inherits the shared `Suspense` +
+  `ErrorBoundary`), `Sidebar.tsx` `widgetMeta` (recent-widgets — the exhaustive `Record` type
+  forces this), and `WidgetSelectorModal.tsx` (picker card). Accent color: amber, the one
+  unused slot. Lazy chunk is ~8 kB; the dataset chunks are untouched.
+- **Deferred to later phases as planned:** structured preview cards for character/monster
+  lookups (Phase 3 — the bridge only emits `{type:"tool", name}` today, so the widget shows a
+  chip, not a card), "Add to Party/Initiative" hand-off (Phase 4), bundled-data-first routing
+  (Phase 5), history persistence (Phase 6), README (Phase 7).
+
+### Phase 2 hardening — code review pass ✅ (2026-07-09, Claude Code)
+
+`/code-review high` on the branch surfaced four issues; all fixed and verified (`pnpm typecheck`
++ `typecheck:deployable`, production build with `grep /api/` and `grep bridge-protocol` both zero,
+**61 tests** green, and a full **Docker image build** to prove the new workspace dep survives the
+filtered `--frozen-lockfile` install).
+
+1. **Bridge crash on client disconnect (server.ts).** `handleChat` guarded writes on
+   `res.writableEnded`, which is only true when *we* end — not when the client (Stop button,
+   closed tile) closes the socket. The post-abort `error` event then wrote to a destroyed
+   response, and with no `res.on("error")` handler that was an unhandled `'error'` → process
+   crash. Fixed: guard every write on `res.writable` (false on peer close too) and swallow
+   response `'error'`.
+2. **Wedged conversation after a resume failure (AIChatWidget.tsx).** `sessionIdRef` was echoed
+   back as `resume` forever; once a session was rejected/evicted, every later turn re-sent the
+   dead id and failed identically. Fixed: clear `sessionIdRef` on any `error` event so the next
+   message starts a fresh session.
+3. **Dead error write (AIChatWidget.tsx).** The `BridgeUnreachableError` branch set a per-message
+   error *and* flipped `status` to `offline`, which replaces the whole chat view — so the bubble
+   never rendered. Removed the dead write.
+4. **Type duplication → shared package + validated parser (A+B).** `BridgeEvent`/`BridgeHealth`
+   were hand-copied across the Node/browser boundary. Extracted the canonical, **types-only**
+   `@workspace/bridge-protocol` (`packages/bridge-protocol`), imported via `import type` by both
+   the bridge and the widget (drift is now a compile error; erased from the bundle). Because
+   shared types can't validate socket bytes, `parseSseRecord` now validates each variant's shape
+   via a new `isBridgeEvent` guard (unknown/future event types fail safe). Wired through
+   `pnpm-workspace.yaml` (`packages/*`), both manifests, the lockfile, and a new Dockerfile
+   `COPY packages/bridge-protocol/package.json` before the filtered install.
+
+**Also landed this branch (beyond the original Phase-2 shell):** multi-turn continuity — the
+bridge accepts `{ resume: "<sessionId>" }` on `/chat` and replays that Agent session; the widget
+captures each turn's `done.sessionId` and echoes it back, with `/clear` and `/new` slash commands
+(and the "New chat" button) resetting it.
+
+**Phase-8 unit tests: partially done.** `artifacts/dm-screen/src/lib/aiBridge.test.ts` now covers
+the pure client logic (`isBridgeEvent`, `parseSseRecord`, `friendlyToolName`). Component/DOM tests
+for the widget itself remain deferred (would need jsdom + `@testing-library/react`, per CLAUDE.md).
 
 ---
 
@@ -273,8 +342,9 @@ don't leave the tree broken between phases.
    wiring, subscription auth (with opt-in metered fallback), ddb-mcp attached as an MCP server
    with the restricted read-only tool list, minimal HTTP+SSE chat endpoint. No UI. Smoke-tested
    end-to-end; subscription billing confirmed (`service_tier: standard`, no API key).
-2. **Chat widget shell** — eighth widget, lazy-loaded + `ErrorBoundary`, talks to the bridge,
-   renders streamed text, clear "bridge not running" empty state. No persistence yet.
+2. **Chat widget shell** — ✅ **DONE (2026-07-08, see Progress log).** Eighth widget,
+   lazy-loaded + `ErrorBoundary`, talks to the bridge, renders streamed text, clear "bridge not
+   running" empty state. No persistence. Verified with the bridge running and stopped.
 3. **Structured tool-result rendering** — bridge emits typed events for character/monster
    lookups; widget renders preview cards instead of raw prose.
 4. **Data hand-off** — "Add to Party" / "Add to Initiative" buttons, wired via `CustomEvent`s,

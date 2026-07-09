@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required.
+pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required. An **optional** local AI-bridge service (`services/ai-bridge`) and a shared types-only wire-contract package (`packages/bridge-protocol`) power the AI Chat widget; **neither is part of the deployable** — the SPA builds and runs without them (the widget just shows a "bridge not running" state).
 
 History: this used to be a three-tier app (React + Express + PostgreSQL on Replit), migrated to a fully static, self-hostable SPA. Anything pre-migration (the API server, Drizzle, the OpenAPI/Orval codegen, the mockup sandbox, Replit infra) has been deleted; if you find references to them in old commits or comments, they're historical.
 
@@ -61,21 +61,25 @@ artifacts/
   dm-screen/                  React 19 + Vite + Tailwind v4 — the only deployable
     src/data/                 Bundled reference data (spells, monsters, weapons, …)
     src/lib/                  localStorage stores, backup/restore, shared UI primitives
-    src/components/widgets/   The seven widgets
+    src/components/widgets/   The eight widgets (AI Chat requires the optional bridge)
     public/                   PWA icons + static assets
     docker/nginx.conf         SPA-aware nginx config used by the Docker image
+packages/
+  bridge-protocol/            Shared, types-only wire contract for the AI bridge ⇄ AI Chat widget (no runtime code, no deps)
 scripts/                      Standalone tsx data generators (offline, read from ../5etools-src)
+services/
+  ai-bridge/                  Optional local Claude Agent SDK + ddb-mcp bridge; NOT in the deployable (see its README)
 attached_assets/              Source CSV for the 2,158-row monster index
 Dockerfile, docker-compose.yml, .dockerignore
 ```
 
 ## TypeScript / project references
 
-Every package extends `tsconfig.base.json` (`composite: true`, `moduleResolution: "bundler"`, `customConditions: ["workspace"]`). The root `tsconfig.json` currently has an empty `references` array — all the old `lib/*` packages are gone.
+Every package extends `tsconfig.base.json` (`moduleResolution: "bundler"`, `customConditions: ["workspace"]`). The root `tsconfig.json`'s `references` array is empty — cross-package imports resolve through the **`workspace` export condition**, not TypeScript project references.
 
-- Typecheck from the root so workspace cross-references resolve. `pnpm --filter ... run typecheck` also works because each package declares its own references.
-- If you ever re-introduce a workspace library, add `{ "path": "..." }` to the importing package's `tsconfig.json` `references` array and to the root `tsconfig.json`.
-- `tsc` is only for type-checking and `.d.ts` emission. Bundling is handled by Vite.
+- **Shared workspace library:** `@workspace/bridge-protocol` (`packages/bridge-protocol`) is a types-only package holding the AI-bridge wire contract (`BridgeEvent`, `BridgeHealth`), imported by both `services/ai-bridge` and `artifacts/dm-screen` so a producer/consumer drift is a compile error. Its `package.json` `exports` maps the `workspace` condition straight to `src/index.ts` — no build step, no `.d.ts` emit. Both consumers `import type` from it, so it is **erased from every bundle** (verify: `grep -r bridge-protocol dist/public/assets` returns zero). Copy this pattern (expose the `workspace` export condition) rather than wiring `composite`/`references` if you add another shared package.
+- Typecheck from the root so workspace cross-references resolve. `pnpm --filter ... run typecheck` also works; `pnpm typecheck:deployable` (used by `pnpm build`) covers only `artifacts/**` + `scripts` but still resolves the shared package's source through dm-screen.
+- `tsc` is only for type-checking. Bundling is handled by Vite.
 
 ## Frontend architecture (dm-screen)
 
@@ -136,6 +140,7 @@ The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control:
 - Multi-stage `Dockerfile`: build on `node:24-bookworm-slim` (glibc — must match the `linux-{x64,arm64}-gnu` native binaries), runtime on `nginxinc/nginx-unprivileged:alpine` (nginx runs as the non-root `nginx` user, so it listens on **8080**, not the privileged port 80). **Don't switch the build stage to `node:24-alpine`** — `pnpm-workspace.yaml`'s `overrides:` block still excludes the `-musl` rollup/esbuild/lightningcss/oxide variants. If you change the container port, update `nginx.conf`'s `listen`, the Dockerfile `EXPOSE`/`HEALTHCHECK`, and the compose `ports`/healthcheck together.
 - `docker-compose.yml`: single service, no DB, publishes `38080:8080` (container listens on 8080). Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host). 38080 was chosen over Vite's default 5173 specifically because 5173 (and other common dev-tool defaults like 3000/8080) collide with other local projects' containers, causing the browser to serve a stale cached SPA from the wrong origin's service worker.
 - `.dockerignore` is a **denylist** (conventional exclude patterns, not a `*` + `!` allowlist): anything NOT matched by a pattern IS sent to the build daemon and lands in build-stage layers via `COPY . .`. It excludes `node_modules`, `dist`, `.git`, the intake docs, and secret-shaped files (`.env*`, `*.pem`, `*.key`, …) — extend those patterns when adding new local-only file types.
+- The build does a **filtered** install (`pnpm install --frozen-lockfile --filter @workspace/dm-screen --filter @workspace/scripts`) that deliberately excludes the bridge's Agent-SDK deps. The manifest set is `COPY`d before the install so `--frozen-lockfile` can resolve the graph — **if you add a workspace dependency to dm-screen (or scripts), add a matching `COPY <pkg>/package.json` line** or the frozen-lockfile install fails in the image. `packages/bridge-protocol` is copied for exactly this reason (it's a dm-screen dep); its types are erased at build time so nothing enters the runtime image.
 - Builds on ARM64 (Apple Silicon, Pi, Graviton) — the `linux-arm64-gnu` variants are explicitly **not** excluded.
 
 ## Security: npm minimum release age

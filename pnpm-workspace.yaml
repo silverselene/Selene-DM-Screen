@@ -29,6 +29,7 @@ minimumReleaseAge: 1440
 
 packages:
   - artifacts/*
+  - packages/*
   - scripts
   - services/*
 

@@ -234,6 +234,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.1(@types/node@24.13.2)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.48.0)(tsx@4.21.0))
+      '@workspace/bridge-protocol':
+        specifier: workspace:*
+        version: link:../../packages/bridge-protocol
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -313,6 +316,8 @@ importers:
         specifier: 'catalog:'
         version: 3.25.76
 
+  packages/bridge-protocol: {}
+
   scripts:
     devDependencies:
       '@types/node':
@@ -334,6 +339,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
+      '@workspace/bridge-protocol':
+        specifier: workspace:*
+        version: link:../../packages/bridge-protocol
       tsx:
         specifier: 'catalog:'
         version: 4.21.0

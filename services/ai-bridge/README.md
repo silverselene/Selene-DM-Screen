@@ -7,9 +7,8 @@ server attached over stdio, restricted to **read-only** lookups.
 
 This is a deliberate, scoped exception to the "one static artifact, no backend"
 architecture: it is **not** part of the SPA build or the Docker image, and the
-core app works fully without it. The chat widget alone degrades to an "AI bridge
-not running" state when it is stopped. (Phase 1 scaffold — the widget lands in a
-later phase.)
+core app works fully without it. The **AI Chat** widget degrades to an "AI bridge
+not running" state when it is stopped.
 
 ## Prerequisites
 
@@ -48,7 +47,16 @@ pnpm --filter @workspace/ai-bridge run smoke -- "How does Grapple work in 2024 r
 | Method | Path      | Purpose |
 |--------|-----------|---------|
 | `GET`  | `/health` | Reachability + billing mode + ddb-mcp status. Used by the widget to detect "bridge not running". |
-| `POST` | `/chat`   | Body `{ "message": "..." }`. Streams Server-Sent Events: `text`, `tool`, `done`, `error`. |
+| `POST` | `/chat`   | Body `{ "message": "...", "resume"?: "<sessionId>" }`. Streams Server-Sent Events: `text`, `tool`, `done`, `error`. Pass the previous turn's `done.sessionId` back as `resume` to continue the conversation. |
+
+The event/health shapes (`BridgeEvent`, `BridgeHealth`) are defined once in the
+shared, types-only [`@workspace/bridge-protocol`](../../packages/bridge-protocol)
+package and imported by both this bridge and the widget, so producer/consumer
+drift is a compile error. The socket bytes are still untrusted at runtime — the
+widget validates each SSE record shape before use (`parseSseRecord` in
+`artifacts/dm-screen/src/lib/aiBridge.ts`). A client that closes the connection
+mid-turn (Stop button, closed tile) aborts the in-flight Agent turn; the server
+guards every write on `res.writable`, so a disconnect can't crash it.
 
 ## Billing / auth
 

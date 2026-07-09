@@ -3,6 +3,7 @@ import {
   type SDKUserMessage,
   type McpServerConfig,
 } from "@anthropic-ai/claude-agent-sdk";
+import type { BridgeEvent } from "@workspace/bridge-protocol";
 import { config } from "./config";
 import { ALLOWED_TOOL_SET, MCP_SERVER_NAME } from "./ddbTools";
 import { resolveAuth, type ResolvedAuth } from "./auth";
@@ -13,19 +14,9 @@ You have READ-ONLY access to the DM's own D&D Beyond content through the "dndbey
 
 You cannot modify anything on D&D Beyond and have no access to the local filesystem. Never claim to have changed D&D Beyond state. Keep answers tight and table-ready; the DM is mid-session.`;
 
-/** Events streamed back to the HTTP layer for one chat turn. */
-export type BridgeEvent =
-  | { type: "text"; text: string }
-  | { type: "tool"; name: string }
-  | {
-      type: "done";
-      result: string;
-      subtype: string;
-      usage?: unknown;
-      costUsd?: number;
-      sessionId?: string;
-    }
-  | { type: "error"; message: string };
+// Events streamed back to the HTTP layer for one chat turn. The shape is the
+// shared bridge/widget wire contract; re-exported so local imports keep working.
+export type { BridgeEvent };
 
 function authAwareError(err: unknown, auth: ResolvedAuth): string {
   const msg = err instanceof Error ? err.message : String(err);
@@ -56,6 +47,7 @@ function authAwareError(err: unknown, auth: ResolvedAuth): string {
 export async function* runChatTurn(
   message: string,
   abortController?: AbortController,
+  resumeSessionId?: string,
 ): AsyncGenerator<BridgeEvent> {
   const auth = resolveAuth();
 
@@ -97,6 +89,11 @@ export async function* runChatTurn(
                   `Tool "${toolName}" is not permitted by the AI bridge. ` +
                   `Only read-only D&D Beyond lookups are available.`,
               },
+        // Continue the prior conversation so follow-up questions keep context
+        // (e.g. "how many spell slots?" after "what level is character X?").
+        // The client echoes back the sessionId from the previous turn's `done`
+        // event; the SDK replays that session's history from its local store.
+        ...(resumeSessionId ? { resume: resumeSessionId } : {}),
         // Safety cap on tool-calling loops for a single turn.
         maxTurns: 12,
         env: auth.env,

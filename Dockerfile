@@ -29,6 +29,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY artifacts/dm-screen/package.json ./artifacts/dm-screen/
 COPY scripts/package.json ./scripts/
 COPY services/ai-bridge/package.json ./services/ai-bridge/
+# @workspace/bridge-protocol is a types-only workspace package that dm-screen
+# depends on (the AI-bridge wire contract). Its manifest is needed so the
+# filtered install can resolve+symlink it; it has no dependencies and its
+# `import type` usages are erased at build time, so nothing lands in the image.
+COPY packages/bridge-protocol/package.json ./packages/bridge-protocol/
 
 # `--frozen-lockfile` fails the build if the lockfile would drift; that's
 # what we want for reproducible images. The `--filter`s install only the

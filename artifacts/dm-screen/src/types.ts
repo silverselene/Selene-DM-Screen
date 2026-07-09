@@ -10,6 +10,7 @@ export const WIDGET_TYPES = [
   "wizard-tome",
   "party",
   "portal",
+  "ai-chat",
   "empty",
 ] as const;
 

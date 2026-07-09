@@ -44,13 +44,11 @@ sessions via `localStorage`.
 - **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
   player for table music or ambience. The link is remembered across
   sessions, and the embed resizes with the tile.
-
-### Coming soon
-
-- **AI Chat** — an assistant widget for asking rules questions and managing
-  combatants/party members by chatting, backed by an optional local AI
-  bridge service. In active development on an unmerged branch; not yet
-  available in this build.
+- **AI Chat** — ask Selene rules questions and look up monsters, spells, or a
+  player's D&D Beyond character in-session. Requires the **optional** local AI
+  bridge (`services/ai-bridge`); without it the widget shows a "bridge not
+  running" state and the rest of the app is unaffected. See
+  [services/ai-bridge/README.md](services/ai-bridge/README.md).
 
 ### Quality of life
 
@@ -174,19 +172,24 @@ Leaving `BASE_PATH` unset serves at `/` with no proxy prefix to strip.
 
 ## Architecture
 
-pnpm workspace with one deployable plus an offline tooling package:
+pnpm workspace with one deployable, an offline tooling package, and an optional
+local AI service (not part of the build or the Docker image):
 
 ```
 artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only deployable)
   src/data/                  Bundled reference data: spells, monsters,
                              weapons, generators, compendium
   src/lib/                   localStorage stores, backup/restore, shared UI primitives
-  src/components/widgets/    The eight widgets
+  src/components/widgets/    The eight widgets (AI Chat needs the optional bridge)
   public/                    PWA icons + static assets
   docker/nginx.conf          SPA-aware nginx config (used by the Docker image)
   scripts/verify-precache.mjs  Post-build guard: fails the build if a dataset
                              chunk grows past the PWA precache size cap
+packages/bridge-protocol/    Shared, types-only wire contract for the AI bridge ⇄
+                             AI Chat widget (no runtime code — erased from bundles)
 scripts/                     Standalone tsx data-generators (run offline)
+services/ai-bridge/          Optional local Claude Agent SDK + ddb-mcp bridge —
+                             powers the AI Chat widget; NOT in the deployable
 attached_assets/             Source CSV for the thin monster index
 Dockerfile, docker-compose.yml, .dockerignore
 ```
