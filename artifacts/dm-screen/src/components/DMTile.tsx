@@ -148,8 +148,8 @@ export function DMTile({
           onClick={onAdd}
           className="flex items-center justify-center text-purple-700 hover:text-purple-400 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full border border-current flex items-center justify-center group-hover:shadow-[0_0_10px_rgba(139,43,226,0.3)] transition-all">
-            <Plus className="w-4 h-4" />
+          <div className="w-[65px] h-[65px] rounded-full border border-current flex items-center justify-center group-hover:shadow-[0_0_10px_rgba(139,43,226,0.3)] transition-all">
+            <Plus className="w-8 h-8" />
           </div>
         </button>
 

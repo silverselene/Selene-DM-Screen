@@ -1,8 +1,13 @@
-// Shared helpers for the 5etools → static data generators.
+// Shared helpers for the 5etools/Open5e → static data generators.
 //
-// Source data: a local clone of https://github.com/5etools-mirror-3/5etools-src
-// pinned to tag v2.31.0 (sibling of this repo at ../../../5etools-src by default).
-// 5etools content is MIT-licensed; see attached LICENSE in their repo.
+// Source data:
+// - a local clone of https://github.com/5etools-mirror-3/5etools-src pinned
+//   to tag v2.31.0 (sibling of this repo at ../5etools-src by default).
+//   5etools content is MIT-licensed; see attached LICENSE in their repo.
+// - a local clone of https://github.com/open5e/open5e-api pinned to tag
+//   v1.12.0 (sibling of this repo at ../open5e-api by default). Its
+//   Kobold Press / EN Publishing monster data is Open Game Content under the
+//   Open Gaming License v1.0a — see OGL-NOTICE.md at the repo root.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -14,6 +19,9 @@ export const REPO_ROOT = path.resolve(__dirname, "../../..");
 export const FIVETOOLS_DIR =
   process.env["FIVETOOLS_DIR"] ?? path.resolve(REPO_ROOT, "../5etools-src");
 export const FIVETOOLS_DATA_DIR = path.join(FIVETOOLS_DIR, "data");
+export const OPEN5E_DIR =
+  process.env["OPEN5E_DIR"] ?? path.resolve(REPO_ROOT, "../open5e-api");
+export const OPEN5E_DATA_DIR = path.join(OPEN5E_DIR, "data/v1");
 export const DM_DATA_DIR = path.join(
   REPO_ROOT,
   "artifacts/dm-screen/src/data",

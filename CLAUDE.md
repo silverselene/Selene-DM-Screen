@@ -34,13 +34,14 @@ pnpm test                                            # all packages that define 
 pnpm --filter @workspace/dm-screen run test          # single package (vitest run)
 pnpm --filter @workspace/dm-screen run test:watch    # watch mode
 
-# Regenerate bundled reference data from the local ../5etools-src clone (tag v2.31.0)
+# Regenerate bundled reference data from the local ../5etools-src (tag v2.31.0)
+# and ../open5e-api (tag v1.12.0) clones
 pnpm --filter @workspace/scripts run generate:all
 # Or individually:
 pnpm --filter @workspace/scripts run generate:spells
 pnpm --filter @workspace/scripts run generate:monsters
-pnpm --filter @workspace/scripts run generate:monster-index
 pnpm --filter @workspace/scripts run generate:weapons
+pnpm --filter @workspace/scripts run generate:compendium
 
 # Docker
 docker compose up --build                            # http://localhost:38080 (host) → 8080 (non-root nginx container)
@@ -53,7 +54,7 @@ docker compose up --build                            # http://localhost:38080 (h
 ```
 artifacts/
   dm-screen/                  React 19 + Vite + Tailwind v4 — the only deployable
-    src/data/                 Bundled reference data (spells, bestiary, monsterIndex, weapons, …)
+    src/data/                 Bundled reference data (spells, monsters, weapons, …)
     src/lib/                  localStorage stores, backup/restore, shared UI primitives
     src/components/widgets/   The seven widgets
     public/                   PWA icons + static assets
@@ -94,16 +95,21 @@ Every package extends `tsconfig.base.json` (`composite: true`, `moduleResolution
 | Dataset | File | Count | Source |
 |---|---|---|---|
 | Spells | `src/data/spells.ts` | 557 | 5etools `data/spells/*.json` + `sources.json` |
-| Bestiary (rich) | `src/data/bestiary.ts` | 40 | 5etools `data/bestiary/*.json` (XMM > MM) |
-| Monster index (thin) | `src/data/monsterIndex.ts` | 2,158 | `attached_assets/Monsters_&_Beasts_*.csv` |
+| Monsters | `src/data/monsters.ts` | 2,160 | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools `data/bestiary/*.json` (XMM > MM) + Open5e `data/v1/{tob,cc,tob2,tob3,menagerie}/Monster.json` (OGL) |
 | Weapons | `src/data/weapons.ts` | 251 | 5etools `data/items.json` + `items-base.json` (2024 wins) |
-| Compendium / Oracle / generators | `src/data/{compendium,generators,playerOptions}.ts` | — | hand-curated |
+| Compendium (hand-curated) | `src/data/compendium.ts` | 78 | hand-curated DM summaries — never touched by a generator |
+| Compendium (bulk rules) | `src/data/compendiumRules.ts` | 564 | 5etools `data/{feats,actions,skills,senses,variantrules}.json` + Open5e `data/v1/{a5e,toh,taldorei}/Feat.json` (OGL/CC-BY) |
+| Oracle / generators | `src/data/{generators,playerOptions}.ts` | — | hand-curated |
 
-All datasets are **bundled at build time** — no network at runtime. Generators live in `scripts/src/data-generators/` and read **only** from a local sibling clone at `../5etools-src` pinned to tag `v2.31.0` (overridable via `FIVETOOLS_DIR`). When regenerating:
+`monsters.ts` is a single unified array (`MonsterEntry[]`): every entry carries the thin fields (name/ac/hp/cr/size/type/alignment/source/environment/pageNumber/isLegendary/initiative…), and 2,146 of the 2,160 (99.4%) additionally carry the rich fields (speed, ability scores, senses/languages, traits/actions/reactions/legendaryActions) — 40 from a hand-maintained curated list (`CANONICAL_RICH_NAMES` in `generate-monsters.ts`), the rest matched by name against 5etools (official WotC content) or Open5e (Kobold Press Tome of Beasts I–III / Creature Codex, Level Up A5e Monstrous Menagerie — Open Game Content under OGL, see [OGL-NOTICE.md](OGL-NOTICE.md)). The remaining 14 are custom/homebrew entries or adventure-specific variants with no match in either source and stay thin. Check `actions !== undefined` to tell a full stat block apart from a thin entry — see [monsterSearch.ts](artifacts/dm-screen/src/lib/monsterSearch.ts) and [BestiaryWidget.tsx](artifacts/dm-screen/src/components/widgets/BestiaryWidget.tsx).
+
+The Compendium widget merges two data files at the widget layer (`CompendiumWidget.tsx`), not in a single generated array like `monsters.ts` — `compendium.ts` holds the DM's own hand-written rule summaries and is **never** touched by `generate-compendium.ts`; that generator only writes `compendiumRules.ts` (feats, combat actions, skills, senses, and DMG/PHB-style variant rules), skipping any entry whose (normalized) title already exists in `compendium.ts` so the DM's own wording always wins. `categories` for the filter dropdown is derived from the union of both arrays in the widget, not exported from either data file.
+
+All datasets are **bundled at build time** — no network at runtime. Generators live in `scripts/src/data-generators/` and read **only** from local sibling clones: `../5etools-src` pinned to tag `v2.31.0` (overridable via `FIVETOOLS_DIR`), and, for `generate-monsters.ts`'s and `generate-compendium.ts`'s third-party passes, `../open5e-api` pinned to tag `v1.12.0` (overridable via `OPEN5E_DIR`). When regenerating:
 
 - Prefer 2024 sources (XPHB, XMM) over 2014 (PHB, MM) — the strippers and source-priority lists already encode this.
 - The shared `stripTags` in `scripts/src/data-generators/lib.ts` translates 5etools tag macros (`{@h}`, `{@actSaveFail}`, `{@hit N}`, `{@dc N}`, `{@damage}`, `{@scaledice}`, …) into plain-English combat labels. Extend it there, not in individual generators.
-- File headers preserve 5etools MIT attribution. Keep them.
+- File headers preserve 5etools MIT attribution and note the Open5e/OGL provenance where applicable. Keep them, and keep [OGL-NOTICE.md](OGL-NOTICE.md) in sync if you add another OGL-licensed source book.
 
 ## PWA / service worker
 
@@ -113,8 +119,8 @@ The app is a PWA via `vite-plugin-pwa` configured in `vite.config.ts`:
 - `injectRegister: "script"` — pinned (not `"auto"`) so a future plugin default-change can't reintroduce an inline registration and force the CSP `script-src` back open.
 - `cleanupOutdatedCaches: true` + Vite's hashed asset filenames = stale caches can't strand the DM.
 - `navigateFallback: "index.html"` for SPA routing.
-- `build.rollupOptions.output.manualChunks` splits the four big datasets into stable `data-spells` / `data-monster-index` / `data-bestiary` / `data-weapons` chunks, and widgets are `React.lazy`-loaded per tile, so the main `index` chunk is ~233 kB and a widget edit no longer busts the dataset precache.
-- `maximumFileSizeToCacheInBytes: 4 MiB` (headroom for the largest dataset chunk; default 2 MiB cap was uncomfortably close).
+- `build.rollupOptions.output.manualChunks` splits the big datasets into stable `data-spells` / `data-monsters` / `data-weapons` / `data-compendium-rules` chunks, and widgets are `React.lazy`-loaded per tile, so the main `index` chunk is ~237 kB and a widget edit no longer busts the dataset precache.
+- `maximumFileSizeToCacheInBytes: 8 MiB` (headroom for the largest dataset chunk — `data-monsters` alone is ~4.1 MB now that most of the 2,160-row monster dataset carries a full stat block; default 2 MiB cap was uncomfortably close).
 - `globPatterns` precaches `js, css, html, svg, png, ico, webp, woff, woff2`.
 - Two `runtimeCaching` rules for Google Fonts (stylesheet StaleWhileRevalidate, woff2 CacheFirst).
 

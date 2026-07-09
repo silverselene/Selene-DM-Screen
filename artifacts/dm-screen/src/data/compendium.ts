@@ -575,5 +575,3 @@ export const compendiumData: CompendiumEntry[] = [
     tags: ["warlock", "class", "2024", "pact magic", "eldritch invocations", "short rest"],
   },
 ];
-
-export const categories = [...new Set(compendiumData.map((e) => e.category))].sort();

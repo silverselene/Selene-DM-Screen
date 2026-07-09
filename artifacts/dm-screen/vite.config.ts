@@ -73,10 +73,13 @@ export default defineConfig({
         // and Google Fonts on first online visit so the table never needs
         // network.
         globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff,woff2}"],
-        // The dm-screen JS bundle is ~1.6 MB. Default precache cap is 2 MB —
-        // raise to 4 MB so the bundle plus all the reference data fits in
-        // one shot rather than being split across separate runtime caches.
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // The dm-screen JS bundle is ~1.6 MB, and data-monsters alone is
+        // ~4.1 MB now that most of the 2,160-row monster dataset carries a
+        // full stat block. Default precache cap is 2 MB — raise well past
+        // the current largest chunk (with headroom for the dataset to keep
+        // growing) so the bundle plus all the reference data fits in one
+        // shot rather than being split across separate runtime caches.
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         // clientsClaim + skipWaiting are the coherent pair for the
         // `registerType: "autoUpdate"` strategy above: a freshly installed SW
@@ -130,9 +133,9 @@ export default defineConfig({
         // that one widget's code.
         manualChunks(id) {
           if (id.includes("/src/data/spells.")) return "data-spells";
-          if (id.includes("/src/data/monsterIndex.")) return "data-monster-index";
-          if (id.includes("/src/data/bestiary.")) return "data-bestiary";
+          if (id.includes("/src/data/monsters.")) return "data-monsters";
           if (id.includes("/src/data/weapons.")) return "data-weapons";
+          if (id.includes("/src/data/compendiumRules.")) return "data-compendium-rules";
           return undefined;
         },
       },
