@@ -1,4 +1,4 @@
-import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
+import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
@@ -34,6 +34,7 @@ const KEY_LABELS: Record<string, string> = {
   "dm-bestiary-selected-v1": "Bestiary",
   "dm-bestiary-sort-v1": "Bestiary",
   "dm-bestiary-cr-v1": "Bestiary",
+  "dm-portal-url-v1": "Portal",
 };
 
 function friendlyKeyLabels(keys: string[]): string[] {
@@ -101,6 +102,7 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
   bestiary: { label: "Bestiary", icon: <Skull className="w-3.5 h-3.5" />, color: "text-rose-400 bg-rose-900/20 border-rose-800/40" },
   "wizard-tome": { label: "Wizard's Tome", icon: <BookMarked className="w-3.5 h-3.5" />, color: "text-cyan-400 bg-cyan-900/20 border-cyan-800/40" },
   party: { label: "Party", icon: <Users className="w-3.5 h-3.5" />, color: "text-emerald-400 bg-emerald-900/20 border-emerald-800/40" },
+  portal: { label: "Portal", icon: <MonitorPlay className="w-3.5 h-3.5" />, color: "text-fuchsia-400 bg-fuchsia-900/20 border-fuchsia-800/40" },
 };
 
 const GRID_SIZES = [2, 3, 4] as const;
