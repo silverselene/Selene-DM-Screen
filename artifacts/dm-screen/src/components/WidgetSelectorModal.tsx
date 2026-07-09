@@ -1,4 +1,4 @@
-import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users } from "lucide-react";
+import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay } from "lucide-react";
 import type { WidgetType } from "@/types";
 
 interface Props {
@@ -55,6 +55,13 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
     description: "Manage player characters — AC, HP, level, class, spells & weapons. Add to initiative.",
     icon: <Users className="w-6 h-6" />,
     color: "from-emerald-900/60 to-emerald-800/40 border-emerald-600/50 hover:border-emerald-400",
+  },
+  {
+    type: "portal",
+    label: "Portal",
+    description: "Embed a YouTube, Spotify, SoundCloud, or Vimeo link for table music or ambience.",
+    icon: <MonitorPlay className="w-6 h-6" />,
+    color: "from-fuchsia-900/60 to-fuchsia-800/40 border-fuchsia-600/50 hover:border-fuchsia-400",
   },
 ];
 

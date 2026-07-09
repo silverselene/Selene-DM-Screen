@@ -9,6 +9,7 @@ export const WIDGET_TYPES = [
   "bestiary",
   "wizard-tome",
   "party",
+  "portal",
   "empty",
 ] as const;
 

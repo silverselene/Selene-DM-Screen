@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import {
   Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users,
-  ArrowRight, ArrowDown, Minimize2,
+  ArrowRight, ArrowDown, Minimize2, MonitorPlay,
 } from "lucide-react";
 import type { TileEntry, WidgetType } from "@/types";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
@@ -24,6 +24,8 @@ const WizardsTomeWidget = lazy(() =>
   import("./widgets/WizardsTomeWidget").then((m) => ({ default: m.WizardsTomeWidget })));
 const PartyWidget = lazy(() =>
   import("./widgets/PartyWidget").then((m) => ({ default: m.PartyWidget })));
+const PortalWidget = lazy(() =>
+  import("./widgets/PortalWidget").then((m) => ({ default: m.PortalWidget })));
 
 function WidgetLoading() {
   return (
@@ -85,6 +87,11 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
     icon: <Users className="w-3 h-3" />,
     accent: "border-emerald-800/60 shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]",
   },
+  portal: {
+    label: "Portal",
+    icon: <MonitorPlay className="w-3 h-3" />,
+    accent: "border-fuchsia-800/60 shadow-[inset_0_0_20px_rgba(217,70,239,0.05)]",
+  },
 };
 
 function WidgetContent({
@@ -112,6 +119,7 @@ function WidgetContent({
         )}
         {widget === "wizard-tome" && <WizardsTomeWidget />}
         {widget === "party" && <PartyWidget />}
+        {widget === "portal" && <PortalWidget />}
       </Suspense>
     </ErrorBoundary>
   );

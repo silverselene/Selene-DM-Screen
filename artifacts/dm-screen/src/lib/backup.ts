@@ -320,6 +320,10 @@ export type BestiaryCrFilter = (typeof BESTIARY_CR_FILTERS)[number];
 // into a key every widget mount re-reads.
 export const WIDGET_QUERY_MAX = 200;
 
+// Portal widget's saved embed link. URLs (with query strings, e.g. a
+// SoundCloud share link) run longer than the generic query cap above.
+export const PORTAL_URL_MAX = 2000;
+
 // Oracle roll history: 5 entries kept per tab today; validate with
 // headroom so a future "keep more history" bump doesn't invalidate
 // existing stored state.
@@ -399,6 +403,11 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
   "dm-oracle-cr-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
   "dm-oracle-settlement-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
   "dm-oracle-history-v2": lift(validateOracleHistory),
+
+  // Portal widget's saved embed link (raw pasted URL, not the derived
+  // embed src — the widget re-derives the embed URL from this on every
+  // render, see PortalWidget.tsx).
+  "dm-portal-url-v1": lift(validateNullableStringMax(PORTAL_URL_MAX)),
 };
 
 function validatorFor(key: string): KeyValidator {
