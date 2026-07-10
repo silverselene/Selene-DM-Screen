@@ -16,6 +16,30 @@
  * artifacts/dm-screen/src/lib/aiBridge.ts).
  */
 
+/**
+ * Reasoning-effort levels the AI Chat widget exposes. A subset of the Agent
+ * SDK's `EffortLevel` (`low|medium|high|xhigh|max`) — we surface only the three
+ * that are valid on every model, so no per-model gating is needed. Guides
+ * adaptive-thinking depth: `low` is fastest, `high` is the SDK default.
+ */
+export type EffortLevel = "low" | "medium" | "high";
+
+/**
+ * Request body of the bridge's `POST /chat`. Shared so the widget (producer) and
+ * bridge (consumer) can't drift on the field set. The bytes on the socket are
+ * still untrusted — the bridge re-validates `effort` against the enum and treats
+ * `model` opaquely (an unusable id surfaces as an `error` event).
+ */
+export interface ChatRequest {
+  message: string;
+  /** Continue a prior turn's Agent-SDK session so follow-ups keep context. */
+  resume?: string;
+  /** Model id. Omitted → bridge falls back to AI_BRIDGE_MODEL / SDK default. */
+  model?: string;
+  /** Reasoning effort. Omitted → SDK default. */
+  effort?: EffortLevel;
+}
+
 /** One event streamed back from `POST /chat` for a single chat turn. */
 export type BridgeEvent =
   | { type: "text"; text: string }

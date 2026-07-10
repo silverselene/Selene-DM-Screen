@@ -1,14 +1,87 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Sparkles, Send, Loader2, Search, AlertTriangle, RefreshCw, Square, SquarePen } from "lucide-react";
+import { Sparkles, Send, Loader2, Search, AlertTriangle, RefreshCw, Square, SquarePen, ChevronDown } from "lucide-react";
 import {
   checkHealth,
   streamChat,
   friendlyToolName,
   BridgeUnreachableError,
   type BridgeHealth,
+  type EffortLevel,
 } from "@/lib/aiBridge";
 import { ChatToolCard, type ToolResultCard } from "./ChatToolCard";
 import { MiniMarkdown } from "@/lib/miniMarkdown";
+import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
+
+// Model catalog for the footer picker — the single source of truth for the menu
+// (the bridge forwards the chosen id opaquely). Session-only selection; defaults
+// to Sonnet 5 + Medium effort.
+const MODELS = [
+  { id: "claude-opus-4-8", label: "Opus 4.8" },
+  { id: "claude-sonnet-5", label: "Sonnet 5" },
+  { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5" },
+] as const;
+const EFFORTS: { id: EffortLevel; label: string }[] = [
+  { id: "low", label: "Low" },
+  { id: "medium", label: "Medium" },
+  { id: "high", label: "High" },
+];
+const DEFAULT_MODEL = "claude-sonnet-5";
+const DEFAULT_EFFORT: EffortLevel = "medium";
+
+/**
+ * A compact footer dropdown (model or effort). Portals via AnchoredDropdown so
+ * the menu escapes the tile's `overflow: hidden`. Selection is applied to the
+ * next turn only — picking a value never aborts or resets the conversation.
+ */
+function FooterPicker<T extends string>({
+  value,
+  options,
+  onChange,
+  title,
+}: {
+  value: T;
+  options: readonly { id: T; label: string }[];
+  onChange: (v: T) => void;
+  title: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const current = options.find((o) => o.id === value);
+  return (
+    <>
+      <button
+        ref={setAnchor}
+        type="button"
+        title={title}
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-0.5 hover:text-amber-300/90 transition-colors"
+      >
+        {current?.label ?? value}
+        <ChevronDown className="w-2.5 h-2.5 opacity-70" />
+      </button>
+      <AnchoredDropdown anchor={anchor} open={open} role="listbox" autoWidth onRequestClose={() => setOpen(false)}>
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="option"
+            aria-selected={o.id === value}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onChange(o.id);
+              setOpen(false);
+            }}
+            className={`block w-full text-left px-2 py-1 text-[11px] whitespace-nowrap hover:bg-amber-900/30 transition-colors ${
+              o.id === value ? "text-amber-300" : "text-gray-200"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </AnchoredDropdown>
+    </>
+  );
+}
 
 // Phase 2: chat shell only. Talks to the optional local AI bridge, streams the
 // assistant reply, and degrades to a clear "bridge not running" state when the
@@ -39,6 +112,10 @@ export function AIChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Session-only model/effort selection. Applied to the next turn's request;
+  // changing either mid-conversation does not reset the chat or abort a turn.
+  const [model, setModel] = useState<string>(DEFAULT_MODEL);
+  const [effort, setEffort] = useState<EffortLevel>(DEFAULT_EFFORT);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -168,6 +245,8 @@ export function AIChatWidget() {
         },
         abort.signal,
         sessionIdRef.current ?? undefined,
+        model,
+        effort,
       );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -188,7 +267,7 @@ export function AIChatWidget() {
       setSending(false);
       abortRef.current = null;
     }
-  }, [input, sending, updateLastAssistant, newChat]);
+  }, [input, sending, updateLastAssistant, newChat, model, effort]);
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
@@ -347,14 +426,22 @@ export function AIChatWidget() {
             </button>
           )}
         </div>
-        {health && (
-          <div className="mt-1 text-[10px] flex items-center gap-1" style={{ color: "var(--dm-t3)" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
-            Bridge online · {health.billing}
-            {health.billing === "subscription" ? " (Claude subscription)" : ""}
-            {!health.ddbMcpFound && " · D&D Beyond tools unavailable"}
-          </div>
-        )}
+        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[10px]" style={{ color: "var(--dm-t3)" }}>
+          <FooterPicker<string> value={model} options={MODELS} onChange={setModel} title="Model" />
+          <span className="opacity-40">·</span>
+          <span>Effort:</span>
+          <FooterPicker<EffortLevel> value={effort} options={EFFORTS} onChange={setEffort} title="Reasoning effort" />
+          {health && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
+                {health.billing}
+                {!health.ddbMcpFound && " · no D&D Beyond tools"}
+              </span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

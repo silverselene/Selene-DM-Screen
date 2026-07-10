@@ -5,6 +5,7 @@ import { config } from "./config";
 import { ALLOWED_TOOL_IDS } from "./ddbTools";
 import { resolveAuth } from "./auth";
 import { runChatTurn } from "./agent";
+import { parseChatRequest } from "./chatRequest";
 
 const MAX_BODY_BYTES = 64 * 1024; // chat turns are short prompts, not uploads
 
@@ -89,23 +90,21 @@ function handleHealth(res: ServerResponse) {
 }
 
 async function handleChat(req: IncomingMessage, res: ServerResponse) {
-  let message: unknown;
-  let resume: string | undefined;
+  let raw: string;
   try {
-    const raw = await readBody(req);
-    const parsed = JSON.parse(raw) as { message?: unknown; resume?: unknown };
-    message = parsed.message;
-    // Optional: continue a prior conversation. Echoed back by the client from
-    // the previous turn's `done` event, so it's a session id the SDK minted.
-    if (typeof parsed.resume === "string" && parsed.resume !== "") resume = parsed.resume;
+    raw = await readBody(req);
   } catch (err) {
-    sendJson(res, 400, { error: err instanceof Error ? err.message : "Invalid JSON body" });
+    sendJson(res, 400, { error: err instanceof Error ? err.message : "Invalid request body" });
     return;
   }
-  if (typeof message !== "string" || message.trim() === "") {
-    sendJson(res, 400, { error: 'Body must be JSON: { "message": "<non-empty string>" }' });
+  // Parse + validate the untrusted body. `message` is required; `resume`/`model`
+  // pass through when non-empty; `effort` is dropped unless it's a valid level.
+  const parsed = parseChatRequest(raw);
+  if (!parsed.ok) {
+    sendJson(res, 400, { error: parsed.error });
     return;
   }
+  const { message, resume, model, effort } = parsed.value;
 
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -126,7 +125,7 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
   req.on("close", () => abort.abort());
 
   try {
-    for await (const ev of runChatTurn(message, abort, resume)) {
+    for await (const ev of runChatTurn(message, abort, resume, model, effort)) {
       // `res.writable` is false once we've ended OR the peer closed the socket;
       // `writableEnded` only covers the former, so a client disconnect would
       // otherwise fall through to a write-after-close.

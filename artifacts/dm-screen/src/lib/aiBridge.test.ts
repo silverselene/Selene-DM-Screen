@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { isBridgeEvent, isBridgeHealth, parseSseRecord, friendlyToolName } from "./aiBridge";
+import { isBridgeEvent, isBridgeHealth, parseSseRecord, friendlyToolName, buildChatBody } from "./aiBridge";
+
+describe("buildChatBody", () => {
+  it("includes only message when nothing else is given", () => {
+    expect(buildChatBody("hi")).toEqual({ message: "hi" });
+  });
+
+  it("includes resume, model, and effort when provided", () => {
+    expect(buildChatBody("hi", "s1", "claude-opus-4-8", "high")).toEqual({
+      message: "hi",
+      resume: "s1",
+      model: "claude-opus-4-8",
+      effort: "high",
+    });
+  });
+
+  it("omits an undefined or empty resume/model", () => {
+    expect(buildChatBody("hi", undefined, undefined, "medium")).toEqual({ message: "hi", effort: "medium" });
+    expect(buildChatBody("hi", "", "")).toEqual({ message: "hi" });
+  });
+});
 
 describe("isBridgeEvent", () => {
   it("accepts each well-formed variant", () => {

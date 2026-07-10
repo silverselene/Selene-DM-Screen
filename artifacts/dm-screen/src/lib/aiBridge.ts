@@ -12,8 +12,26 @@ export const BRIDGE_URL = "http://127.0.0.1:38900";
 // with the bridge (services/ai-bridge), so a producer/consumer drift is a
 // compile error rather than a silent runtime mis-parse. Re-exported here so
 // existing `@/lib/aiBridge` importers keep working unchanged.
-import type { BridgeEvent, BridgeHealth } from "@workspace/bridge-protocol";
-export type { BridgeEvent, BridgeHealth };
+import type { BridgeEvent, BridgeHealth, ChatRequest, EffortLevel } from "@workspace/bridge-protocol";
+export type { BridgeEvent, BridgeHealth, ChatRequest, EffortLevel };
+
+/**
+ * Build the `POST /chat` request body, including `resume`/`model` only when
+ * they're non-empty and `effort` only when set. Pure and exported so the field
+ * assembly is unit-tested independently of `fetch`.
+ */
+export function buildChatBody(
+  message: string,
+  resume?: string,
+  model?: string,
+  effort?: EffortLevel,
+): ChatRequest {
+  const body: ChatRequest = { message };
+  if (resume) body.resume = resume;
+  if (model) body.model = model;
+  if (effort) body.effort = effort;
+  return body;
+}
 
 /**
  * Validate a decoded `/health` body is a well-formed `BridgeHealth`. The bytes
@@ -133,14 +151,17 @@ export async function streamChat(
   onEvent: (event: BridgeEvent) => void,
   signal?: AbortSignal,
   resumeSessionId?: string,
+  model?: string,
+  effort?: EffortLevel,
 ): Promise<void> {
   let res: Response;
   try {
     res = await fetch(`${BRIDGE_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // `resume` continues the prior turn's session so follow-ups keep context.
-      body: JSON.stringify(resumeSessionId ? { message, resume: resumeSessionId } : { message }),
+      // `resume` continues the prior turn's session so follow-ups keep context;
+      // `model`/`effort` select the model and reasoning depth for this turn.
+      body: JSON.stringify(buildChatBody(message, resumeSessionId, model, effort)),
       signal,
     });
   } catch (err) {

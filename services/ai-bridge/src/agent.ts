@@ -3,7 +3,7 @@ import {
   type SDKUserMessage,
   type McpServerConfig,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { BridgeEvent } from "@workspace/bridge-protocol";
+import type { BridgeEvent, EffortLevel } from "@workspace/bridge-protocol";
 import { config } from "./config";
 import { ALLOWED_TOOL_SET, MCP_SERVER_NAME, bareToolName } from "./ddbTools";
 import { parseToolResult, extractToolResultText } from "./toolResults";
@@ -49,8 +49,15 @@ export async function* runChatTurn(
   message: string,
   abortController?: AbortController,
   resumeSessionId?: string,
+  model?: string,
+  effort?: EffortLevel,
 ): AsyncGenerator<BridgeEvent> {
   const auth = resolveAuth();
+
+  // A per-request model overrides the AI_BRIDGE_MODEL env (config.model), which
+  // stays the fallback for non-widget callers (curl, the smoke test). Undefined
+  // → the Agent SDK / subscription default.
+  const chosenModel = model ?? config.model;
 
   // canUseTool requires streaming-input mode (prompt as an async iterable).
   async function* promptStream(): AsyncGenerator<SDKUserMessage> {
@@ -76,7 +83,9 @@ export async function* runChatTurn(
     const response = query({
       prompt: promptStream(),
       options: {
-        ...(config.model ? { model: config.model } : {}),
+        ...(chosenModel ? { model: chosenModel } : {}),
+        // Reasoning effort (low/medium/high). Undefined → the SDK default.
+        ...(effort ? { effort } : {}),
         systemPrompt: SYSTEM_PROMPT,
         // Hermetic: don't load this repo's CLAUDE.md, skills, or .mcp.json.
         settingSources: [],
