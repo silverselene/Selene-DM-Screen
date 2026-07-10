@@ -35,6 +35,17 @@ export type BridgeEvent =
       markdown: string;
     }
   | {
+      /**
+       * A tool call that errored (e.g. a private or not-found D&D Beyond
+       * character). Emitted instead of `tool_result` when the SDK marks the
+       * result block `is_error`, so the widget renders an inline error rather
+       * than a mis-parsed card. `message` is the raw error text from the tool.
+       */
+      type: "tool_error";
+      tool: string;
+      message: string;
+    }
+  | {
       type: "done";
       result: string;
       subtype: string;

@@ -77,6 +77,17 @@ describe("isBridgeEvent — tool_result", () => {
   });
 });
 
+describe("isBridgeEvent — tool_error", () => {
+  it("accepts a well-formed tool_error", () => {
+    expect(isBridgeEvent({ type: "tool_error", tool: "ddb_get_character", message: "Character is private." })).toBe(true);
+  });
+
+  it("rejects a tool_error missing message or with a non-string field", () => {
+    expect(isBridgeEvent({ type: "tool_error", tool: "ddb_get_character" })).toBe(false);
+    expect(isBridgeEvent({ type: "tool_error", tool: 3, message: "x" })).toBe(false);
+  });
+});
+
 describe("isBridgeHealth", () => {
   const ok = {
     ok: true,
@@ -140,6 +151,12 @@ describe("parseSseRecord", () => {
   it("parses a tool_result data record", () => {
     const ev = { type: "tool_result", tool: "ddb_get_monster", kind: "monster", title: "Goblin", fields: { ac: "15" }, markdown: "# Goblin" };
     const record = `event: tool_result\ndata: ${JSON.stringify(ev)}`;
+    expect(parseSseRecord(record)).toEqual(ev);
+  });
+
+  it("parses a tool_error data record", () => {
+    const ev = { type: "tool_error", tool: "ddb_get_character", message: "Character 1 is private and cannot be accessed." };
+    const record = `event: tool_error\ndata: ${JSON.stringify(ev)}`;
     expect(parseSseRecord(record)).toEqual(ev);
   });
 });

@@ -8,6 +8,7 @@ import {
   type BridgeHealth,
 } from "@/lib/aiBridge";
 import { ChatToolCard, type ToolResultCard } from "./ChatToolCard";
+import { MiniMarkdown } from "@/lib/miniMarkdown";
 
 // Phase 2: chat shell only. Talks to the optional local AI bridge, streams the
 // assistant reply, and degrades to a clear "bridge not running" state when the
@@ -20,6 +21,7 @@ interface AssistantMessage {
   text: string;
   tools: string[];
   cards: ToolResultCard[];
+  toolErrors: { tool: string; message: string }[];
   error?: string;
   pending: boolean;
 }
@@ -116,7 +118,7 @@ export function AIChatWidget() {
     setMessages((prev) => [
       ...prev,
       { role: "user", text },
-      { role: "assistant", text: "", tools: [], cards: [], pending: true },
+      { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
     ]);
 
     const abort = new AbortController();
@@ -135,6 +137,11 @@ export function AIChatWidget() {
             }));
           } else if (event.type === "tool_result") {
             updateLastAssistant((m) => ({ ...m, cards: [...m.cards, event] }));
+          } else if (event.type === "tool_error") {
+            updateLastAssistant((m) => ({
+              ...m,
+              toolErrors: [...m.toolErrors, { tool: friendlyToolName(event.tool), message: event.message }],
+            }));
           } else if (event.type === "error") {
             // A turn-level failure can mean the resumed bridge session was
             // rejected or evicted. Drop the session id so the next message
@@ -276,12 +283,24 @@ export function AIChatWidget() {
                   {m.cards.map((c, j) => (<ChatToolCard key={j} card={c} />))}
                 </div>
               )}
-              {m.text && (
-                <div className="max-w-[92%] text-xs whitespace-pre-wrap break-words leading-relaxed" style={{ color: "var(--dm-t2)" }}>
-                  {m.text}
+              {m.toolErrors.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {m.toolErrors.map((te, j) => (
+                    <div key={j} className="flex items-start gap-1.5 text-xs text-red-400/90">
+                      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                      <span className="whitespace-pre-wrap break-words">
+                        <span className="font-semibold">{te.tool}:</span> {te.message}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
-              {m.pending && !m.text && m.tools.length === 0 && m.cards.length === 0 && (
+              {m.text && (
+                <div className="max-w-[92%]" style={{ color: "var(--dm-t2)" }}>
+                  <MiniMarkdown text={m.text} variant="prose" />
+                </div>
+              )}
+              {m.pending && !m.text && m.tools.length === 0 && m.cards.length === 0 && m.toolErrors.length === 0 && (
                 <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--dm-t3)" }}>
                   <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
                 </div>

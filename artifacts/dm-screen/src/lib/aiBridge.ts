@@ -80,6 +80,8 @@ export function isBridgeEvent(value: unknown): value is BridgeEvent {
         typeof v.title === "string" &&
         typeof v.markdown === "string"
       );
+    case "tool_error":
+      return typeof v.tool === "string" && typeof v.message === "string";
     case "done":
       return typeof v.result === "string" && typeof v.subtype === "string";
     case "error":

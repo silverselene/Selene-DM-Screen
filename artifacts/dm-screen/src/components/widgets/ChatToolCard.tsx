@@ -50,17 +50,30 @@ export function ChatToolCard({ card }: { card: ToolResultCard }) {
           ))}
         </div>
       )}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-300/70 hover:text-amber-200/90 transition-colors"
-      >
-        <ChevronRight className={`w-3 h-3 transition-transform ${open ? "rotate-90" : ""}`} />
-        {open ? "Hide details" : card.kind === "generic" ? "Show details" : "Full stat block"}
-      </button>
-      {open && (
+      {chips.length === 0 ? (
+        // No structured fields parsed (generic lookups, or a rich parse that
+        // extracted nothing) — the raw text IS the content, so show it inline
+        // rather than hide the only meaningful part behind a toggle.
         <div className="mt-1.5 pt-1.5 border-t" style={{ borderColor: "var(--dm-border)" }}>
           <MiniMarkdown text={card.markdown} />
         </div>
+      ) : (
+        // Chips already summarize the result; keep the full block available but
+        // collapsed so it doesn't crowd the card.
+        <>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-300/70 hover:text-amber-200/90 transition-colors"
+          >
+            <ChevronRight className={`w-3 h-3 transition-transform ${open ? "rotate-90" : ""}`} />
+            {open ? "Hide details" : "Full stat block"}
+          </button>
+          {open && (
+            <div className="mt-1.5 pt-1.5 border-t" style={{ borderColor: "var(--dm-border)" }}>
+              <MiniMarkdown text={card.markdown} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

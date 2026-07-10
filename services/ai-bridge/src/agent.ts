@@ -128,6 +128,14 @@ export async function* runChatTurn(
           if (block.type === "tool_result") {
             const bare = toolNamesById.get(block.tool_use_id) ?? "unknown_tool";
             const text = extractToolResultText(block.content);
+            // A tool call that errored (e.g. a private/not-found DDB character)
+            // sets is_error on the result block. Surface it as a distinct error
+            // event so the widget shows an inline error instead of a mis-parsed
+            // stat card. (Cast: is_error may not be on the SDK's narrowed block.)
+            if ((block as { is_error?: boolean }).is_error) {
+              yield { type: "tool_error", tool: bare, message: text || "The lookup failed." };
+              continue;
+            }
             if (text) yield parseToolResult(bare, text);
           }
         }
