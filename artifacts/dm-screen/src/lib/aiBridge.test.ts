@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isBridgeEvent, parseSseRecord, friendlyToolName } from "./aiBridge";
+import { isBridgeEvent, isBridgeHealth, parseSseRecord, friendlyToolName } from "./aiBridge";
 
 describe("isBridgeEvent", () => {
   it("accepts each well-formed variant", () => {
@@ -42,6 +42,67 @@ describe("isBridgeEvent", () => {
   });
 });
 
+describe("isBridgeEvent — tool_result", () => {
+  it("accepts a well-formed tool_result", () => {
+    expect(
+      isBridgeEvent({
+        type: "tool_result",
+        tool: "ddb_get_monster",
+        kind: "monster",
+        title: "Goblin",
+        fields: { ac: "15", hp: "7" },
+        markdown: "# Goblin",
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts a tool_result with no fields (fields is optional)", () => {
+    expect(
+      isBridgeEvent({ type: "tool_result", tool: "ddb_get_spell", kind: "generic", title: "Fireball", markdown: "# Fireball" }),
+    ).toBe(true);
+  });
+
+  it("accepts an unknown kind (widget treats it as generic)", () => {
+    expect(
+      isBridgeEvent({ type: "tool_result", tool: "ddb_x", kind: "future-kind", title: "X", markdown: "x" }),
+    ).toBe(true);
+  });
+
+  it("rejects a tool_result missing markdown", () => {
+    expect(isBridgeEvent({ type: "tool_result", tool: "ddb_x", kind: "generic", title: "X" })).toBe(false);
+  });
+
+  it("rejects a tool_result with non-string title", () => {
+    expect(isBridgeEvent({ type: "tool_result", tool: "ddb_x", kind: "generic", title: 3, markdown: "x" })).toBe(false);
+  });
+});
+
+describe("isBridgeHealth", () => {
+  const ok = {
+    ok: true,
+    service: "selene-ai-bridge",
+    billing: "subscription",
+    ddbMcpEntry: "/path/to/ddb-mcp",
+    ddbMcpFound: true,
+    allowedTools: 26,
+  };
+  it("accepts a well-formed health body", () => {
+    expect(isBridgeHealth(ok)).toBe(true);
+  });
+  it("accepts a null ddbMcpEntry", () => {
+    expect(isBridgeHealth({ ...ok, ddbMcpEntry: null, ddbMcpFound: false })).toBe(true);
+  });
+  it("rejects a body missing billing (would render `undefined`)", () => {
+    const { billing: _drop, ...noBilling } = ok;
+    expect(isBridgeHealth(noBilling)).toBe(false);
+  });
+  it("rejects a non-object or wrong-typed field", () => {
+    expect(isBridgeHealth(null)).toBe(false);
+    expect(isBridgeHealth("{}")).toBe(false);
+    expect(isBridgeHealth({ ...ok, allowedTools: "26" })).toBe(false);
+  });
+});
+
 describe("parseSseRecord", () => {
   it("decodes the data: line and ignores the redundant event: line", () => {
     const record = 'event: text\ndata: {"type":"text","text":"Hello"}';
@@ -74,6 +135,12 @@ describe("parseSseRecord", () => {
     expect(parseSseRecord('data: {"type":"text","text":123}')).toBeNull();
     expect(parseSseRecord('data: {"hello":"world"}')).toBeNull();
     expect(parseSseRecord("data: 42")).toBeNull();
+  });
+
+  it("parses a tool_result data record", () => {
+    const ev = { type: "tool_result", tool: "ddb_get_monster", kind: "monster", title: "Goblin", fields: { ac: "15" }, markdown: "# Goblin" };
+    const record = `event: tool_result\ndata: ${JSON.stringify(ev)}`;
+    expect(parseSseRecord(record)).toEqual(ev);
   });
 });
 

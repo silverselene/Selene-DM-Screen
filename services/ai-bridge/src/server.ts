@@ -8,10 +8,38 @@ import { runChatTurn } from "./agent";
 
 const MAX_BODY_BYTES = 64 * 1024; // chat turns are short prompts, not uploads
 
-function cors(res: ServerResponse) {
-  // Bound to 127.0.0.1, so the LAN can't reach this; a permissive origin only
-  // lets the local SPA (http://localhost:38080) call it from the browser.
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// Binding to 127.0.0.1 keeps the LAN out, but it does NOT stop a request made
+// from inside the DM's own browser: any web page they visit could POST to
+// http://127.0.0.1:38900 and, with a wildcard `Access-Control-Allow-Origin`,
+// read the streamed reply — driving the DM's Claude subscription and
+// exfiltrating their D&D Beyond data. So we reflect an allowed origin only for
+// the local SPA and reject any other cross-site browser request (see
+// `isAllowedOrigin`), rather than trusting `*`.
+const ALLOWED_ORIGINS = new Set([
+  "http://localhost:38080",
+  "http://127.0.0.1:38080",
+]);
+
+/**
+ * A request is allowed when it carries no `Origin` header (curl, the in-process
+ * smoke test, server-to-server — not a browser cross-site call) or its Origin is
+ * one of the local SPA's. A present-but-unlisted Origin is a cross-site browser
+ * request and is refused.
+ */
+function isAllowedOrigin(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  return origin === undefined || ALLOWED_ORIGINS.has(origin);
+}
+
+function cors(req: IncomingMessage, res: ServerResponse) {
+  const origin = req.headers.origin;
+  if (origin !== undefined && ALLOWED_ORIGINS.has(origin)) {
+    // Echo the specific allowed origin (never `*`) so the browser exposes the
+    // response only to the local SPA, and vary on it since the header depends
+    // on the request.
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
@@ -116,13 +144,21 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
 
 export function startServer() {
   const server = createServer((req, res) => {
-    cors(res);
+    cors(req, res);
     const { method = "GET", url = "/" } = req;
     const path = url.split("?")[0];
 
     if (method === "OPTIONS") {
       res.writeHead(204);
       res.end();
+      return;
+    }
+    // Refuse cross-site browser requests before they can trigger any work — a
+    // simple (no-preflight) POST from a malicious page carries an Origin we
+    // won't have allowlisted, so this stops it spending the subscription even
+    // though the missing ACAO would already hide the response from it.
+    if (!isAllowedOrigin(req)) {
+      sendJson(res, 403, { error: "Origin not allowed" });
       return;
     }
     if (method === "GET" && path === "/health") {

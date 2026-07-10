@@ -21,6 +21,20 @@ export type BridgeEvent =
   | { type: "text"; text: string }
   | { type: "tool"; name: string }
   | {
+      /**
+       * A resolved tool call's result, structured for a preview card. `markdown`
+       * always carries the full raw tool-result text (the graceful-degradation
+       * fallback); `fields` is best-effort and may be absent or partial. `kind`
+       * selects the card style — an unknown value is treated as "generic".
+       */
+      type: "tool_result";
+      tool: string;
+      kind: "monster" | "character" | "generic";
+      title: string;
+      fields?: Record<string, string>;
+      markdown: string;
+    }
+  | {
       type: "done";
       result: string;
       subtype: string;

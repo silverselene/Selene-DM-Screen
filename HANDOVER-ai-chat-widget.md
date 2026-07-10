@@ -1,8 +1,8 @@
 # Epic: AI Chat widget (Claude + ddb-mcp)
 
-Status: **Phases 1–2 complete + a Phase-2 hardening/code-review pass** — last touched
-2026-07-09. Phases 3–7 and 9 not started; Phase 8 (unit tests) partially landed for the pure
-client logic. The original plan below is preserved as the record; see the **Progress log**
+Status: **Phases 1–3 complete + a Phase-2 hardening/code-review pass** — last touched
+2026-07-09. Phases 4–7 and 9 not started; Phase 8 (unit tests) continues to land alongside each
+phase's pure logic. The original plan below is preserved as the record; see the **Progress log**
 immediately after the Summary for what was actually built and which "Recommended" positions
 changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items that moved so nothing gets
 built on the stale versions.
@@ -151,6 +151,43 @@ captures each turn's `done.sessionId` and echoes it back, with `/clear` and `/ne
 **Phase-8 unit tests: partially done.** `artifacts/dm-screen/src/lib/aiBridge.test.ts` now covers
 the pure client logic (`isBridgeEvent`, `parseSseRecord`, `friendlyToolName`). Component/DOM tests
 for the widget itself remain deferred (would need jsdom + `@testing-library/react`, per CLAUDE.md).
+
+### Phase 3 — structured tool-result rendering ✅ (2026-07-09, Claude Code)
+
+Design spec: `docs/superpowers/specs/2026-07-09-phase3-structured-tool-result-cards-design.md`;
+plan: `docs/superpowers/plans/2026-07-09-phase3-structured-tool-result-cards.md`. Typecheck +
+84 tests (72 dm-screen + 12 bridge) green; production build clean (`grep /api/` and
+`grep bridge-protocol` both zero). The chat now renders a **preview card** for each resolved
+tool call instead of leaving the result in prose.
+
+- **Key finding that shaped the design:** ddb-mcp lookups return **markdown/plain-text stat
+  blocks**, not JSON (`getMonster` → markdown with a predictable `# / **Armor Class** / **Challenge**`
+  header; `ddb_get_character` → a box-drawing plain-text block with `Race | Class N | Level N`,
+  `HP: cur/max`, `AC: N   Initiative:`). Chosen approach: the **bridge parses** those into
+  best-effort typed `fields` and **always** ships the full raw text as `markdown`, so a ddb
+  format drift degrades gracefully (fields drop, block still renders) — never blanks the card.
+- **New wire event** `{ type: "tool_result", tool, kind: "monster"|"character"|"generic", title,
+  fields?, markdown }` in `@workspace/bridge-protocol`; `isBridgeEvent` validates it (unknown
+  `kind` still parses → treated as generic).
+- **New bridge module** `services/ai-bridge/src/toolResults.ts` (pure): `parseToolResult`
+  (monster/character rich parsers + generic fallback) and `extractToolResultText`. `agent.ts`
+  now correlates each `tool_use` id → its later `user` `tool_result` block and emits the event.
+  Only `ddb_get_monster` / `ddb_get_character` get rich cards; **`ddb_character_lookup` is a
+  spell/feature-*description* lookup, so it's generic** (correction vs. the original spec).
+- **New widget pieces** `ChatToolCard.tsx` (icon + title + chips + collapsible full block) and
+  `lib/miniMarkdown.tsx` (~90-line hand-rolled renderer for the ddb markdown subset — **no new
+  dependency, no `dangerouslySetInnerHTML`**). `AIChatWidget` carries `cards[]` per assistant
+  message; the assistant's prose summary still renders after the cards (cards are additive).
+- **Bridge test infra added:** `services/ai-bridge/vitest.config.ts` + a `test` script +
+  `vitest` devDep (already in the lockfile; stays out of the Docker image, which filters install
+  to dm-screen + scripts).
+- **Deferred as planned:** the "Add to Party/Initiative" hand-off buttons are **Phase 4** —
+  `fields` is shaped so Phase 4 reads `event.fields` and fires the existing `dm-add-to-initiative`
+  CustomEvent without re-parsing. Cards only display in this phase.
+- **Live manual pass owed by the DM** (needs an authenticated ddb session + subscription auth):
+  monster lookup → rich card w/ AC/HP/CR chips; character lookup → rich card; spell lookup →
+  generic card; not-found → card shows the message, no crash. The offline/bridge-stopped path is
+  unchanged from Phase 2.
 
 ---
 
@@ -345,8 +382,10 @@ don't leave the tree broken between phases.
 2. **Chat widget shell** — ✅ **DONE (2026-07-08, see Progress log).** Eighth widget,
    lazy-loaded + `ErrorBoundary`, talks to the bridge, renders streamed text, clear "bridge not
    running" empty state. No persistence. Verified with the bridge running and stopped.
-3. **Structured tool-result rendering** — bridge emits typed events for character/monster
-   lookups; widget renders preview cards instead of raw prose.
+3. **Structured tool-result rendering** — ✅ **DONE (2026-07-09, see Progress log).** Bridge
+   parses ddb-mcp markdown/plain-text results into a typed `tool_result` event (monster/character
+   rich, rest generic) with graceful degradation to raw markdown; widget renders preview cards
+   (`ChatToolCard` + `miniMarkdown`) instead of raw prose.
 4. **Data hand-off** — "Add to Party" / "Add to Initiative" buttons, wired via `CustomEvent`s,
    with the confirm/diff step for existing party members.
 5. **Bundled-data-first rules routing** — client-side search of `spells.ts` / `bestiary.ts` /

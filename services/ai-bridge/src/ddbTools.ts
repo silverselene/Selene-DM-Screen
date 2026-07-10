@@ -63,3 +63,17 @@ export const ALLOWED_TOOL_IDS: string[] = DDB_READ_TOOLS.map(
 );
 
 export const ALLOWED_TOOL_SET: ReadonlySet<string> = new Set(ALLOWED_TOOL_IDS);
+
+const MCP_PREFIX = `mcp__${MCP_SERVER_NAME}__`;
+
+/**
+ * Strip the `mcp__<server>__` prefix the SDK prepends, yielding the bare ddb
+ * tool name (e.g. `mcp__dndbeyond__ddb_get_monster` → `ddb_get_monster`). Tied
+ * to `MCP_SERVER_NAME` so the strip can't drift from the name we mount under;
+ * falls back to a generic prefix strip for any other server.
+ */
+export function bareToolName(fullName: string): string {
+  return fullName.startsWith(MCP_PREFIX)
+    ? fullName.slice(MCP_PREFIX.length)
+    : fullName.replace(/^mcp__[^_]+__/, "");
+}

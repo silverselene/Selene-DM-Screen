@@ -5,7 +5,8 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import type { BridgeEvent } from "@workspace/bridge-protocol";
 import { config } from "./config";
-import { ALLOWED_TOOL_SET, MCP_SERVER_NAME } from "./ddbTools";
+import { ALLOWED_TOOL_SET, MCP_SERVER_NAME, bareToolName } from "./ddbTools";
+import { parseToolResult, extractToolResultText } from "./toolResults";
 import { resolveAuth, type ResolvedAuth } from "./auth";
 
 const SYSTEM_PROMPT = `You are Selene, an assistant embedded in a Dungeon Master's dashboard for Dungeons & Dragons 5.5e (the 2024 rules). You help the DM at the table: answer rules questions, look up monsters, spells, and player characters, and reason about encounters.
@@ -104,13 +105,30 @@ export async function* runChatTurn(
       },
     });
 
+    // Correlate a tool_use (assistant) with its later tool_result (user) so we
+    // can label the result with the tool that produced it. The SDK delivers the
+    // result in a separate `user` message keyed by tool_use_id.
+    const toolNamesById = new Map<string, string>();
+
     for await (const m of response) {
       if (m.type === "assistant") {
         for (const block of m.message.content) {
           if (block.type === "text" && block.text) {
             yield { type: "text", text: block.text };
           } else if (block.type === "tool_use") {
+            // Strip the mcp__<server>__ prefix to the bare ddb tool name.
+            const bare = bareToolName(block.name);
+            toolNamesById.set(block.id, bare);
             yield { type: "tool", name: block.name };
+          }
+        }
+      } else if (m.type === "user" && typeof m.message.content !== "string") {
+        // A user turn carrying tool_result blocks (the resolved tool calls).
+        for (const block of m.message.content) {
+          if (block.type === "tool_result") {
+            const bare = toolNamesById.get(block.tool_use_id) ?? "unknown_tool";
+            const text = extractToolResultText(block.content);
+            if (text) yield parseToolResult(bare, text);
           }
         }
       } else if (m.type === "result") {

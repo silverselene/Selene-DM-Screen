@@ -16,9 +16,29 @@ import type { BridgeEvent, BridgeHealth } from "@workspace/bridge-protocol";
 export type { BridgeEvent, BridgeHealth };
 
 /**
+ * Validate a decoded `/health` body is a well-formed `BridgeHealth`. The bytes
+ * are as untrusted as the SSE stream — a different local process could sit on
+ * :38900, or the bridge could drift — so we check the required fields rather
+ * than blindly casting, keeping the widget from rendering `undefined` billing.
+ */
+export function isBridgeHealth(value: unknown): value is BridgeHealth {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.ok === "boolean" &&
+    typeof v.service === "string" &&
+    typeof v.billing === "string" &&
+    (v.ddbMcpEntry === null || typeof v.ddbMcpEntry === "string") &&
+    typeof v.ddbMcpFound === "boolean" &&
+    typeof v.allowedTools === "number"
+  );
+}
+
+/**
  * Probe the bridge with a short timeout so the widget can flip to a clear
  * "bridge not running" state instead of spinning. A connection-refused, a
- * non-2xx, or a timeout all reject — the caller treats any rejection as offline.
+ * non-2xx, a timeout, or a malformed body all reject — the caller treats any
+ * rejection as offline.
  */
 export async function checkHealth(timeoutMs = 2500): Promise<BridgeHealth> {
   const ctrl = new AbortController();
@@ -26,7 +46,9 @@ export async function checkHealth(timeoutMs = 2500): Promise<BridgeHealth> {
   try {
     const res = await fetch(`${BRIDGE_URL}/health`, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`Bridge health check returned ${res.status}`);
-    return (await res.json()) as BridgeHealth;
+    const body: unknown = await res.json();
+    if (!isBridgeHealth(body)) throw new Error("Bridge health response was malformed");
+    return body;
   } finally {
     clearTimeout(timer);
   }
@@ -48,6 +70,16 @@ export function isBridgeEvent(value: unknown): value is BridgeEvent {
       return typeof v.text === "string";
     case "tool":
       return typeof v.name === "string";
+    case "tool_result":
+      // `kind` is intentionally not constrained to the known union here — an
+      // unknown kind still validates and the card renders it as generic, so a
+      // future bridge adding a card kind doesn't get dropped by an older client.
+      return (
+        typeof v.tool === "string" &&
+        typeof v.kind === "string" &&
+        typeof v.title === "string" &&
+        typeof v.markdown === "string"
+      );
     case "done":
       return typeof v.result === "string" && typeof v.subtype === "string";
     case "error":
@@ -148,7 +180,15 @@ export async function streamChat(
   if (tail) onEvent(tail);
 }
 
-/** Turn `mcp__dndbeyond__ddb_get_character` into a human "Get character". */
+/**
+ * Turn `mcp__dndbeyond__ddb_get_character` into a human "Get character".
+ *
+ * The bridge has a sibling `humanizeToolName` (services/ai-bridge/toolResults.ts)
+ * that does the same for card titles. They are intentionally NOT shared: the one
+ * cross-package module is `@workspace/bridge-protocol`, which is types-only and
+ * erased from the browser bundle, so it can't hold runtime code. Keep the two in
+ * sync by hand if the humanization rule changes.
+ */
 export function friendlyToolName(name: string): string {
   const bare = name.replace(/^mcp__[^_]+__/, "").replace(/^ddb_/, "");
   const words = bare.replace(/_/g, " ").trim();
