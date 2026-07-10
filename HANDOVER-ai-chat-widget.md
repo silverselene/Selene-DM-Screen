@@ -1,11 +1,11 @@
 # Epic: AI Chat widget (Claude + ddb-mcp)
 
-Status: **Phases 1–3 complete + a Phase-2 hardening/code-review pass** — last touched
-2026-07-09. Phases 4–7 and 9 not started; Phase 8 (unit tests) continues to land alongside each
-phase's pure logic. The original plan below is preserved as the record; see the **Progress log**
-immediately after the Summary for what was actually built and which "Recommended" positions
-changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items that moved so nothing gets
-built on the stale versions.
+Status: **Phases 1–4 complete + a Phase-2 hardening/code-review pass + a model/effort-picker
+increment** — last touched 2026-07-10. Phases 5–7 and 9 not started; Phase 8 (unit tests)
+continues to land alongside each phase's pure logic. The original plan below is preserved as the
+record; see the **Progress log** immediately after the Summary for what was actually built and
+which "Recommended" positions changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items
+that moved so nothing gets built on the stale versions.
 
 ## Summary
 
@@ -188,6 +188,100 @@ tool call instead of leaving the result in prose.
   monster lookup → rich card w/ AC/HP/CR chips; character lookup → rich card; spell lookup →
   generic card; not-found → card shows the message, no crash. The offline/bridge-stopped path is
   unchanged from Phase 2.
+
+### Model + effort picker ✅ (2026-07-10, Claude Code)
+
+Not one of the numbered phases — a self-contained UX increment: let the DM choose the **model**
+and **reasoning effort** per turn from the chat widget, instead of the bridge running a single
+env-configured model at the SDK default effort. Design spec:
+`docs/superpowers/specs/2026-07-10-ai-chat-model-effort-design.md`. Typecheck clean across all four
+packages; **117 tests** (21 bridge + 96 dm-screen) green; production build clean (`grep /api/` and
+`grep bridge-protocol` in `dist` both zero).
+
+- **Decided with James (brainstorming, 2026-07-10):** models = **Opus 4.8 / Sonnet 5 / Haiku 4.5**;
+  effort = **Low / Medium / High** (the three SDK `effort` levels valid on every model — no
+  `xhigh`/`max`, so no per-model gating); defaults **Sonnet 5 + Medium**; **session-only** (plain
+  React state — no `dm-` key, no backup/restore surface, resets on remount/reload), consistent with
+  the "session-only for v1" stance already taken for chat history; changeable **anytime**, applied
+  to the **next** turn including mid-conversation (a picker change never aborts a turn or resets
+  the conversation). Placement: two compact dropdowns on the composer footer row.
+- **Both knobs are first-class Agent SDK options** (verified in `@anthropic-ai/claude-agent-sdk`):
+  `options.model` (string) and `options.effort` (`'low'|'medium'|'high'|'xhigh'|'max'` — "guides
+  adaptive-thinking depth"). We expose only the first three effort levels.
+- **Wire contract** (`@workspace/bridge-protocol`): the previously-implicit `/chat` request body is
+  now the shared `ChatRequest` (`message`, `resume?`, `model?`, `effort?`) + an `EffortLevel` type,
+  so producer/consumer drift on these fields is a compile error. Still types-only / erased from the
+  bundle.
+- **Bridge:** new pure `services/ai-bridge/src/chatRequest.ts` (`parseChatRequest`, 8 unit tests) —
+  validates `message`, forwards `resume`/`model` when non-empty, and **drops any out-of-enum
+  effort** (`xhigh`/`max`/garbage from a rogue local caller) so the turn falls back to the default.
+  `server.ts` routes the body through it; `agent.ts` `runChatTurn` gained `model`/`effort` params —
+  a request `model` **overrides** `AI_BRIDGE_MODEL` (env stays the fallback for curl/smoke), and
+  `effort` is passed straight to `query({ options })`. An unusable model id surfaces through the
+  existing `error` event path (no new failure handling).
+- **Widget:** `aiBridge.ts` gained a pure `buildChatBody` helper (3 unit tests) and `streamChat`
+  now takes `model`/`effort`; `AIChatWidget.tsx` holds the two session-state values and a local
+  `FooterPicker` component. The shared `AnchoredDropdown` gained an opt-in **`autoWidth`** mode
+  (size to content, anchor width as a floor, capped to the viewport) — the footer pickers use it so
+  the menu isn't clipped to the narrow trigger; all existing autocomplete/combobox callers are
+  untouched (default stays match-anchor-width).
+- **Live manual pass owed by the DM** (needs subscription auth): the two spec assumptions —
+  **(A)** switching model *mid-conversation* applies to the resumed turn (low-risk: even if the SDK
+  pinned the model to the resumed session, the change still lands on the next New Chat), and
+  **(B)** Haiku 4.5 accepts `high` / Opus 4.8 accepts `low` without an SDK error.
+
+### Phase 4 — data hand-off (chat cards → Party / Initiative) ✅ (2026-07-10, Claude Code)
+
+Design spec: `docs/superpowers/specs/2026-07-10-phase4-data-handoff-design.md`; plan:
+`docs/superpowers/plans/2026-07-10-phase4-data-handoff.md`. Typecheck clean across all four
+packages; **115 dm-screen tests** (19 new) green; production build clean (`grep /api/` and
+`grep bridge-protocol` in `dist` both zero). Implements decision 3 ("preview inline, click to
+commit"). The Phase-3 preview cards now carry **hand-off buttons** that push a looked-up creature
+or character into the existing Initiative and Party widgets on an explicit click. **No new
+persistence, no `dm-*` key, no `bridge-protocol` change** — the buttons map the card's already-parsed
+`tool_result.fields` (no markdown re-parsing in the widget).
+
+- **Which card gets which buttons (decided with James):** `monster` → **Add to Initiative** only
+  (straight to the combatant list; the bundled bestiary dataset is never mutated — monsters are
+  ephemeral, chat-scoped); `character` → **Add to Party** + **Add to Initiative**; `generic` /
+  `tool_error` → none.
+- **Initiative add = auto-roll d20 (James's call).** Monsters carry no init modifier → plain d20;
+  characters → d20 + the card's init bonus. Both are **repeatable** (transient `Added ✓`, button
+  stays live) so two goblins is one card, two clicks. Dispatch reuses the existing cancelable
+  `dm-add-to-initiative` event with the direct-storage fallback.
+- **Party add — name is the only match key** (the card carries no DDB character id). **No existing
+  match → adds directly, no form** (James: don't make the DM review when there's nothing to
+  reconcile). **Name collision → an inline editable review form** (James: "Replace / Add / Cancel"
+  *and* "DM should be able to edit any number before importing"): each shared field (**Level, AC, HP**
+  as number inputs; **Class, Race** as text; **Name read-only**) pre-filled from the card, existing
+  value shown as a muted `was: N` hint, changed rows highlighted, then **Replace** / **Add as new** /
+  **Cancel**. `MAX_PARTY` full → alert.
+- **Scope correction surfaced during brainstorming — spell slots / current HP are NOT diffable.**
+  Neither the card's parsed `fields` nor the stored `PlayerCharacter` shape carries spell *slots*
+  (`spells` is a `string[]` of names) or current HP (party stores only static max; live HP lives in
+  the Initiative combatant, where `characterCardToCombatant` already routes the card's `cur`). So the
+  party diff covers only what both sides carry — **level/class/race/AC/max-HP**. James chose the
+  feasible diff now; slot tracking would be a separate feature (new persisted shape + validator +
+  Party UI) and stays out of scope.
+- **New pure module** `artifacts/dm-screen/src/lib/cardHandoff.ts` (19 unit tests in
+  `cardHandoff.test.ts`): `parseLeadingInt` / `parseHp` field parsers, `monsterCardToCombatant` /
+  `characterCardToCombatant` (d20 **injected** for determinism), `characterCardToPlayerDraft` /
+  `draftToPlayerInput` (numeric coercion → store input), and `diffPlayer` (changed-only rows). The
+  `ToolResultCard` type moved here from `ChatToolCard.tsx` (re-exported there for existing importers)
+  so the lib is self-contained with no widget→lib cycle.
+- **Targeted refactor** `combatant.ts` gained `addCombatantToInitiative(combatant) → "added" |
+  "full" | "error"`, lifting the ~50-line cancelable-dispatch + cap-check + fallback that was inlined
+  in `PartyWidget.addToInitiative`. Both the Party per-row add and the new card path now share one
+  copy (cap/fallback logic can't diverge). Covered by 4 new `combatant.test.ts` cases (full / consumed
+  / fallback-write / unreadable-error).
+- **New widget piece** `ChatCardActions.tsx` (button row + collision edit form; returns `null` for
+  generic cards), rendered as the last child of `ChatToolCard`. No new dependency, no
+  `dangerouslySetInnerHTML`; amber accent + `var(--dm-*)` tokens.
+- **Live manual pass owed by the DM** (needs an authenticated ddb session + subscription auth): the
+  five checks in the plan's Task 5 — monster→Initiative (incl. repeat add for two goblins),
+  character→Party on a new name (direct add), character→Party name collision (form `was:` hints →
+  Replace / Add as new / edit-a-number-before-commit), character→Initiative (d20 + bonus, `isPlayer`),
+  generic card shows no buttons, and the Initiative-tile-removed fallback path.
 
 ---
 
@@ -386,8 +480,11 @@ don't leave the tree broken between phases.
    parses ddb-mcp markdown/plain-text results into a typed `tool_result` event (monster/character
    rich, rest generic) with graceful degradation to raw markdown; widget renders preview cards
    (`ChatToolCard` + `miniMarkdown`) instead of raw prose.
-4. **Data hand-off** — "Add to Party" / "Add to Initiative" buttons, wired via `CustomEvent`s,
-   with the confirm/diff step for existing party members.
+4. **Data hand-off** — ✅ **DONE (2026-07-10, see Progress log).** "Add to Party" / "Add to
+   Initiative" buttons on the preview cards, wired via the existing `dm-add-to-initiative`
+   `CustomEvent` (shared `addCombatantToInitiative` helper) and `partyStore`. Party name-collision
+   opens an editable review form (Replace / Add as new / Cancel) diffing level/class/race/AC/max-HP;
+   no match → direct add. Monsters → Initiative only. Pure logic in `lib/cardHandoff.ts` (19 tests).
 5. **Bundled-data-first rules routing** — client-side search of `spells.ts` / `bestiary.ts` /
    `compendium.ts` before a chat turn is sent to the bridge for general rules questions.
 6. **Chat history decision + implementation** — per the open question above.

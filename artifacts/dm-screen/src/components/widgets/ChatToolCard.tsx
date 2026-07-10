@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { ChevronRight, Skull, Shield, ScrollText } from "lucide-react";
-import type { BridgeEvent } from "@/lib/aiBridge";
 import { MiniMarkdown } from "@/lib/miniMarkdown";
+import { ChatCardActions } from "./ChatCardActions";
+import type { ToolResultCard } from "@/lib/cardHandoff";
 
-export type ToolResultCard = Extract<BridgeEvent, { type: "tool_result" }>;
+export type { ToolResultCard };
 
 // Ordered field keys per kind → which chips to show and their labels. Keys the
 // bridge didn't extract are simply skipped (best-effort fields).
@@ -75,6 +76,7 @@ export function ChatToolCard({ card }: { card: ToolResultCard }) {
           )}
         </>
       )}
+      <ChatCardActions card={card} />
     </div>
   );
 }

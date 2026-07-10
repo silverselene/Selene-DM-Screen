@@ -45,6 +45,13 @@ export function initiativeFullMessage(): string {
 export const INIT_MIN = -99;
 export const INIT_MAX = 999;
 
+/** A single d20 (1–20). Shared by every "roll initiative for me" entry point —
+ *  the Initiative widget's add forms and the AI-chat cards — so the roll lives
+ *  in one place rather than being re-implemented per widget. */
+export function rollD20(): number {
+  return Math.floor(Math.random() * 20) + 1;
+}
+
 /** Parse a typed initiative string and clamp it to [INIT_MIN, INIT_MAX].
  *  `<input type="number" min max>` attributes are only UI hints — typed
  *  or pasted text flows through unchecked. Unparseable input → 0. */
@@ -168,4 +175,48 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
     seen.add(combatant.id);
   }
   return normalized;
+}
+
+/**
+ * Add a combatant to the live Initiative tracker, shared by every non-Initiative
+ * entry point (the Party widget's per-row add and the AI-chat cards). Dispatches
+ * the cancelable `dm-add-to-initiative` event; a mounted Initiative widget
+ * consumes it via preventDefault(). If nothing consumes it (no Initiative tile
+ * placed, or its lazy chunk hasn't mounted), fall back to writing storage
+ * directly so the combatant appears when the widget mounts.
+ *
+ * Returns "full" at the MAX_COMBATANTS cap (caller alerts with
+ * initiativeFullMessage()), "error" when the fallback can't read/write storage,
+ * else "added".
+ */
+export function addCombatantToInitiative(
+  combatant: Combatant,
+): "added" | "full" | "error" {
+  let stored: Combatant[] | null = null;
+  try {
+    const raw = window.localStorage.getItem(INITIATIVE_STORAGE_KEY);
+    stored = validateCombatants(raw ? JSON.parse(raw) : []) ?? [];
+  } catch {
+    stored = null;
+  }
+  if (stored !== null && stored.length >= MAX_COMBATANTS) return "full";
+
+  const consumed = !window.dispatchEvent(
+    new CustomEvent("dm-add-to-initiative", {
+      detail: { combatant },
+      cancelable: true,
+    }),
+  );
+  if (consumed) return "added";
+
+  try {
+    if (stored === null) throw new Error("unreadable initiative list");
+    window.localStorage.setItem(
+      INITIATIVE_STORAGE_KEY,
+      JSON.stringify(appendCombatant(stored, combatant)),
+    );
+    return "added";
+  } catch {
+    return "error";
+  }
 }

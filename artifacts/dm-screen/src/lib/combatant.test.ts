@@ -89,3 +89,60 @@ describe("validateCombatants", () => {
     expect(validateCombatants(huge)).toHaveLength(MAX_COMBATANTS);
   });
 });
+
+import { afterEach, vi } from "vitest";
+import { addCombatantToInitiative, INITIATIVE_STORAGE_KEY } from "./combatant";
+import type { Combatant } from "@/types";
+
+function mkCombatant(): Combatant {
+  return { id: mintCombatantId(), name: "Goblin", initiative: 12, hp: 7, maxHp: 7, isPlayer: false };
+}
+
+function installWindow(
+  opts: { seed?: Combatant[]; consumed?: boolean; throwOnRead?: boolean } = {},
+): Map<string, string> {
+  const map = new Map<string, string>();
+  if (opts.seed) map.set(INITIATIVE_STORAGE_KEY, JSON.stringify(opts.seed));
+  vi.stubGlobal("window", {
+    localStorage: {
+      getItem: (k: string) => {
+        if (opts.throwOnRead) throw new Error("boom");
+        return map.has(k) ? map.get(k)! : null;
+      },
+      setItem: (k: string, v: string) => { map.set(k, String(v)); },
+    },
+    // dispatchEvent returns false when a listener called preventDefault (consumed).
+    dispatchEvent: () => !opts.consumed,
+  });
+  // CustomEvent isn't defined in the Node test env; a minimal stub is enough.
+  vi.stubGlobal("CustomEvent", class {
+    constructor(public type: string, public init?: unknown) {}
+  });
+  return map;
+}
+
+describe("addCombatantToInitiative", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("returns 'full' at the MAX_COMBATANTS cap", () => {
+    installWindow({ seed: Array.from({ length: MAX_COMBATANTS }, mkCombatant) });
+    expect(addCombatantToInitiative(mkCombatant())).toBe("full");
+  });
+
+  it("returns 'added' without writing when a widget consumes the event", () => {
+    const map = installWindow({ seed: [], consumed: true });
+    expect(addCombatantToInitiative(mkCombatant())).toBe("added");
+    expect(map.get(INITIATIVE_STORAGE_KEY)).toBe(JSON.stringify([]));
+  });
+
+  it("falls back to a direct write when nothing consumes the event", () => {
+    const map = installWindow({ seed: [], consumed: false });
+    expect(addCombatantToInitiative(mkCombatant())).toBe("added");
+    expect(JSON.parse(map.get(INITIATIVE_STORAGE_KEY)!)).toHaveLength(1);
+  });
+
+  it("returns 'error' when the list is unreadable and nothing consumes the event", () => {
+    installWindow({ throwOnRead: true, consumed: false });
+    expect(addCombatantToInitiative(mkCombatant())).toBe("error");
+  });
+});

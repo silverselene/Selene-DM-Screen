@@ -21,6 +21,7 @@ import {
   appendCombatant,
   clampInitiative,
   initiativeFullMessage,
+  rollD20,
 } from "@/lib/combatant";
 import { isV1Empty } from "@/lib/migrations";
 import { isImeComposing } from "@/lib/keyboard";
@@ -157,7 +158,6 @@ export function InitiativeWidget() {
   // Custom-combatant form. Initiative is pre-rolled with a fresh d20 each
   // time the form is opened or after a successful add, so the DM doesn't
   // have to roll a die just to type a number; they can still override.
-  const rollD20 = () => Math.floor(Math.random() * 20) + 1;
   const freshForm = () => ({
     name: "",
     initiative: String(rollD20()),
