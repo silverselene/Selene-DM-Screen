@@ -11,6 +11,8 @@ import {
 import { ChatToolCard, type ToolResultCard } from "./ChatToolCard";
 import { MiniMarkdown } from "@/lib/miniMarkdown";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
+import { parseLookupCommand, lookupDataset, autoDetectLocal } from "@/lib/localLookup";
+import { ChatLocalAnswer, type LocalAnswer } from "./ChatLocalAnswer";
 
 // Model catalog for the footer picker — the single source of truth for the menu
 // (the bridge forwards the chosen id opaquely). Session-only selection; defaults
@@ -97,6 +99,9 @@ interface AssistantMessage {
   toolErrors: { tool: string; message: string }[];
   error?: string;
   pending: boolean;
+  local?: LocalAnswer;      // present when this turn was answered from bundled data
+  sourceQuery?: string;     // the original query, for "Ask Selene instead"
+  escalated?: boolean;      // true once the DM escalated a local answer to the bridge
 }
 interface UserMessage {
   role: "user";
@@ -123,6 +128,17 @@ export function AIChatWidget() {
   // turn's `done` event and echoed back on the next turn so follow-up questions
   // keep context. Resets when the widget remounts (tile closed/reopened).
   const sessionIdRef = useRef<string | null>(null);
+  // Mirror of `messages`, kept current on every render, so an event handler can
+  // read the authoritative length synchronously to compute the index of a
+  // message it is about to append — without relying on a setState updater's
+  // side-effect running before the next line (it does not, because the preceding
+  // setInput marks the fiber dirty and defeats React's eager-state shortcut).
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  messagesRef.current = messages;
+  // Synchronous in-flight guard. `sending` state lags a render behind, so a fast
+  // double Enter/click could fire two turns before it flips; this ref is set the
+  // instant a bridge turn begins and read by the send/escalate guards.
+  const sendingRef = useRef(false);
 
   const probe = useCallback(async () => {
     setStatus("checking");
@@ -149,18 +165,15 @@ export function AIChatWidget() {
   // Abort any in-flight turn if the widget unmounts (tile closed / type switched).
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  // Mutate the trailing assistant message in place as events stream in.
-  const updateLastAssistant = useCallback(
-    (fn: (m: AssistantMessage) => AssistantMessage) => {
+  // Mutate a specific assistant message by index (escalation targets the clicked
+  // card's message, which may not be the last one).
+  const updateAssistantAt = useCallback(
+    (index: number, fn: (m: AssistantMessage) => AssistantMessage) => {
       setMessages((prev) => {
+        const m = prev[index];
+        if (!m || m.role !== "assistant") return prev;
         const next = [...prev];
-        for (let i = next.length - 1; i >= 0; i--) {
-          const m = next[i];
-          if (m.role === "assistant") {
-            next[i] = fn(m);
-            break;
-          }
-        }
+        next[index] = fn(m);
         return next;
       });
     },
@@ -175,7 +188,110 @@ export function AIChatWidget() {
     sessionIdRef.current = null;
     setMessages([]);
     setInput("");
+    sendingRef.current = false;
     setSending(false);
+  }, []);
+
+  // Stream a bridge turn into a specific assistant message (identified by its
+  // index in `messages`). Extracted so both a fresh send and an escalation
+  // ("Ask Selene instead") share one implementation — escalation targets the
+  // clicked card's message, which may not be the last one.
+  const streamTurn = useCallback(
+    async (text: string, targetIndex: number) => {
+      sendingRef.current = true;
+      setSending(true);
+      const abort = new AbortController();
+      abortRef.current = abort;
+      // This turn's abort controller doubles as its identity token. A turn
+      // aborted via "New chat" can settle (reject + run catch/finally, or emit a
+      // buffered event) after the *next* turn has already begun — and because
+      // "New chat" clears the message list, `targetIndex` may now point at the
+      // new turn's message. Gate every turn-global and index-targeted write on
+      // still being the current turn so a stale settlement can't clobber the new
+      // one's sending flags, abort handle, session id, or message content.
+      const isCurrent = () => abortRef.current === abort;
+      try {
+        await streamChat(
+          text,
+          (event) => {
+            if (!isCurrent()) return;
+            if (event.type === "text") {
+              updateAssistantAt(targetIndex, (m) => ({ ...m, text: m.text + event.text }));
+            } else if (event.type === "tool") {
+              updateAssistantAt(targetIndex, (m) => ({ ...m, tools: [...m.tools, friendlyToolName(event.name)] }));
+            } else if (event.type === "tool_result") {
+              updateAssistantAt(targetIndex, (m) => ({ ...m, cards: [...m.cards, event] }));
+            } else if (event.type === "tool_error") {
+              updateAssistantAt(targetIndex, (m) => ({
+                ...m,
+                toolErrors: [...m.toolErrors, { tool: friendlyToolName(event.tool), message: event.message }],
+              }));
+            } else if (event.type === "error") {
+              // A turn-level failure can mean the resumed bridge session was
+              // rejected or evicted. Drop the session id so the next message
+              // starts fresh instead of replaying the same failing resume id on
+              // every subsequent turn (which would wedge the conversation).
+              sessionIdRef.current = null;
+              updateAssistantAt(targetIndex, (m) => ({ ...m, error: event.message, pending: false }));
+            } else if (event.type === "done") {
+              if (event.sessionId) sessionIdRef.current = event.sessionId;
+              updateAssistantAt(targetIndex, (m) => {
+                if (event.subtype === "success") return { ...m, text: m.text || event.result, pending: false };
+                return { ...m, pending: false, error: m.error ?? `The assistant stopped early (${event.subtype}).` };
+              });
+            }
+          },
+          abort.signal,
+          sessionIdRef.current ?? undefined,
+          model,
+          effort,
+        );
+      } catch (err) {
+        // Superseded turn: leave all state (sending flags, status, messages) to
+        // the turn that replaced it.
+        if (!isCurrent()) return;
+        if (err instanceof DOMException && err.name === "AbortError") {
+          updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false, error: m.text ? undefined : "Cancelled." }));
+        } else if (err instanceof BridgeUnreachableError) {
+          // Flip to the "bridge not running" screen, which replaces the whole
+          // chat view — so a per-message error bubble here would never render.
+          setStatus("offline");
+        } else {
+          updateAssistantAt(targetIndex, (m) => ({
+            ...m,
+            pending: false,
+            error: err instanceof Error ? err.message : String(err),
+          }));
+        }
+      } finally {
+        if (isCurrent()) {
+          updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false }));
+          sendingRef.current = false;
+          setSending(false);
+          abortRef.current = null;
+        }
+      }
+    },
+    [updateAssistantAt, model, effort],
+  );
+
+  // Build the local answer for a message, or null if it should go to the bridge.
+  // Slash commands always produce a LocalAnswer (card / candidates / no-match /
+  // hint); free text produces one only on a unique exact hit. Also returns the
+  // sourceQuery (command arg, else the raw text) so callers don't have to parse
+  // the command a second time.
+  const routeLocal = useCallback((text: string): { answer: LocalAnswer; sourceQuery: string } | null => {
+    const cmd = parseLookupCommand(text);
+    const sourceQuery = cmd?.arg || text;
+    if (cmd) {
+      if (!cmd.arg) return { answer: { hint: `Type a name after /${cmd.dataset}, e.g. “/${cmd.dataset} ${cmd.dataset === "monster" ? "goblin" : cmd.dataset === "spell" ? "fireball" : "grappled"}”.` }, sourceQuery };
+      const r = lookupDataset(cmd.dataset, cmd.arg);
+      if (r.exact) return { answer: { card: r.exact }, sourceQuery };
+      if (r.candidates.length > 0) return { answer: { candidates: r.candidates }, sourceQuery };
+      return { answer: { noMatch: cmd.arg }, sourceQuery };
+    }
+    const card = autoDetectLocal(text);
+    return card ? { answer: { card }, sourceQuery } : null;
   }, []);
 
   const send = useCallback(async () => {
@@ -188,86 +304,47 @@ export function AIChatWidget() {
       newChat();
       return;
     }
-    if (sending) return;
+    if (sendingRef.current) return;
 
+    const routed = routeLocal(text);
     setInput("");
-    setSending(true);
+
+    if (routed) {
+      // Answered from bundled data — no bridge call, no tokens. Keep sourceQuery
+      // (the command arg for a lookup, else the raw text) so "Ask Selene instead"
+      // sends something sensible to the bridge.
+      const { answer, sourceQuery } = routed;
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", text },
+        { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: false, local: answer, sourceQuery },
+      ]);
+      return;
+    }
+
+    // Index of the assistant message we're about to append: the current length
+    // (user goes there) + 1. Read from messagesRef, not a setState-updater
+    // side-effect (which runs too late) nor the `messages` closure (which can be
+    // stale — a local answer mutates messages without re-creating this callback).
+    const targetIndex = messagesRef.current.length + 1;
     setMessages((prev) => [
       ...prev,
       { role: "user", text },
       { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
     ]);
+    await streamTurn(text, targetIndex);
+  }, [input, newChat, routeLocal, streamTurn]);
 
-    const abort = new AbortController();
-    abortRef.current = abort;
-
-    try {
-      await streamChat(
-        text,
-        (event) => {
-          if (event.type === "text") {
-            updateLastAssistant((m) => ({ ...m, text: m.text + event.text }));
-          } else if (event.type === "tool") {
-            updateLastAssistant((m) => ({
-              ...m,
-              tools: [...m.tools, friendlyToolName(event.name)],
-            }));
-          } else if (event.type === "tool_result") {
-            updateLastAssistant((m) => ({ ...m, cards: [...m.cards, event] }));
-          } else if (event.type === "tool_error") {
-            updateLastAssistant((m) => ({
-              ...m,
-              toolErrors: [...m.toolErrors, { tool: friendlyToolName(event.tool), message: event.message }],
-            }));
-          } else if (event.type === "error") {
-            // A turn-level failure can mean the resumed bridge session was
-            // rejected or evicted. Drop the session id so the next message
-            // starts fresh instead of replaying the same failing resume id on
-            // every subsequent turn (which would wedge the conversation).
-            sessionIdRef.current = null;
-            updateLastAssistant((m) => ({ ...m, error: event.message, pending: false }));
-          } else if (event.type === "done") {
-            if (event.sessionId) sessionIdRef.current = event.sessionId;
-            updateLastAssistant((m) => {
-              if (event.subtype === "success") {
-                // If the model streamed no text blocks, fall back to the result.
-                return { ...m, text: m.text || event.result, pending: false };
-              }
-              // Non-success terminal (e.g. max turns hit). Keep whatever text
-              // streamed, but never leave a silent blank bubble — surface why.
-              return {
-                ...m,
-                pending: false,
-                error: m.error ?? `The assistant stopped early (${event.subtype}).`,
-              };
-            });
-          }
-        },
-        abort.signal,
-        sessionIdRef.current ?? undefined,
-        model,
-        effort,
-      );
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        updateLastAssistant((m) => ({ ...m, pending: false, error: m.text ? undefined : "Cancelled." }));
-      } else if (err instanceof BridgeUnreachableError) {
-        // Flip to the "bridge not running" screen, which replaces the whole
-        // chat view — so a per-message error bubble here would never render.
-        setStatus("offline");
-      } else {
-        updateLastAssistant((m) => ({
-          ...m,
-          pending: false,
-          error: err instanceof Error ? err.message : String(err),
-        }));
-      }
-    } finally {
-      updateLastAssistant((m) => ({ ...m, pending: false }));
-      setSending(false);
-      abortRef.current = null;
-    }
-  }, [input, sending, updateLastAssistant, newChat, model, effort]);
+  // Escalate a local answer: mark it escalated, flip to pending, and stream the
+  // bridge answer into the SAME assistant message (renders below the local card).
+  const escalate = useCallback(
+    async (index: number, query: string) => {
+      if (sendingRef.current) return;
+      updateAssistantAt(index, (m) => ({ ...m, escalated: true, pending: true }));
+      await streamTurn(query, index);
+    },
+    [updateAssistantAt, streamTurn],
+  );
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
@@ -332,7 +409,11 @@ export function AIChatWidget() {
           <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
             <Sparkles className="w-6 h-6 text-amber-400/70" />
             <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
-              Ask about rules, look up a monster or spell, or check a player's D&D Beyond character.
+              Ask about rules, or look things up instantly from your bundled data with{" "}
+              <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">/spell</code>,{" "}
+              <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">/monster</code>,{" "}
+              <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">/rule</code>{" "}
+              — or just type a name.
             </p>
           </div>
         )}
@@ -373,6 +454,16 @@ export function AIChatWidget() {
                     </div>
                   ))}
                 </div>
+              )}
+              {m.local && (
+                <ChatLocalAnswer
+                  answer={m.local}
+                  escalated={!!m.escalated}
+                  onEscalate={(query) => {
+                    const q = query || m.sourceQuery;
+                    if (q) void escalate(i, q);
+                  }}
+                />
               )}
               {m.text && (
                 <div className="max-w-[92%]" style={{ color: "var(--dm-t2)" }}>

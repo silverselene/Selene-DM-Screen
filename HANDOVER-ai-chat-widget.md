@@ -1,7 +1,7 @@
 # Epic: AI Chat widget (Claude + ddb-mcp)
 
-Status: **Phases 1–4 complete + a Phase-2 hardening/code-review pass + a model/effort-picker
-increment** — last touched 2026-07-10. Phases 5–7 and 9 not started; Phase 8 (unit tests)
+Status: **Phases 1–5 complete + a Phase-2 hardening/code-review pass + a model/effort-picker
+increment + a Phase-5 code-review/hardening pass** — last touched 2026-07-11. Phases 6–7 and 9 not started; Phase 8 (unit tests)
 continues to land alongside each phase's pure logic. The original plan below is preserved as the
 record; see the **Progress log** immediately after the Summary for what was actually built and
 which "Recommended" positions changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items
@@ -283,6 +283,98 @@ persistence, no `dm-*` key, no `bridge-protocol` change** — the buttons map th
   Replace / Add as new / edit-a-number-before-commit), character→Initiative (d20 + bonus, `isPlayer`),
   generic card shows no buttons, and the Initiative-tile-removed fallback path.
 
+### Phase 5 — bundled-data-first rules routing ✅ (2026-07-10, Claude Code)
+
+Design spec: `docs/superpowers/specs/2026-07-10-phase5-bundled-data-first-routing-design.md`; plan:
+`docs/superpowers/plans/2026-07-10-phase5-bundled-data-first-routing.md`. Typecheck clean across all
+four packages; **136 dm-screen tests** (21 new) green; production build clean (`grep /api/` and
+`grep bridge-protocol` in `dist` both zero). Implements decision 4 ("bundled datasets first, ddb-mcp
+fallback"): common spell/monster/rule lookups are answered from the bundled datasets **client-side**,
+and the chat turn only reaches the bridge when the local data can't answer. **No bridge change, no
+`@workspace/bridge-protocol` change, no new `dm-*` key** — local answers are session state like the
+rest of the chat.
+
+- **Two routing paths (decided with James):** **slash commands** `/spell`, `/monster`, `/rule` are the
+  reliable, explicit path (lenient — exact → card, partial → a "Did you mean" clickable list, none →
+  "no match" + an **Ask Selene** escalate button); **free-text auto-detect** is a conservative bonus
+  that fires **only on a unique exact name match across the union** of all three datasets (bare entity
+  names like `fireball` / `goblin` / `grappled`), with a short leading-filler strip (`what is` /
+  `tell me about` / …). Anything sentence-y or non-unique goes to the bridge as before. The offline
+  "bridge not running" wall is unchanged — local lookups run in the online path only (James's call).
+- **Cards reuse the Phase-3/4 infrastructure.** A locally-found **monster** becomes a `kind:"monster"`
+  `ToolResultCard` (`fields: {ac,hp,cr,type,speed}`) rendered by the existing `ChatToolCard`, so it
+  carries the Phase-4 **Add to Initiative** hand-off for free; **spells/rules** become `kind:"generic"`
+  markdown cards (no hand-off). Each local answer shows an **"Answered from your bundled data"**
+  provenance line and an **"Ask Selene instead →"** link that re-runs the original query through the
+  bridge, streaming the AI answer **below** the retained card (additive, same turn).
+- **New pure module** `artifacts/dm-screen/src/lib/localLookup.ts` (21 unit tests in `localLookup.test.ts`):
+  `normalizeQuery`, `parseLookupCommand`, `lookupDataset` (exact + capped substring candidates per
+  dataset), `autoDetectLocal` (unique-exact across the union), and card builders `toSpellCard` /
+  `toMonsterCard` / `toRuleCard` producing the `cardHandoff` `ToolResultCard` shape (the monster
+  builder's `fields` round-trip through `monsterCardToCombatant`, asserted in a test). `/rule` searches
+  the union of `compendiumData` + `compendiumRulesData`, matching `CompendiumWidget`.
+- **New widget piece** `ChatLocalAnswer.tsx` (provenance line + card / "Did you mean" list / no-match /
+  usage hint + escalate link). No new dependency, no `dangerouslySetInnerHTML`.
+- **`AIChatWidget.tsx`** now routes each message through local lookup first; the bridge-streaming half
+  of `send()` was extracted into a reusable `streamTurn(text, targetIndex)` shared by a fresh send and
+  the escalation path, writing through an **index-targeted** `updateAssistantAt(index, fn)` (the old
+  last-message-only `updateLastAssistant` was removed). `AssistantMessage` gained `local?` /
+  `sourceQuery?` / `escalated?`; `escalate(index, query)` targets the clicked card's own message.
+  Empty-state hint now mentions the slash commands.
+- **Whole-feature review (opus) caught one Critical, fixed + re-reviewed clean:** escalation originally
+  wrote to the *last* assistant message (via `updateLastAssistant`), so "Ask Selene instead" on an
+  **older** local answer streamed the reply into the wrong bubble. Root cause was a **plan** defect —
+  the plan under-specified the spec's `escalate(messageIndex)` to a last-message helper. Fixed by
+  threading the message index through `escalate`/`streamTurn`/`updateAssistantAt`.
+- **Live manual pass owed by the DM:** `/spell fireball` → spell card; `/monster goblin` → monster card
+  with Add to Initiative (adds a Goblin combatant); `/rule grappled` → rule card; `/spell fire` → "Did
+  you mean" list; `/spell zzzz` → no-match + Ask Selene; bare `goblin` → monster card; a sentence
+  question still streams from the bridge; "Ask Selene instead" streams the AI answer below the retained
+  card (including on an **earlier** answer, not just the latest — the index-targeting fix above).
+
+### Phase 5 hardening — code review pass ✅ (2026-07-11, Claude Code)
+
+`/code-review high` on the Phase-5 diff surfaced five findings; the four real ones are fixed, plus the
+abort race that was previously logged as a known follow-up. Typecheck clean; **136 dm-screen tests**
+still green (no test changes — all fixes are internal to the widget/lib). All in
+`AIChatWidget.tsx` / `ChatLocalAnswer.tsx` / `localLookup.ts`.
+
+1. **Broken streaming on every bridge turn (Critical, introduced by the Phase-5 refactor).** `send()`
+   computed the assistant message's `targetIndex` **inside a `setMessages` updater's side-effect**
+   (`targetIndex = prev.length + 1`) and then read it on the next line. Because the immediately-preceding
+   `setInput("")` marks the fiber dirty, React 18's eager-state shortcut is skipped and the updater does
+   **not** run before `streamTurn(text, targetIndex)` — so `targetIndex` stayed `-1`, every
+   `updateAssistantAt(-1, …)` no-op'd, and the assistant bubble spun forever with no text. Fixed with a
+   `messagesRef` (mirrors `messages` every render) read **synchronously**: `targetIndex =
+   messagesRef.current.length + 1`. The ref also fixes the latent stale-`messages`-closure problem (a
+   local answer mutates `messages` without re-creating `send`).
+2. **Escalation ignored a picked "Did you mean" candidate.** After the DM clicked a candidate chip, "Ask
+   Selene instead" still escalated the original `sourceQuery`. `ChatLocalAnswer` now tracks the picked
+   `{name, card}` and `onEscalate(query?)` sends the chosen entity's name (falls back to `sourceQuery`
+   when nothing was picked).
+3. **Double-fire race on Send/Enter.** The `if (sending) return` guard read render-lagged state, so a
+   fast double Enter/click could launch two turns (duplicate user message, two `AbortController`s
+   racing). Added a synchronous `sendingRef` set the instant a bridge turn begins (cleared in
+   `streamTurn`'s `finally` and in `newChat`); `send`/`escalate` guard on it. `sending` **state** is kept
+   for the composer UI only.
+4. **Silent last-wins on a normalized monster-name collision.** `monsterByName` is now built **first-wins**
+   (verified the current 2,160-entry dataset has **zero** normalized collisions — this is defensive
+   hardening so a future regen with a dup name stays deterministic).
+5. **The `newChat()`-mid-stream abort race (the old "known follow-up") is now hardened.** Each
+   `streamTurn` treats its own `AbortController` as an identity token (`isCurrent = () => abortRef.current
+   === abort`) and gates **every** turn-global and index-targeted write on still being current: the event
+   callback early-returns, and the `catch`/`finally` skip teardown when superseded. This closes the real
+   clobber — because `newChat` clears the message list *and* `sendingRef` synchronously, a superseded
+   turn's late settlement could otherwise write "Cancelled"/error into the **reused** `targetIndex`
+   (now a *new* turn's message) and null the new turn's `abortRef` (wedging its Stop button). The current
+   turn's own Stop is unaffected (`stop()` aborts without nulling `abortRef`, so `isCurrent()` stays true).
+6. **Investigated, no change — free-text auto-detect false positives (finding #5, low).** Testing ~40
+   common words showed the ones that resolve locally (`hide`, `dodge`, `grapple`, `light`, `fear`, `aid`, …)
+   are legitimate combat actions / conditions / spells the feature exists to serve; any trailing words
+   defeat the exact match and fall through to the bridge; and every local answer already carries the
+   provenance line + "Ask Selene instead" escape hatch. A denylist would regress the core value and be
+   arbitrary, so the unique-exact-across-datasets gate stands.
+
 ---
 
 ## Decisions already made (in a planning conversation with James, 2026-07-07)
@@ -485,8 +577,11 @@ don't leave the tree broken between phases.
    `CustomEvent` (shared `addCombatantToInitiative` helper) and `partyStore`. Party name-collision
    opens an editable review form (Replace / Add as new / Cancel) diffing level/class/race/AC/max-HP;
    no match → direct add. Monsters → Initiative only. Pure logic in `lib/cardHandoff.ts` (19 tests).
-5. **Bundled-data-first rules routing** — client-side search of `spells.ts` / `bestiary.ts` /
-   `compendium.ts` before a chat turn is sent to the bridge for general rules questions.
+5. **Bundled-data-first rules routing** — ✅ **DONE (2026-07-10, see Progress log).** Client-side
+   lookup over `spells.ts` / `monsters.ts` / `compendium*.ts` via slash commands (`/spell`, `/monster`,
+   `/rule`) and conservative unique-exact free-text auto-detect, before a chat turn is sent to the
+   bridge. Pure logic in `lib/localLookup.ts` (21 tests); monster cards reuse the Phase-4 Add-to-
+   Initiative hand-off; each local answer offers "Ask Selene instead". No bridge/protocol/`dm-*` change.
 6. **Chat history decision + implementation** — per the open question above.
 7. **Docs** — README section documenting the bridge as optional: how to install/authenticate
    (`claude setup-token`), how to start it, what happens if it's not running, and an explicit
