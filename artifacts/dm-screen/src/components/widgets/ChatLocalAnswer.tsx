@@ -2,13 +2,11 @@ import { useState } from "react";
 import { BookOpen, Sparkles } from "lucide-react";
 import { ChatToolCard } from "./ChatToolCard";
 import type { ToolResultCard } from "@/lib/cardHandoff";
-
-export interface LocalAnswer {
-  card?: ToolResultCard;
-  candidates?: { name: string; card: ToolResultCard }[];
-  noMatch?: string;
-  hint?: string;
-}
+// LocalAnswer lives in the React-free chatHistory module (so the persistence
+// validator can reference it without pulling a widget `.tsx` into backup.ts's
+// import graph); re-exported here for existing importers.
+import type { LocalAnswer } from "@/lib/chatHistory";
+export type { LocalAnswer };
 
 /**
  * Renders one bundled-data answer: a provenance line, then either the card, a

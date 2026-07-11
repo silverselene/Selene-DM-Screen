@@ -1,7 +1,7 @@
 # Epic: AI Chat widget (Claude + ddb-mcp)
 
-Status: **Phases 1–5 complete + a Phase-2 hardening/code-review pass + a model/effort-picker
-increment + a Phase-5 code-review/hardening pass** — last touched 2026-07-11. Phases 6–7 and 9 not started; Phase 8 (unit tests)
+Status: **Phases 1–6 complete + a Phase-2 hardening/code-review pass + a model/effort-picker
+increment + a Phase-5 code-review/hardening pass** — last touched 2026-07-11. Phases 7 and 9 not started; Phase 8 (unit tests)
 continues to land alongside each phase's pure logic. The original plan below is preserved as the
 record; see the **Progress log** immediately after the Summary for what was actually built and
 which "Recommended" positions changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items
@@ -375,6 +375,48 @@ still green (no test changes — all fixes are internal to the widget/lib). All 
    provenance line + "Ask Selene instead" escape hatch. A denylist would regress the core value and be
    arbitrary, so the unique-exact-across-datasets gate stands.
 
+### Phase 6 — chat history persistence ✅ (2026-07-11, Claude Code)
+
+Design spec: `docs/superpowers/specs/2026-07-11-phase6-chat-history-persistence-design.md`; plan:
+`docs/superpowers/plans/2026-07-11-phase6-chat-history-persistence.md`. Workspace typecheck clean
+across all four packages; **148 dm-screen tests** (12 new) + 21 bridge tests green; production build
+clean (`grep /api/` and `grep bridge-protocol` in `dist` both zero, `dm-ai-chat-v1` present as
+expected). Resolves the handover's open "chat history persistence" question. **No bridge, no
+`@workspace/bridge-protocol`, no migration** (new key, no legacy data) — entirely client-side.
+
+- **Decided with James (brainstorming, 2026-07-11):** **persist** the transcript (previously
+  session-only React state); **transcript-only** — the visible messages persist but the bridge's
+  Agent-SDK `resume` session id does **not**, so a reload shows history while the next turn starts a
+  fresh bridge session (the SDK session lives in the bridge process's memory and would usually be dead
+  after a reload/restart anyway); **backup-exposure handling = both** mitigations, because the
+  full-backup sweep round-trips every `dm-*` key into a shareable file and chat can echo D&D Beyond
+  content — (a) the "New chat" reset also wipes the persisted key so the DM can clear before exporting,
+  and (b) a conditional export-time warning line.
+- **New key** `dm-ai-chat-v1` (versioned, `dm-`-prefixed → auto-swept by the full backup).
+- **New pure module** `artifacts/dm-screen/src/lib/chatHistory.ts` (11 unit tests in `chatHistory.test.ts`):
+  owns `CHAT_HISTORY_KEY`, `MAX_CHAT_MESSAGES = 200` (count cap like `MAX_COMBATANTS`/`MAX_PARTY`,
+  keep-most-recent on overflow; the import path's 2 MB `MAX_RAW_VALUE_BYTES` is the byte backstop),
+  the chat message types **moved here** from `AIChatWidget.tsx`, `LocalAnswer` **moved here** from
+  `ChatLocalAnswer.tsx` (which re-exports it), and `validateChatHistory` / `validateCard` /
+  `validateLocalAnswer` / `hasPersistedChat`. The validator is a `ShapeValidator<ChatMessage[]>` run on
+  **both** the `useLocalStorage` read path and the `backup.ts` import path: rejects non-arrays, caps to
+  the most-recent 200, drops malformed entries (and malformed nested cards/local pieces individually),
+  **forces every restored assistant message `pending:false`**, and drops a trailing content-less
+  assistant message (a dead in-flight turn snapshotted mid-stream). Types moved into a React-free module
+  so `backup.ts` (and its Node test) never import a widget `.tsx`.
+- **Widget** `AIChatWidget.tsx`: swapped `useState<ChatMessage[]>([])` → `useLocalStorage(CHAT_HISTORY_KEY,
+  [], validateChatHistory, { debounceWriteMs: 500 })`. The hook already debounces (streaming no longer
+  writes per token) and flushes on pagehide / tab-hidden / unmount / before a backup sweep. `newChat()`'s
+  `setMessages([])` now also clears the key. `sessionIdRef` stays session-only (transcript-only).
+- **`backup.ts`**: registered `"dm-ai-chat-v1": lift(validateChatHistory)` (1 new round-trip test in
+  `backup.test.ts`). **`Sidebar.tsx`**: an amber "⚠ Includes AI-chat transcripts (may contain D&D Beyond
+  content)" line under the BACKUP description, shown only when `hasPersistedChat()`.
+- **Live manual pass owed by the DM** (needs a running bridge): send a turn → reload → transcript
+  restored, no ghost "Thinking…", next turn starts fresh; "New chat" clears it (and stays cleared after
+  reload); backup export shows the warning + includes `dm-ai-chat-v1` when a transcript exists, omits
+  both after New chat; import round-trips. Automated verification (typecheck / tests / build / bundle
+  scan) is done.
+
 ---
 
 ## Decisions already made (in a planning conversation with James, 2026-07-07)
@@ -582,7 +624,11 @@ don't leave the tree broken between phases.
    `/rule`) and conservative unique-exact free-text auto-detect, before a chat turn is sent to the
    bridge. Pure logic in `lib/localLookup.ts` (21 tests); monster cards reuse the Phase-4 Add-to-
    Initiative hand-off; each local answer offers "Ask Selene instead". No bridge/protocol/`dm-*` change.
-6. **Chat history decision + implementation** — per the open question above.
+6. **Chat history decision + implementation** — ✅ **DONE (2026-07-11, see Progress log).** Persist the
+   transcript in a versioned `dm-ai-chat-v1` key (transcript-only — no resume session id), with a shared
+   `validateChatHistory` cap/normalizer run on both the `useLocalStorage` read path and the backup import,
+   plus both backup-exposure mitigations (New chat clears the key; conditional export-time warning). Pure
+   logic in `lib/chatHistory.ts` (11 tests). No bridge/protocol/migration change.
 7. **Docs** — README section documenting the bridge as optional: how to install/authenticate
    (`claude setup-token`), how to start it, what happens if it's not running, and an explicit
    restatement that the core app needs none of this.

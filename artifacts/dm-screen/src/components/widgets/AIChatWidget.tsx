@@ -8,11 +8,22 @@ import {
   type BridgeHealth,
   type EffortLevel,
 } from "@/lib/aiBridge";
-import { ChatToolCard, type ToolResultCard } from "./ChatToolCard";
+import { ChatToolCard } from "./ChatToolCard";
 import { MiniMarkdown } from "@/lib/miniMarkdown";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { parseLookupCommand, lookupDataset, autoDetectLocal } from "@/lib/localLookup";
 import { ChatLocalAnswer, type LocalAnswer } from "./ChatLocalAnswer";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  CHAT_HISTORY_KEY,
+  CHAT_CHANGED_EVENT,
+  MAX_CHAT_MESSAGES,
+  capChatMessages,
+  validateChatHistory,
+  type ChatMessage,
+  type AssistantMessage,
+  type ChatChangedDetail,
+} from "@/lib/chatHistory";
 
 // Model catalog for the footer picker — the single source of truth for the menu
 // (the bridge forwards the chosen id opaquely). Session-only selection; defaults
@@ -91,30 +102,27 @@ function FooterPicker<T extends string>({
 // persistence is a later phase. Structured preview cards + "Add to ___" hand-off
 // (tool events beyond a lightweight indicator) also land in later phases.
 
-interface AssistantMessage {
-  role: "assistant";
-  text: string;
-  tools: string[];
-  cards: ToolResultCard[];
-  toolErrors: { tool: string; message: string }[];
-  error?: string;
-  pending: boolean;
-  local?: LocalAnswer;      // present when this turn was answered from bundled data
-  sourceQuery?: string;     // the original query, for "Ask Selene instead"
-  escalated?: boolean;      // true once the DM escalated a local answer to the bridge
-}
-interface UserMessage {
-  role: "user";
-  text: string;
-}
-type ChatMessage = UserMessage | AssistantMessage;
+// Message types (ChatMessage / AssistantMessage / UserMessage) live in the
+// React-free @/lib/chatHistory module so the persistence validator can share
+// them; imported above.
 
 type BridgeStatus = "checking" | "online" | "offline";
 
 export function AIChatWidget() {
   const [status, setStatus] = useState<BridgeStatus>("checking");
   const [health, setHealth] = useState<BridgeHealth | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Persisted transcript. The hook debounces writes (streaming mutates
+  // `messages` per token) and flushes on pagehide / tab-hidden / unmount /
+  // before a backup sweep. `validateChatHistory` forces every restored
+  // assistant message non-pending, so a reload shows history with no ghost
+  // "Thinking…". The bridge resume/session id is intentionally NOT persisted
+  // (`sessionIdRef` starts null), so the first post-reload turn starts fresh.
+  const [messages, setMessages] = useLocalStorage<ChatMessage[]>(
+    CHAT_HISTORY_KEY,
+    [],
+    validateChatHistory,
+    { debounceWriteMs: 500 },
+  );
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   // Session-only model/effort selection. Applied to the next turn's request;
@@ -164,6 +172,21 @@ export function AIChatWidget() {
 
   // Abort any in-flight turn if the widget unmounts (tile closed / type switched).
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Keep the Sidebar's backup warning in sync with the live transcript. The
+  // warning must reflect what a backup would export, but the persist is
+  // debounced and the native `storage` event doesn't fire for same-tab writes,
+  // so a direct localStorage read there can lag. Emit a same-tab CustomEvent
+  // when the transcript flips between empty and non-empty (depending on the
+  // boolean, not `messages`, so this fires on the flip — not per streamed
+  // token). We intentionally do NOT emit `false` on unmount: closing the tile
+  // doesn't clear the persisted key, so the backup still contains the chat.
+  const hasChat = messages.length > 0;
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent<ChatChangedDetail>(CHAT_CHANGED_EVENT, { detail: { present: hasChat } }),
+    );
+  }, [hasChat]);
 
   // Mutate a specific assistant message by index (escalation targets the clicked
   // card's message, which may not be the last one).
@@ -314,24 +337,32 @@ export function AIChatWidget() {
       // (the command arg for a lookup, else the raw text) so "Ask Selene instead"
       // sends something sensible to the bridge.
       const { answer, sourceQuery } = routed;
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", text },
-        { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: false, local: answer, sourceQuery },
-      ]);
+      setMessages((prev) =>
+        capChatMessages([
+          ...prev,
+          { role: "user", text },
+          { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: false, local: answer, sourceQuery },
+        ]),
+      );
       return;
     }
 
-    // Index of the assistant message we're about to append: the current length
-    // (user goes there) + 1. Read from messagesRef, not a setState-updater
-    // side-effect (which runs too late) nor the `messages` closure (which can be
-    // stale — a local answer mutates messages without re-creating this callback).
-    const targetIndex = messagesRef.current.length + 1;
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text },
-      { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
-    ]);
+    // Index of the assistant message we're about to append. It always lands
+    // last, so after the keep-most-recent cap its index is (capped length − 1).
+    // `Math.min(len + 2, MAX) − 1` collapses to the pre-cap `len + 1` when no
+    // trimming happens, and stays correct when the append pushes past the cap
+    // and the oldest entries are dropped. Read from messagesRef (authoritative
+    // length), not a setState-updater side-effect (runs too late) nor the
+    // `messages` closure (can be stale — a local answer mutates messages
+    // without re-creating this callback).
+    const targetIndex = Math.min(messagesRef.current.length + 2, MAX_CHAT_MESSAGES) - 1;
+    setMessages((prev) =>
+      capChatMessages([
+        ...prev,
+        { role: "user", text },
+        { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
+      ]),
+    );
     await streamTurn(text, targetIndex);
   }, [input, newChat, routeLocal, streamTurn]);
 

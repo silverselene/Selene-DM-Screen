@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, Sparkles, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -7,6 +8,7 @@ import {
   prepareImport,
   promptForJsonFile,
 } from "@/lib/backup";
+import { hasPersistedChat, CHAT_CHANGED_EVENT, type ChatChangedDetail } from "@/lib/chatHistory";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -125,6 +127,18 @@ export function Sidebar({
   recentWidgets, onRestoreRecent, onClearRecent,
 }: Props) {
   const { isDark } = useTheme();
+
+  // Reactive mirror of the persisted AI-chat transcript's emptiness, driving
+  // the BACKUP panel's D&D-Beyond-content warning. Seeded from localStorage
+  // (correct when the chat widget isn't mounted) and kept live by the widget's
+  // same-tab `dm-ai-chat-changed` event — a plain `hasPersistedChat()` call in
+  // render would be non-reactive and could lag the debounced persist.
+  const [hasChat, setHasChat] = useState(hasPersistedChat);
+  useEffect(() => {
+    const onChange = (e: Event) => setHasChat((e as CustomEvent<ChatChangedDetail>).detail.present);
+    window.addEventListener(CHAT_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(CHAT_CHANGED_EVENT, onChange);
+  }, []);
 
   const sidebarBg = isDark
     ? "linear-gradient(180deg, #0b0018 0%, #080012 100%)"
@@ -272,6 +286,11 @@ export function Sidebar({
             <p className="text-[10px] leading-relaxed mb-2" style={{ color: "var(--dm-t4)" }}>
               State is stored per-browser. Export a snapshot to move it to another browser or back up.
             </p>
+            {hasChat && (
+              <p className="text-[10px] leading-relaxed mb-2 text-amber-300/80">
+                ⚠ Includes AI-chat transcripts (may contain D&amp;D Beyond content).
+              </p>
+            )}
             <div className="flex gap-1">
               <button
                 onClick={runFullExport}

@@ -26,6 +26,7 @@ import {
 } from "@/lib/combatant";
 import { parseEnvelopeHead } from "@/lib/envelope";
 import { flushPendingWrites } from "@/lib/pendingWrites";
+import { validateChatHistory } from "@/lib/chatHistory";
 
 // Re-export so call sites that already import widget constants /
 // validators from `@/lib/backup` keep working unchanged.
@@ -378,6 +379,12 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
   "dm-initiative-active-id-v1": lift(validateInitiativeActiveId),
   "dm-round-v1": lift(validateBoundedInt(1, 9999)),
   "dm-initiative-mode-v1": lift(validateEnum(INITIATIVE_MODES)),
+
+  // AI Chat transcript — persisted history (Phase 6). Shared validator caps
+  // to MAX_CHAT_MESSAGES and normalizes each message; also used by the
+  // widget's useLocalStorage read path. Grouped with party/initiative because
+  // it likewise can carry D&D Beyond content.
+  "dm-ai-chat-v1": lift(validateChatHistory),
 
   // Per-widget UI state (queries, filters, selections, roll history).
   // These never feed stat-block math, but they DO feed unguarded
