@@ -1,4 +1,4 @@
-import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay } from "lucide-react";
+import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, Bot } from "lucide-react";
 import type { WidgetType } from "@/types";
 
 interface Props {
@@ -89,6 +89,26 @@ export function WidgetSelectorModal({ onSelect, onClose }: Props) {
               <div className="text-xs text-gray-400 leading-tight">{w.description}</div>
             </button>
           ))}
+
+          {/* Teaser only — not a real WidgetType yet, so it's not wired to
+              onSelect. The functionality lives on an unmerged branch (a chat
+              widget backed by a local AI bridge service); this just previews
+              it so DMs know it's coming before that branch lands. */}
+          <div
+            title="Coming soon"
+            className="relative flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-indigo-950/40 to-indigo-900/20 border border-indigo-800/30 rounded-lg text-center opacity-60 cursor-not-allowed select-none"
+          >
+            <span className="absolute top-1.5 right-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-indigo-700/40 text-indigo-200 border border-indigo-500/40">
+              Soon
+            </span>
+            <div className="text-white/50">
+              <Bot className="w-6 h-6" />
+            </div>
+            <div className="text-sm font-bold text-gray-400">AI Chat</div>
+            <div className="text-xs text-gray-600 leading-tight">
+              Ask rules questions and manage combatants by chatting with an AI assistant.
+            </div>
+          </div>
         </div>
       </div>
     </div>
