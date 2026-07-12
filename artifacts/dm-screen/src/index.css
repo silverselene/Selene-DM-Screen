@@ -61,7 +61,7 @@
   --popover: 270 60% 5%;
   --popover-foreground: 270 20% 88%;
 
-  --app-font-sans: 'Inter', sans-serif;
+  --app-font-sans: 'Avenir', 'Avenir Next', 'Inter', sans-serif;
   --app-font-serif: 'Cinzel', 'Georgia', serif;
   --app-font-mono: Menlo, monospace;
   --radius: 0.5rem;
