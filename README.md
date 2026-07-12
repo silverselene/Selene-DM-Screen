@@ -18,9 +18,11 @@ widget. Open, close, resize (1×1 or 2×2), and rearrange widgets freely; recent
 widgets are saved in the sidebar for quick restore. Layout persists across
 sessions via `localStorage`.
 
-### Seven widgets
+### Eight widgets
 
-- **Compendium** — search and browse D&D 5.5e rules entries.
+- **Compendium** — search and browse D&D 5.5e rules entries: hand-curated DM
+  summaries plus a bulk set of feats, combat actions, skills, senses, and
+  DMG/PHB-style variant rules.
 - **Initiative Tracker** — add players and monsters, roll initiative, track HP
   and AC round by round. Clicking a monster name jumps straight to its
   Bestiary entry. Combatants, turn order, current round, and per-combatant HP
@@ -29,14 +31,26 @@ sessions via `localStorage`.
 - **Oracle** — random generator with four tabs: Names (by ancestry/race),
   Places (7 settlement types with combinatorial name patterns and
   descriptors), Loot (by CR tier), and Items (mundane & common magic).
-- **Bestiary** — full-text monster search over 40 rich stat blocks plus a
-  2,158-entry thin index for quick reference. Shows stat blocks, traits,
-  actions, and CR-coloured badges.
+- **Bestiary** — full-text search over a unified 2,160-monster dataset, 2,146
+  of them with a full stat block (traits, actions, reactions, legendary
+  actions) rather than just a thin index entry. CR-coloured badges throughout.
 - **Wizard's Tome** — searchable spell compendium (557 spells). Filter by
-  level, class, or school.
+  level, class, or school. Every spell shows a Damage line at a glance —
+  dice + type (+ save/attack) for damage-dealers, healing amount for
+  healers, a short effect blurb otherwise.
 - **Party** — full CRUD for player characters. Tracks name, race, class,
   level, AC, HP, weapons (with live autocomplete against 251 weapons), and
   spells. One-click dispatch to the Initiative Tracker.
+- **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
+  player for table music or ambience. The link is remembered across
+  sessions, and the embed resizes with the tile.
+
+### Coming soon
+
+- **AI Chat** — an assistant widget for asking rules questions and managing
+  combatants/party members by chatting, backed by an optional local AI
+  bridge service. In active development on an unmerged branch; not yet
+  available in this build.
 
 ### Quality of life
 
@@ -167,7 +181,7 @@ artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only dep
   src/data/                  Bundled reference data: spells, monsters,
                              weapons, generators, compendium
   src/lib/                   localStorage stores, backup/restore, shared UI primitives
-  src/components/widgets/    The seven widgets
+  src/components/widgets/    The eight widgets
   public/                    PWA icons + static assets
   docker/nginx.conf          SPA-aware nginx config (used by the Docker image)
   scripts/verify-precache.mjs  Post-build guard: fails the build if a dataset
@@ -182,20 +196,24 @@ Dockerfile, docker-compose.yml, .dockerignore
 | Dataset | Count | Source |
 |---|---|---|
 | Spells | 557 | 5etools v2.31.0 (`data/spells/*.json` + `sources.json`) |
-| Bestiary (rich stat blocks) | 40 | 5etools v2.31.0 (2024 XMM preferred, falls back to 2014 MM) |
-| Monster index (thin search) | 2,158 | `attached_assets/Monsters_&_Beasts_*.csv` |
+| Monsters | 2,160 (2,146 with full stat blocks) | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools v2.31.0 bestiary (2024 XMM preferred) + Open5e (OGL) |
 | Weapons | 251 | 5etools v2.31.0 (`data/items.json` + `items-base.json`) |
+| Compendium (hand-curated) | 78 | hand-curated DM summaries |
+| Compendium (bulk rules) | 564 | 5etools v2.31.0 (feats, actions, skills, senses, variant rules) + Open5e (OGL) |
 
-The data is generated **offline** from a local sibling clone of
-`5etools-src` pinned at tag `v2.31.0`. To regenerate:
+The data is generated **offline** from local sibling clones of `5etools-src`
+pinned at tag `v2.31.0` and, for the Open5e-sourced portions of the monster
+and compendium datasets, `open5e-api` pinned at tag `v1.12.0`. To regenerate:
 
 ```bash
-# requires ../5etools-src/ checked out at tag v2.31.0
+# requires ../5etools-src/ (v2.31.0) and ../open5e-api/ (v1.12.0) checked out
 pnpm --filter @workspace/scripts run generate:all
 ```
 
-5etools content is MIT-licensed; attribution is preserved at the top of each
-generated data file.
+5etools content is MIT-licensed. The Open5e-sourced portions (Kobold Press
+Tome of Beasts I–III / Creature Codex, Level Up A5e Monstrous Menagerie) are
+Open Game Content under the OGL — see [OGL-NOTICE.md](OGL-NOTICE.md).
+Attribution for both is preserved at the top of each generated data file.
 
 ## Security
 
@@ -208,4 +226,6 @@ and remove the exclusion once 24 hours have passed.
 ## License
 
 MIT for the application code. Bundled D&D reference data is sourced from
-5etools (MIT) — see file headers under `artifacts/dm-screen/src/data/`.
+5etools (MIT) and, in part, Open5e (OGL) — see file headers under
+`artifacts/dm-screen/src/data/` and [OGL-NOTICE.md](OGL-NOTICE.md) for the
+OGL attribution.
