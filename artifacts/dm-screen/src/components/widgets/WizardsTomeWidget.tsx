@@ -60,6 +60,7 @@ function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
             <div><span className="text-gray-500 font-semibold">Casting Time: </span><span className="text-gray-300">{spell.castingTime}</span></div>
             <div><span className="text-gray-500 font-semibold">Range: </span><span className="text-gray-300">{spell.range}</span></div>
+            <div className="col-span-2"><span className="text-gray-500 font-semibold">Damage: </span><span className="text-gray-300">{spell.damageSummary}</span></div>
             <div><span className="text-gray-500 font-semibold">Components: </span><span className="text-gray-300">{spell.components}</span></div>
             <div><span className="text-gray-500 font-semibold">Duration: </span><span className="text-gray-300">{spell.duration}</span></div>
           </div>

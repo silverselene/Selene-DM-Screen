@@ -17,6 +17,24 @@ import {
   writeOutput,
 } from "./lib.js";
 
+// parseDamage/parseHealing scan a spell's `entries` for the first
+// {@damage}/{@dice} macro, which works for the vast majority of spells
+// (the macro right after "takes X damage" / "regains X hit points" *is*
+// the primary effect) but misfires on a handful of narratively dense spells
+// where the first macro is something else entirely — a side-effect penalty,
+// a random-table roll, or a self-inflicted cost. A full scan of every
+// damage/healing-tagged spell (see PR discussion) turned up exactly these
+// three false positives; everything else checked out correct:
+//   - Wish: the {@damage 1d10} is the "stress of casting" self-harm penalty
+//     for a wish beyond the standard list, and the {@dice 2d4} that would've
+//     been read as healing is actually "2d4 days" of Strength-score drain
+//     duration — neither is Wish's own effect.
+//   - Reincarnate: the {@dice} macro is "roll 1d10/d100 and consult the
+//     species table below," not a hit-point roll.
+//   - Temple of the Gods: the {@dice d4} is a roll-and-subtract penalty
+//     applied to the creature's own d20 rolls, not healing.
+const DAMAGE_HEALING_FALSE_POSITIVES = new Set(["Wish", "Reincarnate", "Temple of the Gods"]);
+
 // Hardcoded source list from the legacy importer. Order matters: earlier
 // files win ties when two sources publish a spell with the same name.
 // XPHB (2024 PHB) is listed before PHB so 2024 readings win — matches the
@@ -55,6 +73,91 @@ const SCHOOLS: Record<string, string> = {
   P: "Conjuration",
 };
 
+const ABILITY_ABBR: Record<string, string> = {
+  strength: "Str",
+  dexterity: "Dex",
+  constitution: "Con",
+  intelligence: "Int",
+  wisdom: "Wis",
+  charisma: "Cha",
+};
+
+const SPELL_ATTACK_LABEL: Record<string, string> = {
+  M: "melee spell attack",
+  R: "ranged spell attack",
+};
+
+// A save and an attack roll are mutually exclusive per 5etools schema, so
+// only one of these ever applies to a given spell.
+function formatSaveOrAttack(s: FiveToolsSpell): string | null {
+  if (s.savingThrow?.length) {
+    return `${s.savingThrow.map((a) => ABILITY_ABBR[a] ?? a).join("/")} save`;
+  }
+  if (s.spellAttack?.length) {
+    return s.spellAttack.map((a) => SPELL_ATTACK_LABEL[a] ?? a).join("/");
+  }
+  return null;
+}
+
+// Best-effort "what does this spell actually do" blurb for spells with no
+// damage or healing to report — the first sentence of the rendered
+// description, plus a second if the first is too short to carry the actual
+// mechanic (e.g. "You touch a willing creature." tells you nothing on its
+// own; the AC/effect is in the sentence right after it).
+function summarizeEffect(description: string): string {
+  const sentences = description.split(/(?<=[.!?])\s+(?=[A-Z])/);
+  let summary = sentences[0] ?? description;
+  if (sentences.length > 1 && summary.length < 60) {
+    summary = `${summary} ${sentences[1]}`;
+  }
+  if (summary.length > 160) {
+    summary = `${summary.slice(0, 157).trimEnd()}…`;
+  }
+  return summary;
+}
+
+// Spells where the caster/attacker picks a single damage type from an
+// explicit list *for that same damage roll* — e.g. Chromatic Orb's "Choose
+// Acid, Cold, Fire, Lightning, Poison, or Thunder ... damage of the chosen
+// type." Verified by hand against each spell's actual rules text (not just
+// "has more than one damageInflict entry" — most multi-entry spells are
+// something else: Chaos Bolt's type is randomly rolled, Meteor Swarm and
+// Flame Strike always deal *both* listed types at once, Prismatic Spray/Wall
+// roll a table, Ice Knife/Storm Sphere/Bigby's Hand/Wall of Thorns deal two
+// *different* types from two different triggers, and Destructive Wave is a
+// fixed Thunder instance plus a *separate* Radiant-or-Necrotic instance that
+// this schema's single dice/type pair can't represent without misstating
+// the fixed part as chosen). Only add a name here after checking the text.
+const DAMAGE_TYPE_CHOICE_SPELLS = new Set([
+  "Chromatic Orb",
+  "Sorcerous Burst",
+  "Dragon's Breath",
+  "Elemental Weapon",
+  "Glyph of Warding",
+  "Elemental Bane",
+  "Spirit Shroud",
+  "Conjure Minor Elementals",
+  "Songal's Elemental Suffusion",
+  "Elminster's Effulgent Spheres",
+  "Forbiddance",
+  "Illusory Dragon",
+  "Alter Self",
+  // Fire Shield doesn't use any of the "chosen type" phrasing above — it
+  // says "Fire damage from a warm shield or Cold damage from a chill
+  // shield" — but it's the same mechanic (pick one of two types when you
+  // cast it), just worded around the two named variants instead.
+  "Fire Shield",
+]);
+
+function formatDamageType(s: FiveToolsSpell, damage: SpellDamage): string {
+  const single = damage.type.charAt(0).toUpperCase() + damage.type.slice(1);
+  if (!DAMAGE_TYPE_CHOICE_SPELLS.has(s.name)) return single;
+  const types = s.damageInflict ?? [damage.type];
+  if (types.length < 2) return single;
+  const labels = types.map((t) => t.charAt(0).toUpperCase() + t.slice(1));
+  return `player choice of ${labels.join("/")}`;
+}
+
 interface FiveToolsSpell {
   name: string;
   source?: string;
@@ -92,6 +195,13 @@ interface FiveToolsSpell {
   scalingLevelDice?:
     | ScalingLevelDice
     | ScalingLevelDice[];
+  // Ability the target rolls (e.g. ["dexterity"], or multiple abilities for
+  // spells that let the target choose / trigger different saves per effect).
+  savingThrow?: string[];
+  // "M" or "R" — melee/ranged spell attack roll, mutually exclusive with
+  // savingThrow (a spell either forces a save or requires an attack roll,
+  // never both).
+  spellAttack?: string[];
 }
 
 interface ScalingLevelDice {
@@ -114,6 +224,11 @@ interface Spell {
   upcast?: string;
   damage?: SpellDamage;
   healing?: SpellHealing;
+  // Always present, so the Wizard's Tome can show a Damage line for every
+  // spell: the dice + type (plus "Dex save" / "ranged spell attack" when the
+  // spell has one) for damage-dealers, "0 — Heals ..." for pure healing
+  // spells, and "0 — <short effect summary>" for everything else.
+  damageSummary: string;
 }
 
 interface SpellDamage {
@@ -217,13 +332,19 @@ function parseClasses(classesObj: FiveToolsSpell["classes"]): string[] {
 
 // 5etools v2+ keeps class membership out of the per-spell records and in a
 // separate sources.json index keyed by source → spell name → class[]. Pull it
-// once, then look each spell up while parsing.
+// once, then look each spell up while parsing. Supplement-book spells (XGE,
+// TCE, ...) that expand an *existing* class's spell list (rather than
+// introducing a spell tied directly to a class) are keyed under
+// `classVariant` instead of `class` — both need to be read, or every such
+// spell silently ends up with an empty classes[] (this was a real bug: it
+// affected 101 spells, ~18% of the dataset, until both keys were read here).
 type SourcesIndex = Record<
   string,
   Record<
     string,
     {
       class?: Array<{ name?: string; source?: string }>;
+      classVariant?: Array<{ name?: string; source?: string }>;
     }
   >
 >;
@@ -235,9 +356,9 @@ function classesFromIndex(
 ): string[] {
   if (!source) return [];
   const entry = index[source]?.[name];
-  if (!entry?.class?.length) return [];
+  if (!entry) return [];
   const set = new Set<string>();
-  for (const c of entry.class) {
+  for (const c of [...(entry.class ?? []), ...(entry.classVariant ?? [])]) {
     if (c.name) set.add(c.name);
   }
   return [...set].sort();
@@ -386,6 +507,7 @@ function findFirstScaleDice(entries: unknown): {
 }
 
 function parseHealing(s: FiveToolsSpell): SpellHealing | undefined {
+  if (DAMAGE_HEALING_FALSE_POSITIVES.has(s.name)) return undefined;
   // miscTags "HL" is the canonical 5etools flag for "this spell heals".
   if (!s.miscTags?.includes("HL")) return undefined;
 
@@ -417,6 +539,7 @@ function parseHealing(s: FiveToolsSpell): SpellHealing | undefined {
 }
 
 function parseDamage(s: FiveToolsSpell): SpellDamage | undefined {
+  if (DAMAGE_HEALING_FALSE_POSITIVES.has(s.name)) return undefined;
   const type = s.damageInflict?.[0];
   if (!type) return undefined;
 
@@ -468,6 +591,21 @@ function parseSpell(s: FiveToolsSpell, sourcesIndex: SourcesIndex): Spell {
   if (classes.length === 0) {
     classes = classesFromIndex(sourcesIndex, s.source, s.name);
   }
+
+  const damage = parseDamage(s);
+  const healing = parseHealing(s);
+
+  let damageSummary: string;
+  if (damage) {
+    const saveOrAttack = formatSaveOrAttack(s);
+    const typeLabel = formatDamageType(s, damage);
+    damageSummary = `${damage.dice} ${typeLabel}${saveOrAttack ? ` (${saveOrAttack})` : ""}`;
+  } else if (healing) {
+    damageSummary = `0 — Heals ${healing.dice}`;
+  } else {
+    damageSummary = `0 — ${summarizeEffect(description)}`;
+  }
+
   const out: Spell = {
     name: s.name,
     level: s.level ?? 0,
@@ -478,13 +616,12 @@ function parseSpell(s: FiveToolsSpell, sourcesIndex: SourcesIndex): Spell {
     duration: parseDuration(s.duration),
     classes,
     description,
+    damageSummary,
   };
   if (ritual) out.ritual = true;
   if (concentration) out.concentration = true;
   if (upcastText) out.upcast = upcastText;
-  const damage = parseDamage(s);
   if (damage) out.damage = damage;
-  const healing = parseHealing(s);
   if (healing) out.healing = healing;
   return out;
 }
@@ -550,6 +687,10 @@ export interface Spell {
   upcast?: string;
   damage?: SpellDamage;
   healing?: SpellHealing;
+  /** Always present. Dice + type (+ save/attack) for damage-dealers,
+   *  "0 — Heals ..." for pure healing spells, "0 — <effect summary>"
+   *  otherwise. */
+  damageSummary: string;
 }
 
 export interface SpellDamage {
