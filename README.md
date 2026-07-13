@@ -50,6 +50,35 @@ sessions via `localStorage`.
   running" state and the rest of the app is unaffected. See
   [services/ai-bridge/README.md](services/ai-bridge/README.md).
 
+  <details>
+  <summary>What the chat can do</summary>
+
+  - **Bundled-data-first lookups.** Common spell/monster/rule questions are
+    answered instantly from the app's own bundled datasets — no round-trip to
+    the bridge. Use the explicit slash commands `/spell`, `/monster`, `/rule`
+    (exact match → a card; partial → a "Did you mean" list), or just type a bare
+    entity name (`fireball`, `goblin`, `grappled`) and it auto-detects a unique
+    match. Every local answer shows an **"Answered from your bundled data"**
+    line and an **"Ask Selene instead →"** link that re-runs the query through
+    the AI for a fuller reply.
+  - **Live D&D Beyond lookups** (via the bridge) for anything not bundled — a
+    specific player's current character sheet, a homebrew monster, an owned
+    rulebook — returned as a **preview card**, never a silent write.
+  - **Data hand-off, click to commit.** Monster cards get an **Add to
+    Initiative** button; character cards get **Add to Party** + **Add to
+    Initiative**. A party name-collision opens an editable Replace / Add-as-new
+    review form (diffing level/class/race/AC/max-HP) so nothing is clobbered
+    without your say-so.
+  - **Per-turn model + effort pickers** on the composer — choose Opus 4.8 /
+    Sonnet 5 / Haiku 4.5 and Low / Medium / High reasoning effort. Change them
+    anytime; the new choice applies to your next turn (and always to the next
+    **New chat**).
+  - **Transcript persistence.** Your chat history is saved locally
+    (`dm-ai-chat-v1`) and restored on reload; **New chat** clears it. Because
+    replies can echo D&D Beyond content, a full backup that includes a
+    transcript shows a warning (see the persistence note below).
+  </details>
+
 ### Quality of life
 
 - Light / Dark mode toggle — a full light theme using lavender and ink tones.
@@ -73,7 +102,10 @@ sessions via `localStorage`.
 >   incognito loses everything** that wasn't exported first.
 > - **Use the Backup buttons** in the sidebar before clearing data or
 >   migrating to a new machine. The full backup round-trips every `dm-*` key
->   verbatim and reloads the tab on import.
+>   verbatim and reloads the tab on import. This includes the AI Chat
+>   transcript (`dm-ai-chat-v1`), which can echo D&D Beyond character/campaign
+>   content — the sidebar shows a warning when an export would carry one; use
+>   **New chat** to clear it first if you don't want it in the shared file.
 > - **Stay on one origin.** Running in dev (`http://localhost:38080`) and in
 >   Docker (`http://localhost:38080`) on the same port and host shares state.
 >   Switching ports starts a fresh, separate store. One side effect of the

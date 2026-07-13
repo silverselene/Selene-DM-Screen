@@ -1,11 +1,13 @@
 # Epic: AI Chat widget (Claude + ddb-mcp)
 
-Status: **Phases 1–6 complete + a Phase-2 hardening/code-review pass + a model/effort-picker
-increment + a Phase-5 code-review/hardening pass** — last touched 2026-07-11. Phases 7 and 9 not started; Phase 8 (unit tests)
-continues to land alongside each phase's pure logic. The original plan below is preserved as the
-record; see the **Progress log** immediately after the Summary for what was actually built and
-which "Recommended" positions changed. Inline `UPDATE`/`RESOLVED` notes flag the specific items
-that moved so nothing gets built on the stale versions.
+Status: **All phases (1–9) complete** + a Phase-2 hardening/code-review pass + a model/effort-picker
+increment + a Phase-5 code-review/hardening pass — last touched 2026-07-13. Phases 7 (docs), 8
+(tests), and 9 (verification) landed 2026-07-13; the only work left is the **live manual pass**
+(needs a running bridge + subscription auth + a ddb session) — the consolidated checklist is in the
+Phase-9 entry below. The original plan below is preserved as the record; see the **Progress log**
+immediately after the Summary for what was actually built and which "Recommended" positions changed.
+Inline `UPDATE`/`RESOLVED` notes flag the specific items that moved so nothing gets built on the
+stale versions.
 
 ## Summary
 
@@ -417,6 +419,70 @@ expected). Resolves the handover's open "chat history persistence" question. **N
   both after New chat; import round-trips. Automated verification (typecheck / tests / build / bundle
   scan) is done.
 
+### Phase 7 — docs ✅ (2026-07-13, Claude Code)
+
+Refresh, not a from-scratch write — the bridge already had a thorough
+[`services/ai-bridge/README.md`](services/ai-bridge/README.md) and the root README already carried
+an AI Chat entry. Closed the drift that accumulated across Phases 3–6:
+
+- **Bridge README:** `/chat` body updated to the current `ChatRequest` shape (`message`, `resume?`,
+  `model?`, `effort?`) with the per-turn picker semantics; SSE event list gained **`tool_result`**
+  (Phase 3) with a paragraph on the `tool` vs. `tool_result` split and graceful-degradation; added
+  the **session-expiry** setup-error note the Prerequisites section required ("re-run `ddb_login`
+  yourself; the chat flow never re-authenticates").
+- **Root README:** the AI Chat feature bullet gained a collapsible **`<details>` "What the chat can
+  do"** covering bundled-data-first slash commands (`/spell`/`/monster`/`/rule` + bare-name
+  auto-detect), live ddb lookups, the click-to-commit hand-off, the model/effort pickers, and
+  transcript persistence. The Persistence-model callout now names `dm-ai-chat-v1` and the
+  backup-warning behavior. `claude setup-token` auth, the "not running" degrade, and the
+  "core app needs none of this" restatement were already present and left intact.
+
+### Phase 8 — tests ✅ (2026-07-13, Claude Code)
+
+Pure-logic coverage was already effectively complete (every Phase 3–6 lib + bridge parser has a
+`*.test.ts`). Added the one meaningful gap: **`services/ai-bridge/src/ddbTools.test.ts`** (11 cases)
+— a regression guard on the read-only allowlist so a future ddb-mcp regen can't quietly land a
+write/destructive tool (`ddb_login`, `ddb_interact`, `ddb_navigate`, `ddb_download_character`, …) in
+the model's reach: asserts each forbidden tool is excluded from `DDB_READ_TOOLS` **and** from the
+`ALLOWED_TOOL_SET` gate (by fully-qualified id), that bare/unqualified names and the SDK's built-in
+`Bash`/`Read`/`Write`/`Edit` are rejected, and that `bareToolName` round-trips every allowed id.
+Component/DOM tests for the widget itself remain **deliberately deferred** (need jsdom +
+`@testing-library/react`, per CLAUDE.md) — real browser behavior stays a manual/Playwright concern.
+
+### Phase 9 — verification ✅ automated / ⏳ manual owed (2026-07-13, Claude Code)
+
+**Automated — all green:**
+- `pnpm typecheck` — clean across all four packages.
+- `pnpm test` — **183 tests** (151 dm-screen + 32 bridge, +11 from the new `ddbTools.test.ts`).
+- `pnpm build` — clean; `verify-precache` guard passed (all 4 dataset chunks precached, `data-monsters`
+  ~4.07 MB under the 8 MiB cap).
+- Bundle scans on `dist/public/assets/*.js`: `grep /api/` → **0**, `grep bridge-protocol` → **0**
+  (types-only, erased), `dm-ai-chat-v1` → **present**, bridge URL `127.0.0.1:38900` → **present**.
+
+**Manual pass still owed by the DM** — consolidates every "Live manual pass owed" from Phases 3–6 +
+the model picker. Needs the bridge running (`pnpm dev:ai`), subscription auth, and a valid ddb
+session on disk:
+
+- **Bridge stopped / offline:** widget shows "AI bridge not running · start with `pnpm dev:ai`" +
+  Retry; rest of the app unaffected. (This path is unchanged since Phase 2 and needs no live auth.)
+- **Tool-result cards (Phase 3):** monster lookup → rich card w/ AC/HP/CR chips; character lookup →
+  rich card; spell lookup → generic card; not-found → card shows the message, no crash.
+- **Hand-off (Phase 4):** monster→Initiative (repeat-add two goblins from one card); character→Party
+  on a new name (direct add, no form); character→Party name collision (form `was:` hints → Replace /
+  Add-as-new / edit a number before commit); character→Initiative (d20 + init bonus, `isPlayer`);
+  generic card shows no buttons; Initiative-tile-removed fallback path.
+- **Local routing (Phase 5):** `/spell fireball` → spell card; `/monster goblin` → monster card that
+  adds a Goblin combatant; `/rule grappled` → rule card; `/spell fire` → "Did you mean" list;
+  `/spell zzzz` → no-match + Ask Selene; bare `goblin` → monster card; a sentence question still
+  streams from the bridge; "Ask Selene instead" streams below a retained card (incl. on an **earlier**
+  answer, not just the latest).
+- **Model/effort picker:** switching model mid-conversation applies to the resumed turn (or at least
+  the next New Chat); Haiku 4.5 accepts `high` and Opus 4.8 accepts `low` without an SDK error.
+- **History persistence (Phase 6):** send a turn → reload → transcript restored, no ghost "Thinking…",
+  next turn starts fresh; New chat clears it (stays cleared after reload); backup export shows the
+  warning + includes `dm-ai-chat-v1` when a transcript exists, omits both after New chat; import
+  round-trips.
+
 ---
 
 ## Decisions already made (in a planning conversation with James, 2026-07-07)
@@ -629,14 +695,16 @@ don't leave the tree broken between phases.
    `validateChatHistory` cap/normalizer run on both the `useLocalStorage` read path and the backup import,
    plus both backup-exposure mitigations (New chat clears the key; conditional export-time warning). Pure
    logic in `lib/chatHistory.ts` (11 tests). No bridge/protocol/migration change.
-7. **Docs** — README section documenting the bridge as optional: how to install/authenticate
-   (`claude setup-token`), how to start it, what happens if it's not running, and an explicit
-   restatement that the core app needs none of this.
-8. **Tests** — Vitest coverage for the new pure logic (preview-card data shaping, bundled-vs-
-   ddb-mcp routing logic, party merge/diff logic), matching the existing Tier-1 testing
-   conventions (`*.test.ts` beside the code, fake `localStorage`, no jsdom).
-9. **Verification** — `pnpm test` + `pnpm typecheck` + production build + bundle scan, plus a
-   manual pass with the bridge both running and stopped.
+7. **Docs** — ✅ **DONE (2026-07-13, see Progress log).** Refreshed the bridge README (`/chat`
+   `ChatRequest` body, `tool_result` event, session-expiry note) and expanded the root README AI
+   Chat entry (collapsible `<details>` + `dm-ai-chat-v1` persistence/backup-warning note). The
+   install/auth/degrade/"core app needs none of this" content was already present.
+8. **Tests** — ✅ **DONE (2026-07-13, see Progress log).** Pure-logic coverage was already complete
+   across Phases 3–6; added `ddbTools.test.ts` (11 cases) as the allowlist regression guard.
+   Component/DOM tests remain deliberately deferred (need jsdom, per CLAUDE.md).
+9. **Verification** — ✅ **Automated DONE / ⏳ manual owed (2026-07-13, see Progress log).** typecheck
+   + 183 tests + build + `verify-precache` + bundle scans all green; the consolidated live manual
+   checklist (needs a running bridge + auth + ddb session) is in the Phase-9 Progress-log entry.
 
 ## Open questions for Claude Code to resolve during implementation
 

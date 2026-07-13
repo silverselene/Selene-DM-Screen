@@ -22,6 +22,13 @@ not running" state when it is stopped.
   step needs Playwright browsers (`npx playwright install`). The bridge never
   triggers login and never launches a browser — it only makes browserless
   read-only calls. General rules Q&A works without any of this.
+
+  **When the saved session expires**, live ddb lookups start failing — this is a
+  one-time **setup** error, not something the bridge (or the chat model) retries.
+  Re-run `ddb_login` yourself, the same way you did the first time, to refresh
+  `session.json`; the chat flow never re-authenticates on its own. Bundled-data
+  and general Q&A keep working while the session is stale — only the live D&D
+  Beyond lookups are affected.
 - **A Claude subscription** reachable by the Agent SDK — either an interactive
   `claude` login, or a token from `claude setup-token` exported as
   `CLAUDE_CODE_OAUTH_TOKEN`.
@@ -47,7 +54,17 @@ pnpm --filter @workspace/ai-bridge run smoke -- "How does Grapple work in 2024 r
 | Method | Path      | Purpose |
 |--------|-----------|---------|
 | `GET`  | `/health` | Reachability + billing mode + ddb-mcp status. Used by the widget to detect "bridge not running". |
-| `POST` | `/chat`   | Body `{ "message": "...", "resume"?: "<sessionId>" }`. Streams Server-Sent Events: `text`, `tool`, `done`, `error`. Pass the previous turn's `done.sessionId` back as `resume` to continue the conversation. |
+| `POST` | `/chat`   | Body `{ "message": "...", "resume"?: "<sessionId>", "model"?: "...", "effort"?: "low"\|"medium"\|"high" }`. Streams Server-Sent Events: `text`, `tool`, `tool_result`, `tool_error`, `done`, `error`. Pass the previous turn's `done.sessionId` back as `resume` to continue the conversation; `model`/`effort` are chosen per-turn by the widget's composer pickers (an out-of-enum `effort` is dropped, a request `model` overrides `AI_BRIDGE_MODEL`). |
+
+The `tool` event is a lightweight "calling `<tool>`…" indicator; the richer
+`tool_result` event carries a parsed, typed result (`kind: "monster" | "character"
+| "generic"`, with best-effort `fields` **and** always the full raw `markdown`) so
+the widget can render a preview card — and, for monster/character results, the
+"Add to Initiative / Party" hand-off buttons — instead of leaving the stat block
+in prose. A ddb format drift degrades gracefully (fields drop, the raw block still
+renders). When the SDK marks a tool call as failed, the bridge emits `tool_error`
+(with the tool name + message) **instead of** `tool_result`, so the widget can
+show the failure on its own card rather than burying it in prose.
 
 The event/health shapes (`BridgeEvent`, `BridgeHealth`) are defined once in the
 shared, types-only [`@workspace/bridge-protocol`](../../packages/bridge-protocol)
