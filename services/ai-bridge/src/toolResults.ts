@@ -114,26 +114,137 @@ function parseCharacterCard(text: string): ToolResultEvent {
   addField(fields, "initiative", /Initiative:\s*([+\-]?\d+)/, text);
   addField(fields, "speed", /Speed:\s*([^\n]+?)\s*$/m, text);
   if (fields.hp) fields.hp = fields.hp.replace(/\s+/g, "");
+  const spells = parseSheetSpells(text);
+  // Exclude spell names so an attack cantrip listed in ACTIONS (e.g. Fire Bolt,
+  // which carries a `to hit`) isn't also miscounted as a weapon.
+  const weapons = parseSheetWeapons(text, spells);
   return {
     type: "tool_result",
     tool: "ddb_get_character",
     kind: "character",
     title: title || firstHeadingOrLine(text) || "Character",
     ...(Object.keys(fields).length ? { fields } : {}),
+    ...(spells.length ? { spells } : {}),
+    ...(weapons.length ? { weapons } : {}),
+    markdown: text,
+  };
+}
+
+/** Trim, drop empties, and de-duplicate names case-insensitively (first spelling
+ *  wins, order preserved). Shared by the sheet spell/weapon extractors. */
+function dedupeNames(names: Iterable<string>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of names) {
+    const name = raw.trim();
+    const key = name.toLowerCase();
+    if (name && !seen.has(key)) {
+      seen.add(key);
+      out.push(name);
+    }
+  }
+  return out;
+}
+
+/**
+ * Body of an ALL-CAPS section header (e.g. "SPELLS", "ACTIONS"): the text from
+ * just after that header line to the next ALL-CAPS header line (or EOF), or ""
+ * when the header is absent. Scopes a parse to one section so a same-shaped line
+ * elsewhere (e.g. a "From Race: Darkvision" trait line outside SPELLS) isn't
+ * mis-read as belonging to it.
+ */
+function sectionBody(text: string, header: string): string {
+  const start = new RegExp(`^${header}[ \\t]*$`, "m").exec(text);
+  if (!start) return "";
+  const after = text.slice(start.index + start[0].length);
+  // Next section header: a column-0 line that opens with a capital and carries
+  // no lowercase — matches real headers like "SPELL SLOTS", "FEATS (1)", and
+  // "PROFICIENCIES & TRAINING", while indented content and "• …" bullets don't.
+  const next = /^[A-Z][^a-z\n]*$/m.exec(after);
+  return next ? after.slice(0, next.index) : after;
+}
+
+/**
+ * Extract bare spell names from a `full`/`spells` character sheet's SPELLS
+ * block. The block lists them as `  Cantrips: A, B`, `  Spells: C (L3), D (L1
+ * [ritual])`, and `  From <source>: E` lines; we split on commas and drop the
+ * trailing `(L#…)` level/ritual annotation so a name matches the party roster's
+ * plain-string list. Scoped to the SPELLS section so a "From <source>:" line in
+ * another block isn't slurped. De-duplicated, order preserved. Best-effort: a
+ * summary-only sheet has no SPELLS block → `[]`.
+ */
+export function parseSheetSpells(text: string): string[] {
+  const block = sectionBody(text, "SPELLS");
+  const names: string[] = [];
+  const re = /^\s*(?:Cantrips|Spells|From [^:\n]+):\s*(.+)$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(block)) !== null) {
+    for (const raw of m[1].split(",")) {
+      names.push(raw.replace(/\s*\(L\d+[^)]*\)\s*$/, ""));
+    }
+  }
+  return dedupeNames(names);
+}
+
+/**
+ * Extract weapon names from a character sheet's ACTIONS block. Each weapon
+ * attack is a `• <name>   <+N> to hit   …` line (name padded to 16 chars, an
+ * optional `×N` quantity prefix). Anchoring on the `to hit` clause skips the
+ * non-weapon `•` bullets under BONUS ACTIONS / REACTIONS. `exclude` drops names
+ * that are really spells (an attack cantrip in ACTIONS carries a `to hit` too).
+ * De-duplicated, order preserved.
+ */
+export function parseSheetWeapons(text: string, exclude: readonly string[] = []): string[] {
+  const excluded = new Set(exclude.map((s) => s.toLowerCase()));
+  const names: string[] = [];
+  const re = /^\s*•\s*(?:×\d+\s+)?(.+?)\s+[+\-]?\d+\s+to hit\b/gm;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const name = m[1].trim();
+    if (!excluded.has(name.toLowerCase())) names.push(name);
+  }
+  return dedupeNames(names);
+}
+
+/**
+ * `ddb_get_spell` result → spell card. The bridge output leads with
+ * `**<Name>** — Level N School …`; we pull just the name so the widget can
+ * re-render it from the bundled dataset (Wizard's-Tome styling). `markdown` is
+ * kept as the fallback for spells not in the bundle.
+ */
+function parseSpellCard(text: string): ToolResultEvent {
+  const m = /^\s*\*\*(.+?)\*\*/m.exec(text);
+  const title = (m ? m[1] : firstHeadingOrLine(text)).trim();
+  return {
+    type: "tool_result",
+    tool: "ddb_get_spell",
+    kind: "spell",
+    title: title || "Spell",
     markdown: text,
   };
 }
 
 /**
- * Turn one resolved tool call into a `tool_result` event. `markdown` is always
- * the full raw text (graceful-degradation fallback); rich parsers extract
- * best-effort `fields`. Only `ddb_get_monster` and `ddb_get_character` get rich
- * cards; everything else (including `ddb_character_lookup`, a feature-description
+ * Tools whose result is a raw data dump (not prose) that the assistant already
+ * re-states in its reply — a card for them would just show unreadable JSON. We
+ * suppress the card entirely (`parseToolResult` → null); the "tool used" chip
+ * and the assistant's own summary carry the information.
+ */
+const SUPPRESSED_CARD_TOOLS = new Set(["ddb_list_characters"]);
+
+/**
+ * Turn one resolved tool call into a `tool_result` event, or `null` to suppress
+ * the card (see `SUPPRESSED_CARD_TOOLS`). `markdown` is always the full raw text
+ * (graceful-degradation fallback); rich parsers extract best-effort `fields`.
+ * `ddb_get_monster`, `ddb_get_character`, and `ddb_get_spell` get rich cards;
+ * everything else (including `ddb_character_lookup`, a feature-description
  * lookup) is a generic titled card.
  */
-export function parseToolResult(bareToolName: string, text: string): ToolResultEvent {
+export function parseToolResult(bareToolName: string, text: string): ToolResultEvent | null {
+  if (SUPPRESSED_CARD_TOOLS.has(bareToolName)) return null;
   if (bareToolName === "ddb_get_monster") return parseMonsterCard(text);
   if (bareToolName === "ddb_get_character") return parseCharacterCard(text);
+  if (bareToolName === "ddb_get_spell") return parseSpellCard(text);
   return {
     type: "tool_result",
     tool: bareToolName,

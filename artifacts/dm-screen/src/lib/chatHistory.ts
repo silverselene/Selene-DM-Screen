@@ -67,10 +67,18 @@ export function capChatMessages(msgs: ChatMessage[]): ChatMessage[] {
   return msgs.length > MAX_CHAT_MESSAGES ? msgs.slice(-MAX_CHAT_MESSAGES) : msgs;
 }
 
-const CARD_KINDS: readonly ToolResultCard["kind"][] = ["monster", "character", "generic"];
+const CARD_KINDS: readonly ToolResultCard["kind"][] = ["monster", "character", "generic", "spell"];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** A persisted `string[]` field, filtered to the string entries (or undefined
+ *  when absent/not an array), mirroring the non-string drop applied to fields. */
+function cleanStringArray(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out = v.filter((x): x is string => typeof x === "string");
+  return out.length ? out : undefined;
 }
 
 /** Validate one persisted preview card. Returns a clean ToolResultCard or
@@ -99,6 +107,13 @@ export function validateCard(parsed: unknown): ToolResultCard | undefined {
     }
     card.fields = fields;
   }
+  // Character-only spell/weapon name lists (drive the Add-to-Party hand-off).
+  // Preserve them across persistence — validateCard rebuilds the card, so an
+  // uncopied field would be silently stripped on the next reload.
+  const spells = cleanStringArray(parsed.spells);
+  if (spells) card.spells = spells;
+  const weapons = cleanStringArray(parsed.weapons);
+  if (weapons) card.weapons = weapons;
   return card;
 }
 

@@ -49,13 +49,23 @@ export type BridgeEvent =
        * A resolved tool call's result, structured for a preview card. `markdown`
        * always carries the full raw tool-result text (the graceful-degradation
        * fallback); `fields` is best-effort and may be absent or partial. `kind`
-       * selects the card style — an unknown value is treated as "generic".
+       * selects the card style — an unknown value is treated as "generic". A
+       * `spell` card carries only its name in `title`; the widget re-renders it
+       * from the bundled spell dataset (Wizard's-Tome styling), falling back to
+       * `markdown` when the name isn't in the bundle.
        */
       type: "tool_result";
       tool: string;
-      kind: "monster" | "character" | "generic";
+      kind: "monster" | "character" | "generic" | "spell";
       title: string;
       fields?: Record<string, string>;
+      /**
+       * Character-only: the sheet's spell / weapon names, so an Add-to-Party
+       * hand-off can populate those lists (the collision diff never shows them).
+       * Absent for every other card kind.
+       */
+      spells?: string[];
+      weapons?: string[];
       markdown: string;
     }
   | {

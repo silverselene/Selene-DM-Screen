@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeQuery, parseLookupCommand, toSpellCard, toMonsterCard, toRuleCard, lookupDataset, autoDetectLocal } from "./localLookup";
+import { normalizeQuery, parseLookupCommand, toSpellCard, toMonsterCard, toRuleCard, lookupDataset, autoDetectLocal, resolveBundledSpell } from "./localLookup";
 import { monsterCardToCombatant } from "./cardHandoff";
 import type { Spell } from "@/data/spells";
 import type { MonsterEntry } from "@/data/monsters";
@@ -60,9 +60,9 @@ const rule: CompendiumEntry = {
 };
 
 describe("card builders", () => {
-  it("builds a generic spell card with a header line and description", () => {
+  it("builds a spell card (re-rendered via SpellCardBody) with a markdown fallback", () => {
     const c = toSpellCard(spell);
-    expect(c.kind).toBe("generic");
+    expect(c.kind).toBe("spell");
     expect(c.title).toBe("Fireball");
     expect(c.markdown).toContain("Level 3");
     expect(c.markdown).toContain("Evocation");
@@ -117,6 +117,16 @@ describe("lookupDataset", () => {
     const r = lookupDataset("spell", "zzzzznope");
     expect(r.exact).toBeNull();
     expect(r.candidates).toHaveLength(0);
+  });
+});
+
+describe("resolveBundledSpell", () => {
+  it("resolves a spell-card title (case-insensitively) to its bundled entry", () => {
+    expect(resolveBundledSpell("Fireball")?.name).toBe("Fireball");
+    expect(resolveBundledSpell("  fireball ")?.name).toBe("Fireball");
+  });
+  it("returns null for a name not in the bundle", () => {
+    expect(resolveBundledSpell("Homebrew Zap")).toBeNull();
   });
 });
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ChevronRight, Skull, Shield, ScrollText } from "lucide-react";
 import { MiniMarkdown } from "@/lib/miniMarkdown";
+import { resolveBundledSpell } from "@/lib/localLookup";
+import { SpellCardBody } from "@/components/SpellCardBody";
 import { ChatCardActions } from "./ChatCardActions";
 import type { ToolResultCard } from "@/lib/cardHandoff";
 
@@ -29,6 +31,15 @@ function subtitle(card: ToolResultCard): string | undefined {
 
 export function ChatToolCard({ card }: { card: ToolResultCard }) {
   const [open, setOpen] = useState(false);
+
+  // A spell result re-renders through the shared Wizard's-Tome card whenever the
+  // name is in the bundled dataset, so AI-chat spells look identical to the
+  // Tome. Homebrew / unbundled spells fall through to the generic markdown card.
+  if (card.kind === "spell") {
+    const spell = resolveBundledSpell(card.title);
+    if (spell) return <SpellCardBody spell={spell} />;
+  }
+
   const chips = (CHIP_ORDER[card.kind] ?? [])
     .map(([key, label]) => (card.fields?.[key] ? { label, value: card.fields[key] } : null))
     .filter((c): c is { label: string; value: string } => c !== null);

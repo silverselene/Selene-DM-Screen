@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Swords, UserPlus } from "lucide-react";
 import type { PlayerCharacter } from "@/types";
 import {
+  cardSpellWeaponLists,
   characterCardToCombatant,
   characterCardToPlayerDraft,
   diffPlayer,
   draftToPlayerInput,
+  mergeNameLists,
   monsterCardToCombatant,
   PLAYER_DRAFT_FIELDS,
   type PlayerDraft,
@@ -61,6 +63,10 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
     showFlash("Added to Initiative ✓");
   };
 
+  // The character sheet's spell/weapon names (cleaned/de-duped), imported
+  // alongside the editable stat fields. Empty for a summary-only sheet.
+  const lists = cardSpellWeaponLists(card);
+
   const startAddToParty = () => {
     const draft = characterCardToPlayerDraft(card);
     const match = loadParty().find(
@@ -68,7 +74,7 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
     );
     if (!match) {
       try {
-        addCharacter(draftToPlayerInput(draft));
+        addCharacter(draftToPlayerInput(draft, lists));
         showFlash("Added to Party ✓");
       } catch (e) {
         window.alert((e as Error).message);
@@ -83,18 +89,20 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
     if (!form) return;
     try {
       if (mode === "replace" && existing) {
-        // The card carries no spell/weapon list, so draftToPlayerInput empties
-        // them. Preserve the DM's curated lists on the existing sheet instead
-        // of silently wiping them — the collision diff never showed them, so a
-        // "Replace" (or an "identical" replace) must not touch them.
+        // Re-importing over an existing sheet: union the imported spell/weapon
+        // lists with the DM's existing ones (the collision diff never shows
+        // them) so neither the freshly imported entries nor any hand-added ones
+        // are lost.
         updateCharacter(existing.id, {
+          // spells/weapons come from the merge below, not the draft, so leave
+          // draftToPlayerInput's lists at their default empty.
           ...draftToPlayerInput(form),
-          spells: existing.spells,
-          weapons: existing.weapons,
+          spells: mergeNameLists(existing.spells, lists.spells),
+          weapons: mergeNameLists(existing.weapons, lists.weapons),
         });
         showFlash("Replaced ✓");
       } else {
-        addCharacter(draftToPlayerInput(form));
+        addCharacter(draftToPlayerInput(form, lists));
         showFlash("Added to Party ✓");
       }
       setForm(null);

@@ -21,6 +21,19 @@ describe("validateCard", () => {
   it("coerces an unknown kind to generic", () => {
     expect(validateCard(goodCard({ kind: "spaceship" }))?.kind).toBe("generic");
   });
+  it("preserves the spell kind (re-renders via SpellCardBody after a reload)", () => {
+    expect(validateCard(goodCard({ kind: "spell", title: "Fireball" }))?.kind).toBe("spell");
+  });
+  it("preserves character spell/weapon lists, dropping non-string entries", () => {
+    const c = validateCard(goodCard({ kind: "character", spells: ["Fireball", 3, "Shield"], weapons: ["Dagger"] }));
+    expect(c?.spells).toEqual(["Fireball", "Shield"]);
+    expect(c?.weapons).toEqual(["Dagger"]);
+  });
+  it("omits spell/weapon lists when absent or emptied by filtering", () => {
+    const c = validateCard(goodCard({ kind: "character", spells: [42], weapons: "not-an-array" }));
+    expect(c?.spells).toBeUndefined();
+    expect(c?.weapons).toBeUndefined();
+  });
   it("rejects a card missing markdown/title/tool", () => {
     expect(validateCard(goodCard({ markdown: 3 }))).toBeUndefined();
     expect(validateCard({ type: "tool_result" })).toBeUndefined();

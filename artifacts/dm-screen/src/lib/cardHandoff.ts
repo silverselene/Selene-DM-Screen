@@ -61,10 +61,51 @@ export function characterCardToCombatant(card: ToolResultCard, d20: number): Com
   };
 }
 
-/** The party-roster fields a character card can populate. Excludes `id` (minted
- *  by the store) and `spells`/`weapons` (the card carries neither → they commit
- *  as []). Doubles as the edit-form state shape in ChatCardActions. */
+/** The party-roster fields a character card can populate through the collision
+ *  edit form. Excludes `id` (minted by the store) and `spells`/`weapons` (not
+ *  hand-editable in the form — they ride along from the card via
+ *  `cardSpellWeaponLists`). Doubles as the edit-form state shape in
+ *  ChatCardActions. */
 export type PlayerDraft = Omit<PlayerCharacter, "id" | "spells" | "weapons">;
+
+/** Sanitize a card's `spells`/`weapons` into clean roster lists: trim, drop
+ *  empties, de-dup case-insensitively (first spelling wins). A card without the
+ *  lists (monster card, summary-only character sheet) yields empty arrays. */
+export function cardSpellWeaponLists(card: ToolResultCard): { spells: string[]; weapons: string[] } {
+  return { spells: cleanNameList(card.spells), weapons: cleanNameList(card.weapons) };
+}
+
+function cleanNameList(raw: string[] | undefined): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const name = item.trim();
+    const key = name.toLowerCase();
+    if (name && !seen.has(key)) {
+      seen.add(key);
+      out.push(name);
+    }
+  }
+  return out;
+}
+
+/** Union of two roster lists, case-insensitive, `base` order first. Used when
+ *  re-importing over an existing sheet so neither the DM's hand-added entries
+ *  nor the freshly imported ones are lost. */
+export function mergeNameLists(base: string[], extra: string[]): string[] {
+  const seen = new Set(base.map((s) => s.toLowerCase()));
+  const out = [...base];
+  for (const name of extra) {
+    const key = name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(name);
+    }
+  }
+  return out;
+}
 
 export interface DiffRow {
   field: keyof PlayerDraft;
@@ -94,8 +135,12 @@ function nonNegIntOrNull(n: number | null): number | null {
 }
 
 /** Coerce a (possibly DM-edited) draft into partyStore's write input. The store's
- *  own normalize()/clamps are the backstop; this closes the obvious holes first. */
-export function draftToPlayerInput(draft: PlayerDraft): Omit<PlayerCharacter, "id"> {
+ *  own normalize()/clamps are the backstop; this closes the obvious holes first.
+ *  `spells`/`weapons` (from the card, not the edit form) default to empty. */
+export function draftToPlayerInput(
+  draft: PlayerDraft,
+  lists: { spells: string[]; weapons: string[] } = { spells: [], weapons: [] },
+): Omit<PlayerCharacter, "id"> {
   const level = Number.isFinite(draft.level) ? Math.max(1, Math.trunc(draft.level)) : 1;
   return {
     name: draft.name,
@@ -104,8 +149,8 @@ export function draftToPlayerInput(draft: PlayerDraft): Omit<PlayerCharacter, "i
     level,
     ac: nonNegIntOrNull(draft.ac),
     hp: nonNegIntOrNull(draft.hp),
-    spells: [],
-    weapons: [],
+    spells: lists.spells,
+    weapons: lists.weapons,
   };
 }
 

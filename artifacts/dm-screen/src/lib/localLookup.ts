@@ -68,8 +68,10 @@ export function parseLookupCommand(
  *  it; it exists only so the card shape is complete. */
 export const LOCAL_TOOL = "local_lookup";
 
-/** Spell → generic markdown card. Header line + flags + classes + description
- *  (+ upcast note when present). */
+/** Spell → spell card. `title` is the spell name so the widget re-renders it
+ *  from the bundled dataset with the Wizard's-Tome styling (see
+ *  `resolveBundledSpell` / SpellCardBody). `markdown` is a text rendering kept as
+ *  the fallback for any consumer that can't resolve the name. */
 export function toSpellCard(spell: Spell): ToolResultCard {
   const flags: string[] = [];
   if (spell.ritual) flags.push("ritual");
@@ -81,7 +83,23 @@ export function toSpellCard(spell: Spell): ToolResultCard {
   const parts = [header, "", spell.description];
   if (spell.upcast) parts.push("", `**At higher levels.** ${spell.upcast}`);
   if (spell.classes.length) parts.push("", `_Classes: ${spell.classes.join(", ")}_`);
-  return { type: "tool_result", tool: LOCAL_TOOL, kind: "generic", title: spell.name, markdown: parts.join("\n") };
+  return { type: "tool_result", tool: LOCAL_TOOL, kind: "spell", title: spell.name, markdown: parts.join("\n") };
+}
+
+// Bundled spells keyed by normalized name, for re-rendering a `spell` card (from
+// a local lookup or the AI bridge's `ddb_get_spell`) with the shared Wizard's
+// Tome styling. First-wins on the rare chance of a normalized-name collision.
+const spellByName = new Map<string, Spell>();
+for (const s of spellData) {
+  const key = normalizeQuery(s.name);
+  if (!spellByName.has(key)) spellByName.set(key, s);
+}
+
+/** Resolve a spell card's title to its bundled `Spell`, or null when the name
+ *  isn't in the 557-spell dataset (e.g. homebrew) — the caller then falls back
+ *  to the card's markdown. */
+export function resolveBundledSpell(name: string): Spell | null {
+  return spellByName.get(normalizeQuery(name)) ?? null;
 }
 
 function traitBlock(label: string, traits: MonsterTrait[] | undefined): string[] {

@@ -5,7 +5,9 @@ import {
   monsterCardToCombatant,
   characterCardToCombatant,
   characterCardToPlayerDraft,
+  cardSpellWeaponLists,
   draftToPlayerInput,
+  mergeNameLists,
   diffPlayer,
 } from "./cardHandoff";
 import type { ToolResultCard } from "./cardHandoff";
@@ -117,6 +119,36 @@ describe("draftToPlayerInput", () => {
     expect(
       draftToPlayerInput({ name: "G", race: null, class: null, level: 0, ac: -3, hp: NaN }),
     ).toMatchObject({ level: 1, ac: null, hp: null, spells: [], weapons: [] });
+  });
+  it("threads through the provided spell/weapon lists", () => {
+    expect(
+      draftToPlayerInput(
+        { name: "G", race: "Elf", class: "Wizard", level: 6, ac: 12, hp: 32 },
+        { spells: ["Fireball", "Shield"], weapons: ["Dagger"] },
+      ),
+    ).toMatchObject({ spells: ["Fireball", "Shield"], weapons: ["Dagger"] });
+  });
+});
+
+describe("cardSpellWeaponLists", () => {
+  const charCard = (extra: Partial<ToolResultCard>): ToolResultCard => ({
+    type: "tool_result", tool: "ddb_get_character", kind: "character", title: "E", markdown: "", ...extra,
+  });
+  it("trims, drops empties, and de-dupes case-insensitively", () => {
+    expect(
+      cardSpellWeaponLists(charCard({ spells: [" Fireball ", "fireball", "", "Shield"], weapons: ["Dagger", "dagger "] })),
+    ).toEqual({ spells: ["Fireball", "Shield"], weapons: ["Dagger"] });
+  });
+  it("yields empty arrays when the card carries no lists", () => {
+    expect(cardSpellWeaponLists(charCard({}))).toEqual({ spells: [], weapons: [] });
+  });
+});
+
+describe("mergeNameLists", () => {
+  it("unions case-insensitively with base order first", () => {
+    expect(mergeNameLists(["Fireball", "Shield"], ["shield", "Magic Missile"])).toEqual([
+      "Fireball", "Shield", "Magic Missile",
+    ]);
   });
 });
 

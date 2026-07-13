@@ -145,7 +145,12 @@ export async function* runChatTurn(
               yield { type: "tool_error", tool: bare, message: text || "The lookup failed." };
               continue;
             }
-            if (text) yield parseToolResult(bare, text);
+            if (text) {
+              // null = a suppressed-card tool (e.g. ddb_list_characters, whose
+              // raw JSON the assistant re-states in prose); emit nothing.
+              const card = parseToolResult(bare, text);
+              if (card) yield card;
+            }
           }
         }
       } else if (m.type === "result") {
