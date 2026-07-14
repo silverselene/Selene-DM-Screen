@@ -4,9 +4,20 @@
 // `error` events. Everything here degrades gracefully when the bridge is not
 // running — the chat widget shows a "start the bridge" state rather than hanging.
 
-// The address the bridge binds in services/ai-bridge/src/config.ts. CORS on the
-// bridge is `*` (it's 127.0.0.1-only), so the SPA at localhost:38080 can reach it.
-export const BRIDGE_URL = "http://127.0.0.1:38900";
+// The address the bridge binds in services/ai-bridge/src/config.ts. The bridge
+// deliberately does NOT send wildcard CORS: it reflects only an allowlisted
+// Origin (its ALLOWED_ORIGINS — the SPA's :38080 origins plus anything in the
+// AI_BRIDGE_ALLOWED_ORIGINS env var) and 403s every other browser origin, so a
+// random web page can't spend the DM's subscription.
+//
+// The URL is baked in at dev/build time from the SAME AI_BRIDGE_PORT env var
+// the bridge reads (see the `define` block in vite.config.ts), so
+// `AI_BRIDGE_PORT=39000 pnpm dev` moves both sides together. The fallback
+// covers Vitest (whose standalone config has no define). Remaining coupling:
+// the Docker CSP connect-src in docker/security-headers.conf must list this
+// URL or the widget's fetches are blocked in the container, and the bridge's
+// ALLOWED_ORIGINS must include whatever origin serves this SPA.
+export const BRIDGE_URL: string = import.meta.env.AI_BRIDGE_URL ?? "http://127.0.0.1:38900";
 
 // The wire contract is defined once in @workspace/bridge-protocol and shared
 // with the bridge (services/ai-bridge), so a producer/consumer drift is a
@@ -53,16 +64,31 @@ export function isBridgeHealth(value: unknown): value is BridgeHealth {
 }
 
 /**
+ * The bridge is RUNNING but refused this page's origin (403 from its CORS
+ * allowlist). Distinct from BridgeUnreachableError so the widget can say "add
+ * this origin to AI_BRIDGE_ALLOWED_ORIGINS" instead of the misleading "bridge
+ * not running" — the two states have opposite remedies.
+ */
+export class BridgeOriginError extends Error {
+  constructor() {
+    super("The AI bridge refused this page's origin.");
+    this.name = "BridgeOriginError";
+  }
+}
+
+/**
  * Probe the bridge with a short timeout so the widget can flip to a clear
  * "bridge not running" state instead of spinning. A connection-refused, a
  * non-2xx, a timeout, or a malformed body all reject — the caller treats any
- * rejection as offline.
+ * rejection as offline, except a 403 (BridgeOriginError: the bridge is up but
+ * this SPA's origin isn't in its allowlist).
  */
 export async function checkHealth(timeoutMs = 2500): Promise<BridgeHealth> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(`${BRIDGE_URL}/health`, { signal: ctrl.signal });
+    if (res.status === 403) throw new BridgeOriginError();
     if (!res.ok) throw new Error(`Bridge health check returned ${res.status}`);
     const body: unknown = await res.json();
     if (!isBridgeHealth(body)) throw new Error("Bridge health response was malformed");

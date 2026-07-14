@@ -15,11 +15,11 @@ const MAX_BODY_BYTES = 64 * 1024; // chat turns are short prompts, not uploads
 // read the streamed reply — driving the DM's Claude subscription and
 // exfiltrating their D&D Beyond data. So we reflect an allowed origin only for
 // the local SPA and reject any other cross-site browser request (see
-// `isAllowedOrigin`), rather than trusting `*`.
-const ALLOWED_ORIGINS = new Set([
-  "http://localhost:38080",
-  "http://127.0.0.1:38080",
-]);
+// `isAllowedOrigin`), rather than trusting `*`. The set defaults to the SPA's
+// standard :38080 origins; serving the SPA anywhere else needs the extra
+// origin listed in AI_BRIDGE_ALLOWED_ORIGINS (see config.ts) — otherwise the
+// bridge answers 403 and the widget reports it as "refused this page".
+const ALLOWED_ORIGINS = config.allowedOrigins;
 
 /**
  * A request is allowed when it carries no `Origin` header (curl, the in-process
@@ -170,6 +170,18 @@ export function startServer() {
     // won't have allowlisted, so this stops it spending the subscription even
     // though the missing ACAO would already hide the response from it.
     if (!isAllowedOrigin(req)) {
+      // For GET /health only, reflect ACAO on the 403 so the browser can READ
+      // the status. Without it the missing ACAO turns the 403 into an opaque
+      // network error indistinguishable from connection-refused, and the widget
+      // can't tell "bridge blocked this origin" (remedy: AI_BRIDGE_ALLOWED_ORIGINS)
+      // from "bridge not running" (remedy: start it). The health body carries
+      // nothing sensitive, and /chat stays hard-blocked: its application/json
+      // POST triggers a CORS preflight that gets no ACAO and never reaches here.
+      const origin = req.headers.origin;
+      if (method === "GET" && path === "/health" && origin !== undefined) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Vary", "Origin");
+      }
       sendJson(res, 403, { error: "Origin not allowed" });
       return;
     }

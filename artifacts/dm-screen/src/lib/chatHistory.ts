@@ -24,10 +24,19 @@ export interface ChatChangedDetail {
 }
 
 // Count-based cap like MAX_COMBATANTS / MAX_PARTY. On overflow keep the
-// most-recent messages. No per-message text cap — the count cap plus the
-// import path's MAX_RAW_VALUE_BYTES (2 MB) backstop bound the stored size,
-// and a per-message cap would risk truncating a long AI answer.
+// most-recent messages.
 export const MAX_CHAT_MESSAGES = 200;
+
+// Byte budget for the serialized transcript, enforced alongside the count cap
+// (a count cap alone is byte-unbounded: assistant messages embed full
+// stat-block markdown, and a single "did you mean" can persist several
+// complete cards). Sized so the stored value stays under backup.ts's
+// MAX_PER_VALUE_BYTES (1 MB) — a transcript that grew past that would export
+// fine but be SILENTLY SKIPPED on restore by the import path's raw-size cap —
+// and so it stays a modest share of the ~5 MB origin quota this key shares
+// with mid-encounter Initiative state. Whole oldest messages are dropped, not
+// truncated, so a long AI answer is never cut mid-text.
+export const MAX_CHAT_BYTES = 900_000;
 
 // One bundled-data answer shown in place of a bridge reply. Moved here from
 // ChatLocalAnswer.tsx (which re-exports it) so the validator can live in a
@@ -59,12 +68,25 @@ export interface AssistantMessage {
 
 export type ChatMessage = UserMessage | AssistantMessage;
 
-/** Enforce MAX_CHAT_MESSAGES (keep-most-recent) at the mutation site, mirroring
- *  the read/import cap so a single long session can't grow the persisted
- *  transcript past the cap before the next reload trims it. Returns the same
- *  reference when already within the cap (no copy). */
+/** Enforce MAX_CHAT_MESSAGES and MAX_CHAT_BYTES (keep-most-recent) at the
+ *  mutation site, mirroring the read/import cap so a single long session can't
+ *  grow the persisted transcript past the caps before the next reload trims
+ *  it. The newest message is always kept, even if it alone exceeds the byte
+ *  budget. Returns the same reference when already within both caps (no copy). */
 export function capChatMessages(msgs: ChatMessage[]): ChatMessage[] {
-  return msgs.length > MAX_CHAT_MESSAGES ? msgs.slice(-MAX_CHAT_MESSAGES) : msgs;
+  const counted = msgs.length > MAX_CHAT_MESSAGES ? msgs.slice(-MAX_CHAT_MESSAGES) : msgs;
+  // Walk newest → oldest, keeping messages while the running serialized size
+  // fits the budget. `+ 1` per message approximates the array's comma/bracket
+  // overhead in the stored JSON.
+  let bytes = 0;
+  let start = counted.length;
+  for (let i = counted.length - 1; i >= 0; i--) {
+    bytes += JSON.stringify(counted[i]).length + 1;
+    if (bytes > MAX_CHAT_BYTES && start < counted.length) break;
+    start = i;
+    if (bytes > MAX_CHAT_BYTES) break; // oversized newest message: keep only it
+  }
+  return start === 0 ? counted : counted.slice(start);
 }
 
 const CARD_KINDS: readonly ToolResultCard["kind"][] = ["monster", "character", "generic", "spell"];
@@ -184,10 +206,10 @@ function isContentlessAssistant(m: ChatMessage): boolean {
 }
 
 /** ShapeValidator<ChatMessage[]> for useLocalStorage + backup import.
- *  Rejects non-arrays; caps to the most-recent MAX_CHAT_MESSAGES; drops
- *  malformed entries; forces every assistant message non-pending; drops a
- *  trailing content-less assistant message (a dead in-flight turn). Never
- *  throws. Returns undefined to fall back to []. */
+ *  Rejects non-arrays; caps to the most-recent MAX_CHAT_MESSAGES and
+ *  MAX_CHAT_BYTES; drops malformed entries; forces every assistant message
+ *  non-pending; drops a trailing content-less assistant message (a dead
+ *  in-flight turn). Never throws. Returns undefined to fall back to []. */
 export function validateChatHistory(parsed: unknown): ChatMessage[] | undefined {
   if (!Array.isArray(parsed)) return undefined;
   const capped = parsed.slice(-MAX_CHAT_MESSAGES);
@@ -197,7 +219,7 @@ export function validateChatHistory(parsed: unknown): ChatMessage[] | undefined 
     if (m) out.push(m);
   }
   if (out.length > 0 && isContentlessAssistant(out[out.length - 1])) out.pop();
-  return out;
+  return capChatMessages(out);
 }
 
 /** True iff a non-empty persisted transcript exists. Called in render (the

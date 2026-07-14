@@ -1,60 +1,12 @@
 import { useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PORTAL_URL_MAX, validateNullableStringMax } from "@/lib/backup";
+import { toEmbedUrl } from "@/lib/portalEmbed";
 import { Link2, ExternalLink, Pencil, X } from "lucide-react";
 
-// Providers curated to match the `frame-src` allowlist in
-// docker/security-headers.conf — keep the two in sync. Deliberately NOT a
-// generic `frame-src https:` + pass-through-any-URL: that would let the
-// Portal iframe an arbitrary origin (most sites also send
-// X-Frame-Options/frame-ancestors that refuse to be framed anyway, so a
-// generic allowlist would mostly just fail silently). Add a provider here
-// AND to the nginx CSP together.
-function toEmbedUrl(raw: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:") return null;
-  const host = url.hostname.replace(/^www\./, "");
-
-  if (host === "youtube.com" || host === "m.youtube.com") {
-    if (url.pathname === "/watch") {
-      const id = url.searchParams.get("v");
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-    if (url.pathname.startsWith("/embed/")) return url.toString();
-    if (url.pathname.startsWith("/live/")) {
-      const id = url.pathname.split("/")[2];
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-    return null;
-  }
-  if (host === "youtu.be") {
-    const id = url.pathname.slice(1);
-    return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-  }
-  if (host === "youtube-nocookie.com") {
-    return url.pathname.startsWith("/embed/") ? url.toString() : null;
-  }
-  if (host === "open.spotify.com") {
-    return url.pathname.startsWith("/embed/")
-      ? url.toString()
-      : `https://open.spotify.com/embed${url.pathname}`;
-  }
-  if (host === "soundcloud.com") {
-    return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url.toString())}&auto_play=false`;
-  }
-  if (host === "vimeo.com") {
-    const id = url.pathname.slice(1).split("/")[0];
-    return /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
-  }
-  if (host === "player.vimeo.com") return url.toString();
-
-  return null;
-}
+// URL → iframe mapping lives in @/lib/portalEmbed (pure, unit-tested there —
+// including the invariant that every returned URL uses a host from the Docker
+// CSP's `frame-src` allowlist).
 
 export function PortalWidget() {
   const [savedUrl, setSavedUrl] = useLocalStorage<string | null>(

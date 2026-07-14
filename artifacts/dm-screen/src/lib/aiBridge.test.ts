@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { isBridgeEvent, isBridgeHealth, parseSseRecord, friendlyToolName, buildChatBody } from "./aiBridge";
+import { BRIDGE_URL, isBridgeEvent, isBridgeHealth, parseSseRecord, friendlyToolName, buildChatBody } from "./aiBridge";
+
+describe("BRIDGE_URL", () => {
+  it("falls back to the default bridge address when no define is injected", () => {
+    // Vitest runs without vite.config.ts's `define` block, exercising exactly
+    // the fallback path; the app bundle gets the AI_BRIDGE_PORT-derived URL.
+    expect(BRIDGE_URL).toBe("http://127.0.0.1:38900");
+  });
+});
 
 describe("buildChatBody", () => {
   it("includes only message when nothing else is given", () => {

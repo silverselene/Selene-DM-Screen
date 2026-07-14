@@ -12,6 +12,17 @@ interface UseLocalStorageOptions {
    *  neither a closed tab nor a mid-debounce backup can miss the newest
    *  keystrokes. */
   debounceWriteMs?: number;
+  /** Called when a `setItem` throws (quota exceeded / private mode), after the
+   *  failure is logged. Lets a widget surface "your data isn't being saved" in
+   *  its UI instead of the loss being console-only. Read through a ref on each
+   *  write, so an inline closure here doesn't destabilize the returned setter. */
+  onWriteError?: (err: unknown) => void;
+  /** Called after a `setItem` SUCCEEDS following a prior failure — the
+   *  error→success recovery edge only, not every write. Lets a widget clear the
+   *  "your data isn't being saved" warning once storage frees up (the DM deletes
+   *  a backup, closes the Notepad) instead of leaving it stuck. Read through a
+   *  ref, same as `onWriteError`. */
+  onWriteSuccess?: () => void;
 }
 
 /**
@@ -36,6 +47,13 @@ export function useLocalStorage<T>(
   options?: UseLocalStorageOptions,
 ) {
   const debounceMs = options?.debounceWriteMs ?? 0;
+  const onWriteErrorRef = useRef(options?.onWriteError);
+  onWriteErrorRef.current = options?.onWriteError;
+  const onWriteSuccessRef = useRef(options?.onWriteSuccess);
+  onWriteSuccessRef.current = options?.onWriteSuccess;
+  // Tracks the last write's outcome so onWriteSuccess fires only on the
+  // failure→success edge, not on every persisted keystroke.
+  const lastWriteFailedRef = useRef(false);
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -89,12 +107,18 @@ export function useLocalStorage<T>(
     (val: T) => {
       try {
         window.localStorage.setItem(key, JSON.stringify(val));
+        if (lastWriteFailedRef.current) {
+          lastWriteFailedRef.current = false;
+          onWriteSuccessRef.current?.();
+        }
       } catch (err) {
         // quota / private mode. In-memory state still updates so the UI
         // doesn't freeze, but log so the failure is visible — silently
         // dropping writes was hiding "an hour of notes are gone on reload"
         // scenarios.
+        lastWriteFailedRef.current = true;
         console.error(`useLocalStorage("${key}"): failed to persist`, err);
+        onWriteErrorRef.current?.(err);
       }
     },
     [key],

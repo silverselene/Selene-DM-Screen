@@ -2,6 +2,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   CHAT_HISTORY_KEY,
   MAX_CHAT_MESSAGES,
+  MAX_CHAT_BYTES,
   capChatMessages,
   validateCard,
   validateChatHistory,
@@ -107,6 +108,33 @@ describe("capChatMessages", () => {
     const out = capChatMessages(mk(MAX_CHAT_MESSAGES + 3));
     expect(out).toHaveLength(MAX_CHAT_MESSAGES);
     expect((out[0] as { text: string }).text).toBe("m3"); // oldest 3 dropped
+  });
+
+  // Assistant messages embed full stat-block markdown, so the transcript is
+  // byte-unbounded under the count cap alone; over MAX_PER_VALUE_BYTES the
+  // backup import silently skips it on restore.
+  it("drops oldest messages until the serialized size fits MAX_CHAT_BYTES", () => {
+    const big = (i: number): ChatMessage => ({ role: "user", text: `m${i} ${"x".repeat(200_000)}` });
+    const msgs = Array.from({ length: 8 }, (_, i) => big(i)); // ~1.6 MB total
+    const out = capChatMessages(msgs);
+    expect(out.length).toBeLessThan(msgs.length);
+    expect(JSON.stringify(out).length).toBeLessThanOrEqual(MAX_CHAT_BYTES);
+    // Most-recent kept, oldest dropped.
+    expect((out[out.length - 1] as { text: string }).text.startsWith("m7 ")).toBe(true);
+    expect((out[0] as { text: string }).text.startsWith("m0 ")).toBe(false);
+  });
+
+  it("always keeps the newest message even if it alone exceeds the budget", () => {
+    const huge: ChatMessage = { role: "user", text: "x".repeat(MAX_CHAT_BYTES + 100) };
+    const out = capChatMessages([...mk(3), huge]);
+    expect(out).toEqual([huge]);
+  });
+
+  it("keeps the transcript under the byte budget on restore too", () => {
+    const msgs = Array.from({ length: 8 }, (_, i) => ({ role: "user", text: `m${i} ${"x".repeat(200_000)}` }));
+    const out = validateChatHistory(msgs)!;
+    expect(JSON.stringify(out).length).toBeLessThanOrEqual(MAX_CHAT_BYTES);
+    expect((out[out.length - 1] as { text: string }).text.startsWith("m7 ")).toBe(true);
   });
 });
 

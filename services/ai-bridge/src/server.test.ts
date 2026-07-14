@@ -88,6 +88,71 @@ function collectStream(port: number): Promise<{ events: Array<{ event: string; d
   });
 }
 
+describe("origin allowlist", () => {
+  let server: http.Server;
+  let port: number;
+
+  function getHealth(p: number, origin?: string): Promise<{ status: number; acao?: string }> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          host: "127.0.0.1",
+          port: p,
+          method: "GET",
+          path: "/health",
+          headers: origin ? { Origin: origin } : {},
+        },
+        (res) => {
+          res.resume();
+          resolve({
+            status: res.statusCode ?? 0,
+            acao: res.headers["access-control-allow-origin"] as string | undefined,
+          });
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  beforeEach(async () => {
+    process.env.AI_BRIDGE_PORT = "0";
+    process.env.AI_BRIDGE_ALLOWED_ORIGINS = "https://dm.example.com/";
+    vi.resetModules();
+    const { startServer } = await import("./server");
+    server = await startServer();
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterEach(async () => {
+    delete process.env.AI_BRIDGE_PORT;
+    delete process.env.AI_BRIDGE_ALLOWED_ORIGINS;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("accepts the default SPA origin and an AI_BRIDGE_ALLOWED_ORIGINS extra", async () => {
+    const local = await getHealth(port, "http://localhost:38080");
+    expect(local.status).toBe(200);
+    expect(local.acao).toBe("http://localhost:38080");
+    // Env value had a trailing slash; the Origin header never does.
+    expect((await getHealth(port, "https://dm.example.com")).status).toBe(200);
+  });
+
+  it("refuses an unlisted browser origin with 403", async () => {
+    expect((await getHealth(port, "https://evil.example.com")).status).toBe(403);
+  });
+
+  // Without a reflected ACAO the browser turns the 403 into an opaque network
+  // error the widget can't tell apart from "bridge not running" — so a blocked
+  // origin's /health MUST still echo Access-Control-Allow-Origin (the body is
+  // non-sensitive; /chat stays hard-blocked at its CORS preflight).
+  it("reflects ACAO on the /health 403 so the browser can read the block", async () => {
+    const blocked = await getHealth(port, "https://evil.example.com");
+    expect(blocked.status).toBe(403);
+    expect(blocked.acao).toBe("https://evil.example.com");
+  });
+});
+
 describe("client disconnect mid-stream", () => {
   let server: http.Server;
   let port: number;

@@ -4,6 +4,7 @@ import {
   checkHealth,
   streamChat,
   friendlyToolName,
+  BridgeOriginError,
   BridgeUnreachableError,
   type BridgeHealth,
   type EffortLevel,
@@ -17,7 +18,6 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   CHAT_HISTORY_KEY,
   CHAT_CHANGED_EVENT,
-  MAX_CHAT_MESSAGES,
   capChatMessages,
   validateChatHistory,
   type ChatMessage,
@@ -106,7 +106,11 @@ function FooterPicker<T extends string>({
 // React-free @/lib/chatHistory module so the persistence validator can share
 // them; imported above.
 
-type BridgeStatus = "checking" | "online" | "offline";
+// "blocked" = the bridge is running but 403'd this page's origin (its CORS
+// allowlist doesn't include wherever the SPA is being served from) — the
+// remedy is the AI_BRIDGE_ALLOWED_ORIGINS env var, not starting the bridge,
+// so it must not collapse into "offline".
+type BridgeStatus = "checking" | "online" | "offline" | "blocked";
 
 export function AIChatWidget() {
   const [status, setStatus] = useState<BridgeStatus>("checking");
@@ -117,11 +121,21 @@ export function AIChatWidget() {
   // assistant message non-pending, so a reload shows history with no ghost
   // "Thinking…". The bridge resume/session id is intentionally NOT persisted
   // (`sessionIdRef` starts null), so the first post-reload turn starts fresh.
+  // Flips on when a transcript write throws (quota exceeded / private mode) so
+  // the DM sees "history isn't being saved" instead of a console-only failure.
+  // Cleared by "New chat" — emptying the transcript is the in-app remedy.
+  const [persistFailed, setPersistFailed] = useState(false);
   const [messages, setMessages] = useLocalStorage<ChatMessage[]>(
     CHAT_HISTORY_KEY,
     [],
     validateChatHistory,
-    { debounceWriteMs: 500 },
+    {
+      debounceWriteMs: 500,
+      onWriteError: () => setPersistFailed(true),
+      // Clear the warning if storage recovers (DM frees space elsewhere) so the
+      // banner doesn't stay stuck until a manual New chat.
+      onWriteSuccess: () => setPersistFailed(false),
+    },
   );
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -154,9 +168,9 @@ export function AIChatWidget() {
       const h = await checkHealth();
       setHealth(h);
       setStatus("online");
-    } catch {
+    } catch (err) {
       setHealth(null);
-      setStatus("offline");
+      setStatus(err instanceof BridgeOriginError ? "blocked" : "offline");
     }
   }, []);
 
@@ -213,6 +227,7 @@ export function AIChatWidget() {
     setInput("");
     sendingRef.current = false;
     setSending(false);
+    setPersistFailed(false);
   }, []);
 
   // Stream a bridge turn into a specific assistant message (identified by its
@@ -347,22 +362,23 @@ export function AIChatWidget() {
       return;
     }
 
-    // Index of the assistant message we're about to append. It always lands
-    // last, so after the keep-most-recent cap its index is (capped length − 1).
-    // `Math.min(len + 2, MAX) − 1` collapses to the pre-cap `len + 1` when no
-    // trimming happens, and stays correct when the append pushes past the cap
-    // and the oldest entries are dropped. Read from messagesRef (authoritative
-    // length), not a setState-updater side-effect (runs too late) nor the
-    // `messages` closure (can be stale — a local answer mutates messages
-    // without re-creating this callback).
-    const targetIndex = Math.min(messagesRef.current.length + 2, MAX_CHAT_MESSAGES) - 1;
-    setMessages((prev) =>
-      capChatMessages([
-        ...prev,
-        { role: "user", text },
-        { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
-      ]),
-    );
+    // Build the next transcript up front and apply BOTH caps here so
+    // targetIndex is the pending assistant's REAL post-cap index. A count-only
+    // formula (`min(len + 2, MAX) − 1`) is wrong now that capChatMessages also
+    // enforces MAX_CHAT_BYTES: the byte cap can drop more messages than the
+    // count cap, which would leave targetIndex pointing past the trimmed array
+    // and the streamed reply written to a stale slot (lost + a stuck "Thinking…"
+    // bubble). capChatMessages keeps most-recent, so the pending assistant is
+    // always the last surviving element → its index is (length − 1). Read from
+    // messagesRef (authoritative), not the `messages` closure (can be stale — a
+    // local answer mutates messages without re-creating this callback).
+    const next = capChatMessages([
+      ...messagesRef.current,
+      { role: "user", text },
+      { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
+    ]);
+    const targetIndex = next.length - 1;
+    setMessages(next);
     await streamTurn(text, targetIndex);
   }, [input, newChat, routeLocal, streamTurn]);
 
@@ -385,6 +401,32 @@ export function AIChatWidget() {
       void send();
     }
   };
+
+  /* ── Bridge running but this origin isn't allowlisted ── */
+  if (status === "blocked") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-4">
+        <AlertTriangle className="w-7 h-7 text-amber-500/80" />
+        <div className="text-sm font-semibold" style={{ color: "var(--dm-t2)" }}>
+          AI bridge refused this page
+        </div>
+        <p className="text-xs leading-relaxed max-w-[18rem]" style={{ color: "var(--dm-t3)" }}>
+          The bridge is running, but it only accepts requests from its allowlisted origins. Restart
+          it with{" "}
+          <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90 break-all">
+            AI_BRIDGE_ALLOWED_ORIGINS={window.location.origin}
+          </code>{" "}
+          to allow this page, then retry.
+        </p>
+        <button
+          onClick={() => void probe()}
+          className="mt-1 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-amber-700/50 text-amber-300/90 hover:bg-amber-900/20 transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" /> Retry
+        </button>
+      </div>
+    );
+  }
 
   /* ── Bridge not running ── */
   if (status === "offline") {
@@ -517,6 +559,17 @@ export function AIChatWidget() {
         )}
       </div>
 
+      {/* Persist failure: storage writes are throwing (quota / private mode),
+          so the transcript above is in-memory only and gone on reload. */}
+      {persistFailed && (
+        <div className="shrink-0 mt-1.5 flex items-start gap-1.5 text-[10px] rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1 text-amber-300/90">
+          <AlertTriangle className="w-3 h-3 mt-px shrink-0" />
+          <span>
+            Chat history can't be saved — browser storage is full. This conversation will be lost
+            on reload; use New chat to free space.
+          </span>
+        </div>
+      )}
       {/* Composer */}
       <div className="shrink-0 pt-2 mt-2 border-t" style={{ borderTopColor: "var(--dm-border)" }}>
         <div className="flex items-end gap-1.5">

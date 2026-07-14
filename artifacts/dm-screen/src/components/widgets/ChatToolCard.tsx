@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, Skull, Shield, ScrollText } from "lucide-react";
 import { MiniMarkdown } from "@/lib/miniMarkdown";
-import { resolveBundledSpell } from "@/lib/localLookup";
+import { LOCAL_TOOL, resolveBundledSpell } from "@/lib/localLookup";
 import { SpellCardBody } from "@/components/SpellCardBody";
 import { ChatCardActions } from "./ChatCardActions";
 import type { ToolResultCard } from "@/lib/cardHandoff";
@@ -32,10 +32,13 @@ function subtitle(card: ToolResultCard): string | undefined {
 export function ChatToolCard({ card }: { card: ToolResultCard }) {
   const [open, setOpen] = useState(false);
 
-  // A spell result re-renders through the shared Wizard's-Tome card whenever the
-  // name is in the bundled dataset, so AI-chat spells look identical to the
-  // Tome. Homebrew / unbundled spells fall through to the generic markdown card.
-  if (card.kind === "spell") {
+  // A LOCAL lookup's spell card re-renders through the shared Wizard's-Tome
+  // card (its markdown is just a text rendering of the same bundled entry), so
+  // /spell answers look identical to the Tome. A bridge tool's card (e.g.
+  // ddb_get_spell) must NOT be substituted: its markdown is the authoritative
+  // result — homebrew or 2014-vs-2024 text — and a bundled entry that merely
+  // shares the name would silently show the wrong rules.
+  if (card.kind === "spell" && card.tool === LOCAL_TOOL) {
     const spell = resolveBundledSpell(card.title);
     if (spell) return <SpellCardBody spell={spell} />;
   }

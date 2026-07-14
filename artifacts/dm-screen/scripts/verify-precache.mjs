@@ -39,3 +39,26 @@ if (missing.length > 0) {
 }
 
 console.log(`verify-precache: all ${dataChunks.length} dataset chunks are precached.`);
+
+// Guard the AI-bridge URL define. src/lib/aiBridge.ts reads the bridge address
+// from `import.meta.env.AI_BRIDGE_URL`, injected by the `define` block in
+// vite.config.ts (Vitest has no define and falls back). That `import.meta.env`
+// define is a finicky Vite/esbuild interaction: if a future Vite change stops
+// honoring it, the token resolves to `undefined ?? fallback` and the documented
+// `AI_BRIDGE_PORT` override silently no-ops in the shipped bundle. Assert the
+// baked URL is actually present so that breakage fails the build instead of
+// shipping. (The unit test in aiBridge.test.ts only covers the fallback path.)
+const widgetChunk = assets.find((f) => f.startsWith("AIChatWidget-") && f.endsWith(".js"));
+if (!widgetChunk) {
+  console.error("verify-precache: AIChatWidget-*.js chunk not found — did the lazy-chunk naming change?");
+  process.exit(1);
+}
+const widgetJs = readFileSync(path.join(dist, "assets", widgetChunk), "utf8");
+if (!/https?:\/\/127\.0\.0\.1:\d+/.test(widgetJs)) {
+  console.error(
+    `verify-precache: no baked bridge URL (http://127.0.0.1:<port>) found in assets/${widgetChunk} — ` +
+      "the AI_BRIDGE_URL define in vite.config.ts may have stopped injecting.",
+  );
+  process.exit(1);
+}
+console.log("verify-precache: AI-bridge URL define is baked into the widget chunk.");

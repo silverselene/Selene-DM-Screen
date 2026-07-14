@@ -84,7 +84,8 @@ the SDK environment. To deliberately use a metered API key instead, set
 
 | Env var | Default | Meaning |
 |---------|---------|---------|
-| `AI_BRIDGE_PORT` | `38900` | Listen port (host is always `127.0.0.1`). |
+| `AI_BRIDGE_PORT` | `38900` | Listen port (host is always `127.0.0.1`). The AI Chat widget reads the same var at dev/build time (`vite.config.ts` bakes it into `BRIDGE_URL`), so `AI_BRIDGE_PORT=39000 pnpm dev` moves both sides together. Docker additionally pins the CSP `connect-src` to `:38900` (`docker/security-headers.conf`) — edit that too for a custom port there. |
+| `AI_BRIDGE_ALLOWED_ORIGINS` | unset | Extra browser origins allowed to call the bridge, comma-separated (the SPA's `http://{localhost,127.0.0.1}:38080` are always allowed). Needed when the SPA is served anywhere else — a custom `PORT`, a reverse proxy — or the bridge 403s it and the widget shows "AI bridge refused this page". |
 | `DDB_MCP_ENTRY` | bundled npm package | Override to a local ddb-mcp clone's `dist/index.js`. |
 | `AI_BRIDGE_MODEL` | SDK default | Optional model override. |
 | `AI_BRIDGE_ALLOW_API_KEY` | unset | Opt in to metered `ANTHROPIC_API_KEY` billing. |

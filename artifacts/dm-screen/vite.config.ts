@@ -15,6 +15,21 @@ if (!Number.isFinite(port) || port <= 0) {
 }
 const basePath = process.env["BASE_PATH"] ?? "/";
 
+// AI_BRIDGE_PORT is the SAME env var the optional AI bridge reads for its
+// listen port (services/ai-bridge/src/config.ts), so a single
+// `AI_BRIDGE_PORT=39000 pnpm dev` moves the bridge and the widget in lockstep
+// — the root `dev` script runs both processes from one environment. A static
+// SPA has no runtime env, so the resulting URL is baked into the bundle via
+// the `define` block below (dev, preview, and self-built bundles all honor
+// it). The Docker image's CSP additionally pins connect-src to :38900
+// (docker/security-headers.conf) — a custom port there needs that edited too.
+const DEFAULT_AI_BRIDGE_PORT = 38900;
+const bridgePortEnv = process.env["AI_BRIDGE_PORT"];
+const aiBridgePort = bridgePortEnv ? Number(bridgePortEnv) : DEFAULT_AI_BRIDGE_PORT;
+if (!Number.isFinite(aiBridgePort) || aiBridgePort <= 0) {
+  throw new Error(`Invalid AI_BRIDGE_PORT value: "${bridgePortEnv}"`);
+}
+
 // Dev/preview servers bind to loopback by default. Running `pnpm dev` on an
 // untrusted network (a café, a shared office) shouldn't expose the app — and
 // its localStorage origin — to everyone on the LAN, nor disable Vite's
@@ -28,6 +43,12 @@ const devAllowedHosts = publicHost ? true : undefined;
 
 export default defineConfig({
   base: basePath,
+  define: {
+    // Consumed by src/lib/aiBridge.ts (typed in src/vite-env.d.ts). Vitest
+    // uses its own config without this define, so that module keeps a
+    // fallback to the default URL.
+    "import.meta.env.AI_BRIDGE_URL": JSON.stringify(`http://127.0.0.1:${aiBridgePort}`),
+  },
   plugins: [
     react(),
     tailwindcss(),
