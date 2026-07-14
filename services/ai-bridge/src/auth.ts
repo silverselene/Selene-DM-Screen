@@ -59,9 +59,18 @@ export function resolveAuth(env: NodeJS.ProcessEnv = process.env): ResolvedAuth 
           "Set ANTHROPIC_API_KEY, or unset AI_BRIDGE_ALLOW_API_KEY to use your Claude subscription.",
       );
     }
+    // Mirror of subscription mode's scrub: with more than one credential
+    // present, which one bills would depend on SDK-internal precedence — and
+    // /health's `billing: "apiKey"` could then be a lie. Strip *every* non-metered
+    // credential (the subscription OAuth token AND ANTHROPIC_AUTH_TOKEN, a bearer
+    // token that can route to a gateway/subscription pool) so the opted-in
+    // ANTHROPIC_API_KEY is the only credential the SDK can see.
+    const scrubbedApi = clean(env);
+    delete scrubbedApi.CLAUDE_CODE_OAUTH_TOKEN;
+    delete scrubbedApi.ANTHROPIC_AUTH_TOKEN;
     return {
       mode: "apiKey",
-      env: clean(env),
+      env: scrubbedApi,
       note: "metered Claude API billing (ANTHROPIC_API_KEY — explicitly opted in)",
     };
   }

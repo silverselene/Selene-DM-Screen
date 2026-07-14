@@ -50,6 +50,27 @@ function isAllowedOrigin(req: IncomingMessage): boolean {
   return origin === undefined || ALLOWED_ORIGINS.has(origin);
 }
 
+/**
+ * The Origin allowlist alone doesn't stop DNS rebinding: a page on
+ * `attacker.example` can rebind its hostname to 127.0.0.1 and issue
+ * *same-origin* GETs that carry NO Origin header — sailing past
+ * `isAllowedOrigin` and reading /health. Those requests do carry the attacker's
+ * hostname in `Host`, and a legitimate local client always addresses us by a
+ * loopback name — so any other Host is rejected. A missing Host (non-browser
+ * HTTP/1.0 clients like `curl --http1.0`) is allowed: rebinding is a browser
+ * attack, and browsers always send Host.
+ */
+function isAllowedHost(req: IncomingMessage): boolean {
+  const host = req.headers.host;
+  if (host === undefined) return true;
+  try {
+    const { hostname } = new URL(`http://${host}`);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
 function cors(req: IncomingMessage, res: ServerResponse) {
   const origin = req.headers.origin;
   if (origin !== undefined && ALLOWED_ORIGINS.has(origin)) {
@@ -64,6 +85,10 @@ function cors(req: IncomingMessage, res: ServerResponse) {
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
+  // Same race as the SSE path (see handleChat): a client that disconnects
+  // between our check and this write turns it into an unlistened 'error'
+  // event, which would crash the whole process.
+  res.on("error", () => {});
   const payload = JSON.stringify(body);
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(payload);
@@ -109,13 +134,20 @@ const BRIDGE_PROTOCOL_VERSION = 1;
 
 function handleHealth(res: ServerResponse) {
   const auth = resolveAuth();
+  // Deliberately NOT included: config.ddbMcpEntry. It's an absolute path under
+  // the DM's home directory (leaks the username), and /health is the one
+  // endpoint a DNS-rebound page could read before the Host check existed —
+  // keep its body boring. The path still prints on the server console at
+  // startup (index.ts), which is where a human debugging resolution looks.
   const health: BridgeHealth = {
     ok: true,
     service: "selene-ai-bridge",
     protocolVersion: BRIDGE_PROTOCOL_VERSION,
     billing: auth.mode,
-    ddbMcpEntry: config.ddbMcpEntry,
     ddbMcpFound: config.ddbMcpEntry != null && existsSync(config.ddbMcpEntry),
+    // Published so the client's stall watchdog can size itself above our turn
+    // cap even when an operator raises AI_BRIDGE_TURN_TIMEOUT_MS (see streamChat).
+    turnTimeoutMs: TURN_TIMEOUT_MS,
     allowedTools: ALLOWED_TOOL_IDS.length,
   };
   sendJson(res, 200, health);
@@ -126,6 +158,10 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
   try {
     raw = await readBody(req);
   } catch (err) {
+    // The request stream is in an unusable state (oversized body left paused
+    // with unread bytes, or a request error) — a keep-alive reuse would wedge.
+    // `Connection: close` makes Node tear the socket down after the 400 flushes.
+    res.setHeader("Connection", "close");
     sendJson(res, 400, { error: err instanceof Error ? err.message : "Invalid request body" });
     return;
   }
@@ -213,6 +249,13 @@ export function startServer() {
       res.end();
       return;
     }
+    // DNS-rebinding guard — see isAllowedHost. Checked before the origin gate
+    // because a rebound page's requests are same-origin (no Origin header) and
+    // would otherwise pass it.
+    if (!isAllowedHost(req)) {
+      sendJson(res, 403, { error: "Host not allowed" });
+      return;
+    }
     // Refuse cross-site browser requests before they can trigger any work — a
     // simple (no-preflight) POST from a malicious page carries an Origin we
     // won't have allowlisted, so this stops it spending the subscription even
@@ -243,6 +286,15 @@ export function startServer() {
     }
     sendJson(res, 404, { error: "Not found" });
   });
+
+  // Explicit request-phase timeouts (tighter than Node's 60s/300s defaults):
+  // every legitimate request here is a sub-64KB JSON body from localhost, so a
+  // client that takes longer than this to deliver headers or body is wedged or
+  // hostile and should not hold a socket. These bound only the *incoming*
+  // request; the SSE response can stream as long as the turn runs (that side
+  // is bounded by TURN_TIMEOUT_MS).
+  server.headersTimeout = 30_000;
+  server.requestTimeout = 60_000;
 
   return new Promise<ReturnType<typeof createServer>>((resolve, reject) => {
     server.once("error", reject);

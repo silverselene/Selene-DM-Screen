@@ -161,6 +161,41 @@ export class BridgeUnreachableError extends Error {
   }
 }
 
+// Stall watchdog for the chat stream: if no bytes arrive for this long, give
+// up instead of showing "Thinking…" forever (a wedged bridge process, a
+// half-dead socket). Must sit ABOVE the bridge's own per-turn wall-clock cap
+// (TURN_TIMEOUT_MS): a healthy bridge always speaks first — either turn events
+// or its timeout `error` event — so this only fires when the server has truly
+// gone dark. Cancelling the reader also tears down the connection, which the
+// bridge notices and uses to abort the in-flight turn (its `res.on("close")`).
+//
+// This is only the FLOOR, used when /health doesn't report a turn cap (an older
+// bridge). The bridge cap is operator-tunable via AI_BRIDGE_TURN_TIMEOUT_MS, so
+// when /health does report it, `stallTimeoutForTurn` sizes the watchdog above
+// that value instead — otherwise raising the server cap past this constant would
+// let the client abandon a turn the bridge would still complete.
+export const STREAM_STALL_TIMEOUT_MS = 200_000;
+
+// Headroom the watchdog keeps above the bridge's reported turn cap, so a turn
+// that legitimately runs right up to the cap still gets its timeout `error`
+// event delivered before the client gives up.
+export const STREAM_STALL_MARGIN_MS = 20_000;
+
+/**
+ * Client stall-watchdog timeout for a turn, given the bridge's reported per-turn
+ * cap (`BridgeHealth.turnTimeoutMs`, possibly absent/untrusted). Always the
+ * larger of the built-in floor and `cap + margin`, so the client can never
+ * abandon a turn the bridge would still complete — regardless of how high an
+ * operator sets AI_BRIDGE_TURN_TIMEOUT_MS.
+ */
+export function stallTimeoutForTurn(turnTimeoutMs?: number): number {
+  const cap =
+    typeof turnTimeoutMs === "number" && Number.isFinite(turnTimeoutMs) && turnTimeoutMs > 0
+      ? turnTimeoutMs
+      : 0;
+  return Math.max(STREAM_STALL_TIMEOUT_MS, cap + STREAM_STALL_MARGIN_MS);
+}
+
 /**
  * Send one chat turn and invoke `onEvent` for each streamed `BridgeEvent`.
  * Resolves when the stream ends. Throws `BridgeUnreachableError` if the bridge
@@ -175,6 +210,7 @@ export async function streamChat(
   resumeSessionId?: string,
   model?: string,
   effort?: EffortLevel,
+  stallTimeoutMs: number = STREAM_STALL_TIMEOUT_MS,
 ): Promise<void> {
   let res: Response;
   try {
@@ -205,20 +241,43 @@ export async function streamChat(
   if (!res.body) throw new BridgeUnreachableError();
 
   const reader = res.body.getReader();
+  // Re-armed on every received chunk; on expiry, cancelling the reader resolves
+  // the pending read() as done so the loop exits, then `stalled` turns the
+  // silent end into a thrown, user-visible error.
+  let stalled = false;
+  let stallTimer: ReturnType<typeof setTimeout> | undefined;
+  const armStallTimer = () => {
+    clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => {
+      stalled = true;
+      void reader.cancel().catch(() => {});
+    }, stallTimeoutMs);
+  };
   const decoder = new TextDecoder();
   let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let sep: number;
-    // SSE records are delimited by a blank line ("\n\n").
-    while ((sep = buffer.indexOf("\n\n")) !== -1) {
-      const record = buffer.slice(0, sep);
-      buffer = buffer.slice(sep + 2);
-      const event = parseSseRecord(record);
-      if (event) onEvent(event);
+  try {
+    armStallTimer();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      armStallTimer();
+      buffer += decoder.decode(value, { stream: true });
+      let sep: number;
+      // SSE records are delimited by a blank line ("\n\n").
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        const record = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        const event = parseSseRecord(record);
+        if (event) onEvent(event);
+      }
     }
+  } finally {
+    clearTimeout(stallTimer);
+  }
+  if (stalled) {
+    throw new Error(
+      `The bridge stopped responding (no data for ${Math.round(stallTimeoutMs / 1000)}s), so this turn was abandoned. Try again.`,
+    );
   }
   // Flush a trailing record with no final blank line (defensive).
   const tail = parseSseRecord(buffer);

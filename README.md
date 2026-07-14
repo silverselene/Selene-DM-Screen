@@ -46,7 +46,7 @@ sessions via `localStorage`.
   sessions, and the embed resizes with the tile.
 - **AI Chat** — ask Selene rules questions and look up monsters, spells, or a
   player's D&D Beyond character in-session. Requires the **optional** local AI
-  bridge (`services/ai-bridge`); without it the widget shows a "bridge not
+  bridge (`services/ai-bridge`); without it the widget shows an "AI bridge not
   running" state and the rest of the app is unaffected. See
   [services/ai-bridge/README.md](services/ai-bridge/README.md).
 
@@ -58,7 +58,7 @@ sessions via `localStorage`.
     the bridge. Use the explicit slash commands `/spell`, `/monster`, `/rule`
     (exact match → a card; partial → a "Did you mean" list), or just type a bare
     entity name (`fireball`, `goblin`, `grappled`) and it auto-detects a unique
-    match. Every local answer shows an **"Answered from your bundled data"**
+    match. Every local answer shows a **"From your bundled data"** provenance
     line and an **"Ask Selene instead →"** link that re-runs the query through
     the AI for a fuller reply.
   - **Live D&D Beyond lookups** (via the bridge) for anything not bundled — a

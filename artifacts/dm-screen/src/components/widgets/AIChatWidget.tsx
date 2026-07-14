@@ -3,6 +3,7 @@ import { Sparkles, Send, Loader2, Search, AlertTriangle, RefreshCw, Square, Squa
 import {
   checkHealth,
   streamChat,
+  stallTimeoutForTurn,
   friendlyToolName,
   BridgeOriginError,
   BridgeUnreachableError,
@@ -20,6 +21,7 @@ import {
   CHAT_HISTORY_KEY,
   CHAT_CHANGED_EVENT,
   capChatMessages,
+  mintMessageId,
   validateChatHistory,
   type ChatMessage,
   type AssistantMessage,
@@ -41,6 +43,14 @@ const EFFORTS: { id: EffortLevel; label: string }[] = [
 ];
 const DEFAULT_MODEL = "claude-sonnet-5";
 const DEFAULT_EFFORT: EffortLevel = "medium";
+
+// /health's `billing` is a wire enum (see AuthMode in services/ai-bridge) —
+// map it to a human label for the footer instead of leaking the raw camelCase
+// mode string. An unknown future mode falls through verbatim.
+const BILLING_LABELS: Record<string, string> = {
+  subscription: "Subscription",
+  apiKey: "API key (metered)",
+};
 
 /**
  * A compact footer dropdown (model or effort). Portals via AnchoredDropdown so
@@ -163,6 +173,11 @@ export function AIChatWidget() {
   // setInput marks the fiber dirty and defeats React's eager-state shortcut).
   const messagesRef = useRef<ChatMessage[]>(messages);
   messagesRef.current = messages;
+  // Mirror of `health`, kept current on every render, so streamTurn can size the
+  // stall watchdog from the bridge's reported turn cap without re-creating the
+  // callback (and the send/escalate callbacks that depend on it) on every probe.
+  const healthRef = useRef<BridgeHealth | null>(health);
+  healthRef.current = health;
   // Synchronous in-flight guard. `sending` state lags a render behind, so a fast
   // double Enter/click could fire two turns before it flips; this ref is set the
   // instant a bridge turn begins and read by the send/escalate guards.
@@ -233,7 +248,16 @@ export function AIChatWidget() {
 
   // Reset to a fresh conversation: abort any in-flight turn and drop the resume
   // session id so the next message starts a new bridge session (no prior context).
+  // The transcript is durable, backed-up data and this wipes it with no undo —
+  // so a non-empty transcript gets the same confirm gate as the Notepad /
+  // Initiative clears (a stray click or /clear must not destroy 200 messages).
   const newChat = useCallback(() => {
+    if (
+      messagesRef.current.length > 0 &&
+      !window.confirm("Start a new chat? This permanently clears the saved transcript.")
+    ) {
+      return;
+    }
     abortRef.current?.abort();
     abortRef.current = null;
     sessionIdRef.current = null;
@@ -247,9 +271,12 @@ export function AIChatWidget() {
   // Stream a bridge turn into a specific assistant message (identified by its
   // index in `messages`). Extracted so both a fresh send and an escalation
   // ("Ask Selene instead") share one implementation — escalation targets the
-  // clicked card's message, which may not be the last one.
+  // clicked card's message, which may not be the last one. Resolves `true` when
+  // this turn settled as the current one (its writes landed), `false` when it
+  // was superseded (e.g. "New chat" mid-stream) — so a caller can safely apply
+  // follow-up state to the target message only when the turn really owned it.
   const streamTurn = useCallback(
-    async (text: string, targetIndex: number) => {
+    async (text: string, targetIndex: number): Promise<boolean> => {
       sendingRef.current = true;
       setSending(true);
       const abort = new AbortController();
@@ -297,11 +324,14 @@ export function AIChatWidget() {
           sessionIdRef.current ?? undefined,
           model,
           effort,
+          // Size the stall watchdog above the bridge's reported turn cap so a
+          // raised AI_BRIDGE_TURN_TIMEOUT_MS can't make the client give up early.
+          stallTimeoutForTurn(healthRef.current?.turnTimeoutMs),
         );
       } catch (err) {
         // Superseded turn: leave all state (sending flags, status, messages) to
         // the turn that replaced it.
-        if (!isCurrent()) return;
+        if (!isCurrent()) return false;
         if (err instanceof DOMException && err.name === "AbortError") {
           updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false, error: m.text ? undefined : "Cancelled." }));
         } else if (err instanceof BridgeUnreachableError) {
@@ -315,6 +345,7 @@ export function AIChatWidget() {
             error: err instanceof Error ? err.message : String(err),
           }));
         }
+        return true;
       } finally {
         if (isCurrent()) {
           updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false }));
@@ -323,6 +354,7 @@ export function AIChatWidget() {
           abortRef.current = null;
         }
       }
+      return true;
     },
     [updateAssistantAt, model, effort],
   );
@@ -372,8 +404,8 @@ export function AIChatWidget() {
       setMessages((prev) =>
         capChatMessages([
           ...prev,
-          { role: "user", text },
-          { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: false, local: answer, sourceQuery },
+          { id: mintMessageId(), role: "user", text },
+          { id: mintMessageId(), role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: false, local: answer, sourceQuery },
         ]),
       );
       return;
@@ -391,8 +423,8 @@ export function AIChatWidget() {
     // local answer mutates messages without re-creating this callback).
     const next = capChatMessages([
       ...messagesRef.current,
-      { role: "user", text },
-      { role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
+      { id: mintMessageId(), role: "user", text },
+      { id: mintMessageId(), role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
     ]);
     const targetIndex = next.length - 1;
     setMessages(next);
@@ -405,7 +437,21 @@ export function AIChatWidget() {
     async (index: number, query: string) => {
       if (sendingRef.current) return;
       updateAssistantAt(index, (m) => ({ ...m, escalated: true, pending: true }));
-      await streamTurn(query, index);
+      const ownedTurn = await streamTurn(query, index);
+      // `escalated` was set optimistically above and is what hides the
+      // "Ask Selene instead" link — a failed or aborted escalation must give
+      // the link back, or one transient bridge hiccup removes the affordance
+      // for good. A settled turn is a failure only if it errored or streamed
+      // nothing to show: prose text OR a tool_result card both count as a
+      // successful answer (a "look up X" escalation often returns a card with
+      // no prose, which must NOT read as a failure). Only reset when this turn
+      // still owned the message ("New chat" mid-stream must not touch whatever
+      // now lives at this index).
+      if (ownedTurn) {
+        updateAssistantAt(index, (m) =>
+          m.error || (!m.text && m.cards.length === 0) ? { ...m, escalated: false } : m,
+        );
+      }
     },
     [updateAssistantAt, streamTurn],
   );
@@ -509,13 +555,17 @@ export function AIChatWidget() {
         )}
         {messages.map((m, i) =>
           m.role === "user" ? (
-            <div key={i} className="flex justify-end">
+            // Keyed by the minted per-message id, NOT the index: at the
+            // message cap every send shifts indexes, which would reattach
+            // per-card component state (an open collision form) to the wrong
+            // message.
+            <div key={m.id} className="flex justify-end">
               <div className="max-w-[85%] rounded-lg rounded-br-sm px-2.5 py-1.5 text-xs whitespace-pre-wrap break-words bg-amber-900/25 border border-amber-800/40" style={{ color: "var(--dm-t2)" }}>
                 {m.text}
               </div>
             </div>
           ) : (
-            <div key={i} className="flex flex-col gap-1">
+            <div key={m.id} className="flex flex-col gap-1">
               {m.tools.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {m.tools.map((t, j) => (
@@ -628,7 +678,7 @@ export function AIChatWidget() {
               <span className="opacity-40">·</span>
               <span className="inline-flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80" />
-                {health.billing}
+                {BILLING_LABELS[health.billing] ?? health.billing}
                 {!health.ddbMcpFound && " · no D&D Beyond tools"}
               </span>
             </>

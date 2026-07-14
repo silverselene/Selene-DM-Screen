@@ -830,15 +830,22 @@ function loadOpen5eRichByName(
     const candidates = index.get(resolved.key)!;
     const ownPick = ownSlug ? candidates.find((c) => c.slug === ownSlug) : undefined;
     const crossBook = !ownPick;
-    // For a cross-book fallback (the CSV row's own book had no candidate), pick
-    // the candidate that actually matches the curated creature — the first whose
-    // CR + base type agree — instead of blindly taking candidates[0] and gating
-    // only that one, which would discard a valid same-CR block later in the list.
-    const picked =
-      ownPick ??
-      candidates.find((c) => richMatchesCsv(entry, transformOpen5e(c.fields))) ??
-      candidates[0]!;
-    const fields = transformOpen5e(picked.fields);
+    // Resolve the candidate together with its transformed fields so the chosen
+    // candidate is transformed exactly once. For a cross-book fallback (the CSV
+    // row's own book had no candidate), pick the candidate that actually matches
+    // the curated creature — the first whose CR + base type agree — instead of
+    // blindly taking candidates[0] and gating only that one, which would discard
+    // a valid same-CR block later in the list.
+    const resolvePick = () => {
+      if (ownPick) return { picked: ownPick, fields: transformOpen5e(ownPick.fields) };
+      for (const c of candidates) {
+        const fields = transformOpen5e(c.fields);
+        if (richMatchesCsv(entry, fields)) return { picked: c, fields };
+      }
+      const picked = candidates[0]!;
+      return { picked, fields: transformOpen5e(picked.fields) };
+    };
+    const { picked, fields } = resolvePick();
     if (resolved.lossy || crossBook) {
       const how = [resolved.lossy ? "lossy name" : null, crossBook ? "cross-book" : null]
         .filter(Boolean)

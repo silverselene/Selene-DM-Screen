@@ -92,7 +92,7 @@ export type BridgeEvent =
 /**
  * Response body of the bridge's `GET /health` probe.
  *
- * Only `billing` and `ddbMcpFound` are consumed by the widget, and its
+ * Only `billing` and `ddbMcpFound` are required by the widget, and its
  * validator (`isBridgeHealth`) checks exactly those — so a version-skewed
  * bridge renaming or dropping a cosmetic field degrades gracefully instead of
  * bricking AI Chat on an older deployed SPA. The rest are optional
@@ -104,6 +104,14 @@ export interface BridgeHealth {
   /** Whether the ddb-mcp entrypoint resolved (live DDB lookups work). Consumed. */
   ddbMcpFound: boolean;
   /**
+   * The bridge's per-turn wall-clock cap in ms (server.ts TURN_TIMEOUT_MS,
+   * operator-tunable via AI_BRIDGE_TURN_TIMEOUT_MS). Consumed: the widget's
+   * client-side stall watchdog must sit *above* this so it can't abandon a turn
+   * the bridge would still complete. Absent from pre-versioning bridges — the
+   * client then falls back to its built-in floor.
+   */
+  turnTimeoutMs?: number;
+  /**
    * Wire-contract revision, bumped on a breaking `/chat` or `/health` change so
    * a future client can detect skew explicitly. Absent from pre-versioning
    * bridges — treat missing as 1. The value lives in services/ai-bridge
@@ -112,6 +120,9 @@ export interface BridgeHealth {
   protocolVersion?: number;
   ok?: boolean;
   service?: string;
-  ddbMcpEntry?: string | null;
   allowedTools?: number;
+  // NOTE: the resolved ddb-mcp path is deliberately NOT on the wire — it's an
+  // absolute path under the DM's home directory, and /health should stay
+  // readable-by-anything-local without leaking it. It prints on the bridge's
+  // startup console instead.
 }

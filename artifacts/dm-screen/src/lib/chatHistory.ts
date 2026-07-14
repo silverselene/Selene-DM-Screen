@@ -48,12 +48,27 @@ export interface LocalAnswer {
   hint?: string;
 }
 
+/**
+ * Stable per-message identity, used as the React key (and nothing else). Index
+ * keys misbehave at the MAX_CHAT_MESSAGES cap: each send then shifts every
+ * index by 2, so an open per-card form (e.g. an Add-to-Party collision review)
+ * would visually reattach to the wrong message. Minted at creation; the
+ * validator back-fills messages persisted before ids existed. Not
+ * crypto-sensitive — uniqueness within one transcript is all that matters
+ * (and `crypto.randomUUID` is unavailable on non-HTTPS LAN deploys anyway).
+ */
+export function mintMessageId(): string {
+  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export interface UserMessage {
+  id: string;
   role: "user";
   text: string;
 }
 
 export interface AssistantMessage {
+  id: string;
   role: "assistant";
   text: string;
   tools: string[];
@@ -164,9 +179,12 @@ export function validateLocalAnswer(parsed: unknown): LocalAnswer | undefined {
 
 function validateMessage(parsed: unknown): ChatMessage | undefined {
   if (!isRecord(parsed)) return undefined;
+  // Keep a persisted id (stable across reloads); mint for transcripts saved
+  // before ids existed. Freshly-minted ids persist on the next write.
+  const id = typeof parsed.id === "string" && parsed.id ? parsed.id : mintMessageId();
   if (parsed.role === "user") {
     if (typeof parsed.text !== "string") return undefined;
-    return { role: "user", text: parsed.text };
+    return { id, role: "user", text: parsed.text };
   }
   if (parsed.role === "assistant") {
     const text = typeof parsed.text === "string" ? parsed.text : "";
@@ -183,7 +201,7 @@ function validateMessage(parsed: unknown): ChatMessage | undefined {
         )
       : [];
     // Never restore an in-flight turn as pending — nothing is streaming on load.
-    const msg: AssistantMessage = { role: "assistant", text, tools, cards, toolErrors, pending: false };
+    const msg: AssistantMessage = { id, role: "assistant", text, tools, cards, toolErrors, pending: false };
     if (typeof parsed.error === "string") msg.error = parsed.error;
     const local = validateLocalAnswer(parsed.local);
     if (local) msg.local = local;

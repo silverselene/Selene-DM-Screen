@@ -158,6 +158,14 @@ describe("origin allowlist", () => {
     expect(typeof body.billing).toBe("string");
     expect(typeof body.ddbMcpFound).toBe("boolean");
     expect(body.protocolVersion).toBe(1);
+    // The client sizes its stall watchdog above this, so it must be a positive
+    // number on the wire (an old bridge omitting it makes the client use a floor).
+    expect(typeof body.turnTimeoutMs).toBe("number");
+    expect(body.turnTimeoutMs as number).toBeGreaterThan(0);
+    // The resolved ddb-mcp path is an absolute path under the DM's home dir —
+    // it must never be on the wire (a DNS-rebound page could read /health
+    // before the Host gate existed; keep the body boring regardless).
+    expect(body.ddbMcpEntry).toBeUndefined();
   });
 
   it("refuses an unlisted browser origin with 403", async () => {
@@ -172,6 +180,32 @@ describe("origin allowlist", () => {
     const blocked = await getHealth(port, "https://evil.example.com");
     expect(blocked.status).toBe(403);
     expect(blocked.acao).toBe("https://evil.example.com");
+  });
+
+  /** GET /health with an explicit Host header (the DNS-rebinding probe shape:
+   *  same-origin, so no Origin header — only Host betrays the rebound page). */
+  function getHealthWithHost(p: number, host: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        { host: "127.0.0.1", port: p, method: "GET", path: "/health", headers: { Host: host } },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  // DNS rebinding: attacker.example resolves to 127.0.0.1, so its page's
+  // same-origin GETs reach us with no Origin header — but Host still names the
+  // attacker's domain. Loopback Hosts (what every legitimate client sends)
+  // pass; anything else is refused.
+  it("refuses a non-loopback Host (DNS rebinding) and accepts loopback Hosts", async () => {
+    expect(await getHealthWithHost(port, `attacker.example:${port}`)).toBe(403);
+    expect(await getHealthWithHost(port, `127.0.0.1:${port}`)).toBe(200);
+    expect(await getHealthWithHost(port, `localhost:${port}`)).toBe(200);
   });
 });
 

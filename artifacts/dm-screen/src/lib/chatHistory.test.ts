@@ -50,11 +50,17 @@ describe("validateChatHistory", () => {
     ];
     const out = validateChatHistory(input)!;
     expect(out).toHaveLength(2);
-    expect(out[0]).toEqual({ role: "user", text: "hi" });
+    // Pre-id transcripts get a minted id back-filled (they're the React key).
+    expect(out[0]).toEqual({ id: expect.any(String), role: "user", text: "hi" });
     const a = out[1] as Extract<ChatMessage, { role: "assistant" }>;
     expect(a.pending).toBe(false);
     expect(a.cards).toHaveLength(1);
     expect(a.sourceQuery).toBe("goblin");
+  });
+
+  it("preserves a persisted message id (stable across reloads)", () => {
+    const out = validateChatHistory([{ id: "m-abc", role: "user", text: "hi" }])!;
+    expect(out[0].id).toBe("m-abc");
   });
 
   it("caps to the most-recent MAX_CHAT_MESSAGES", () => {
@@ -95,7 +101,7 @@ describe("validateChatHistory", () => {
 
 describe("capChatMessages", () => {
   const mk = (n: number): ChatMessage[] =>
-    Array.from({ length: n }, (_, i) => ({ role: "user", text: `m${i}` }));
+    Array.from({ length: n }, (_, i) => ({ id: `t${i}`, role: "user", text: `m${i}` }));
 
   it("returns the array unchanged when at or under the cap", () => {
     const under = mk(MAX_CHAT_MESSAGES - 1);
@@ -114,7 +120,7 @@ describe("capChatMessages", () => {
   // byte-unbounded under the count cap alone; over MAX_PER_VALUE_BYTES the
   // backup import silently skips it on restore.
   it("drops oldest messages until the serialized size fits MAX_CHAT_BYTES", () => {
-    const big = (i: number): ChatMessage => ({ role: "user", text: `m${i} ${"x".repeat(200_000)}` });
+    const big = (i: number): ChatMessage => ({ id: `b${i}`, role: "user", text: `m${i} ${"x".repeat(200_000)}` });
     const msgs = Array.from({ length: 8 }, (_, i) => big(i)); // ~1.6 MB total
     const out = capChatMessages(msgs);
     expect(out.length).toBeLessThan(msgs.length);
@@ -125,7 +131,7 @@ describe("capChatMessages", () => {
   });
 
   it("always keeps the newest message even if it alone exceeds the budget", () => {
-    const huge: ChatMessage = { role: "user", text: "x".repeat(MAX_CHAT_BYTES + 100) };
+    const huge: ChatMessage = { id: "huge", role: "user", text: "x".repeat(MAX_CHAT_BYTES + 100) };
     const out = capChatMessages([...mk(3), huge]);
     expect(out).toEqual([huge]);
   });

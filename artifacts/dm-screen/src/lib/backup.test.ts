@@ -168,9 +168,11 @@ describe("dm-ai-chat-v1 backup round-trip", () => {
   beforeEach(() => installStorage());
 
   it("accepts a valid transcript and skips a malformed one", () => {
+    // Explicit ids keep the double-validation comparison below deterministic
+    // (the validator mints fresh ids for messages that lack one).
     const good = JSON.stringify([
-      { role: "user", text: "hi" },
-      { role: "assistant", text: "hey", tools: [], cards: [], toolErrors: [], pending: false },
+      { id: "m-1", role: "user", text: "hi" },
+      { id: "m-2", role: "assistant", text: "hey", tools: [], cards: [], toolErrors: [], pending: false },
     ]);
     const okPrep = prepareImport(envelope({ "dm-ai-chat-v1": good }));
     expect(okPrep.summary.accepted).toBe(1);

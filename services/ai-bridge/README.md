@@ -16,10 +16,13 @@ not running" state when it is stopped.
   npm package is a pinned dependency, installed by `pnpm install` — no clone or
   build required. (Developing ddb-mcp itself? Point `DDB_MCP_ENTRY` at a local
   clone's `dist/index.js` to override.)
-- **A D&D Beyond session on disk** is needed for live lookups. Run `ddb_login`
-  yourself **once** (e.g. with ddb-mcp attached to Claude Code, or
-  `npx @iamjameslennon/ddb-mcp`) to write `~/.config/ddb-mcp/session.json`; that
-  step needs Playwright browsers (`npx playwright install`). The bridge never
+- **A D&D Beyond session on disk** is needed for live lookups. Run the
+  `ddb_login` **tool** yourself **once** to write
+  `~/.config/ddb-mcp/session.json` — ddb-mcp is an MCP server, so you need a
+  client that can call its tools (e.g. attach it to Claude Code and ask it to
+  run `ddb_login`; bare `npx @iamjameslennon/ddb-mcp` just starts the stdio
+  server and won't log in by itself). That step needs Playwright browsers
+  (`npx playwright install`). The bridge never
   triggers login and never launches a browser — it only makes browserless
   read-only calls. General rules Q&A works without any of this.
 
@@ -58,8 +61,8 @@ pnpm --filter @workspace/ai-bridge run smoke -- "How does Grapple work in 2024 r
 
 The `tool` event is a lightweight "calling `<tool>`…" indicator; the richer
 `tool_result` event carries a parsed, typed result (`kind: "monster" | "character"
-| "generic"`, with best-effort `fields` **and** always the full raw `markdown`) so
-the widget can render a preview card — and, for monster/character results, the
+| "spell" | "generic"`, with best-effort `fields` **and** always the full raw
+`markdown`) so the widget can render a preview card — and, for monster/character results, the
 "Add to Initiative / Party" hand-off buttons — instead of leaving the stat block
 in prose. A ddb format drift degrades gracefully (fields drop, the raw block still
 renders). When the SDK marks a tool call as failed, the bridge emits `tool_error`
@@ -73,7 +76,8 @@ drift is a compile error. The socket bytes are still untrusted at runtime — th
 widget validates each SSE record shape before use (`parseSseRecord` in
 `artifacts/dm-screen/src/lib/aiBridge.ts`). A client that closes the connection
 mid-turn (Stop button, closed tile) aborts the in-flight Agent turn; the server
-guards every write on `res.writable`, so a disconnect can't crash it.
+guards every write on the response still being writable and not destroyed
+(`canWrite` in `server.ts`), so a disconnect can't crash it.
 
 ## Billing / auth
 

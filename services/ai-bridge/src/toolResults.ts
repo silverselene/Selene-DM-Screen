@@ -189,17 +189,20 @@ export function parseSheetSpells(text: string): string[] {
 /**
  * Extract weapon names from a character sheet's ACTIONS block. Each weapon
  * attack is a `• <name>   <+N> to hit   …` line (name padded to 16 chars, an
- * optional `×N` quantity prefix). Anchoring on the `to hit` clause skips the
- * non-weapon `•` bullets under BONUS ACTIONS / REACTIONS. `exclude` drops names
- * that are really spells (an attack cantrip in ACTIONS carries a `to hit` too).
- * De-duplicated, order preserved.
+ * optional `×N` quantity prefix). Scoped to the ACTIONS section (like
+ * parseSheetSpells is to SPELLS) — a `to hit` bullet under BONUS ACTIONS /
+ * REACTIONS (e.g. Spiritual Weapon) is an ability, not a weapons-roster entry.
+ * `exclude` drops names that are really spells (an attack cantrip in ACTIONS
+ * carries a `to hit` too). De-duplicated, order preserved. Best-effort: a
+ * summary-only sheet has no ACTIONS block → `[]`.
  */
 export function parseSheetWeapons(text: string, exclude: readonly string[] = []): string[] {
+  const block = sectionBody(text, "ACTIONS");
   const excluded = new Set(exclude.map((s) => s.toLowerCase()));
   const names: string[] = [];
   const re = /^\s*•\s*(?:×\d+\s+)?(.+?)\s+[+\-]?\d+\s+to hit\b/gm;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
+  while ((m = re.exec(block)) !== null) {
     const name = m[1].trim();
     if (!excluded.has(name.toLowerCase())) names.push(name);
   }

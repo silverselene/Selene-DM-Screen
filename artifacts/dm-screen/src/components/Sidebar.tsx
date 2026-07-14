@@ -288,7 +288,8 @@ export function Sidebar({
             </p>
             {hasChat && (
               <p className="text-[10px] leading-relaxed mb-2 text-amber-300/80">
-                ⚠ Includes AI-chat transcripts (may contain D&amp;D Beyond content).
+                ⚠ Includes AI-chat transcripts (may contain D&amp;D Beyond content). Use New
+                chat in the AI widget first to exclude them.
               </p>
             )}
             <div className="flex gap-1">

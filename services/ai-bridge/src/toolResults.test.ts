@@ -298,6 +298,26 @@ SPELLS
     expect(ev?.weapons).toEqual(["Dagger"]);
     expect(ev?.spells).toContain("Fire Bolt");
   });
+  it("does not count a `to hit` bullet outside ACTIONS as a weapon", () => {
+    // Spiritual Weapon is a bonus-action spell attack that is NOT listed in the
+    // SPELLS block's name lines on some sheets — the spells-exclusion guard
+    // alone wouldn't catch it. Only the ACTIONS section may feed the roster.
+    const txt = `═══════════════════════════════════════
+  Test Cleric
+  Hill Dwarf | Cleric 5 | Level 5
+═══════════════════════════════════════
+
+ACTIONS
+• Warhammer       +6 to hit   1d8+3 bludgeoning
+
+BONUS ACTIONS
+• Spiritual Weapon +6 to hit   1d8+3 force
+
+REACTIONS
+• Opportunity Attack +6 to hit   1d8+3 bludgeoning`;
+    const ev = parseToolResult("ddb_get_character", txt);
+    expect(ev?.weapons).toEqual(["Warhammer"]);
+  });
   describe("real captured DDB sheet (Bard 4)", () => {
     const ev = parseToolResult("ddb_get_character", REAL_BARD_SHEET);
     it("parses weapon names, including one containing a comma", () => {
