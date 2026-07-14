@@ -76,6 +76,14 @@ function sse(res: ServerResponse, event: string, data: unknown) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+// True while it's still safe to write to the response. `res.writable` covers our
+// own end(); it stays true on a peer-destroyed socket (Node 24), where only
+// `res.destroyed` flips — check both or a client disconnect falls through to a
+// write-after-close. Single source of truth for the three stream guards below.
+function canWrite(res: ServerResponse): boolean {
+  return res.writable && !res.destroyed;
+}
+
 function handleHealth(res: ServerResponse) {
   const auth = resolveAuth();
   const health: BridgeHealth = {
@@ -120,24 +128,29 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
 
   // Abort the Agent turn as soon as the client goes away, instead of only
   // noticing between streamed events — a turn can sit for seconds inside a
-  // single ddb-mcp tool call.
+  // single ddb-mcp tool call. Listen on `res`, not `req`: on Node 24 the
+  // request emits `close` when its (already-consumed) body ends — before this
+  // line runs — and never again, so a `req` listener misses the disconnect.
+  // `res` emits `close` when the connection actually goes away. It also fires
+  // after a normal end; aborting there is a deliberate no-op as long as nothing
+  // observes the signal once the turn's generator is exhausted (the `for await`
+  // has already returned), so guard against a redundant post-turn abort.
   const abort = new AbortController();
-  req.on("close", () => abort.abort());
+  res.on("close", () => {
+    if (!abort.signal.aborted) abort.abort();
+  });
 
   try {
     for await (const ev of runChatTurn(message, abort, resume, model, effort)) {
-      // `res.writable` is false once we've ended OR the peer closed the socket;
-      // `writableEnded` only covers the former, so a client disconnect would
-      // otherwise fall through to a write-after-close.
-      if (!res.writable) break;
+      if (!canWrite(res)) break;
       sse(res, ev.type, ev);
     }
   } catch (err) {
-    if (res.writable) {
+    if (canWrite(res)) {
       sse(res, "error", { type: "error", message: err instanceof Error ? err.message : String(err) });
     }
   } finally {
-    if (res.writable) res.end();
+    if (canWrite(res)) res.end();
   }
 }
 
