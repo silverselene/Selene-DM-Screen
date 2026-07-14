@@ -89,12 +89,29 @@ export type BridgeEvent =
     }
   | { type: "error"; message: string };
 
-/** Response body of the bridge's `GET /health` probe. */
+/**
+ * Response body of the bridge's `GET /health` probe.
+ *
+ * Only `billing` and `ddbMcpFound` are consumed by the widget, and its
+ * validator (`isBridgeHealth`) checks exactly those — so a version-skewed
+ * bridge renaming or dropping a cosmetic field degrades gracefully instead of
+ * bricking AI Chat on an older deployed SPA. The rest are optional
+ * diagnostics for humans (curl, the widget footer's future use).
+ */
 export interface BridgeHealth {
-  ok: boolean;
-  service: string;
+  /** How chat turns are billed ("subscription" | "apiKey"). Consumed. */
   billing: string;
-  ddbMcpEntry: string | null;
+  /** Whether the ddb-mcp entrypoint resolved (live DDB lookups work). Consumed. */
   ddbMcpFound: boolean;
-  allowedTools: number;
+  /**
+   * Wire-contract revision, bumped on a breaking `/chat` or `/health` change so
+   * a future client can detect skew explicitly. Absent from pre-versioning
+   * bridges — treat missing as 1. The value lives in services/ai-bridge
+   * (server.ts), not here: this package must stay types-only.
+   */
+  protocolVersion?: number;
+  ok?: boolean;
+  service?: string;
+  ddbMcpEntry?: string | null;
+  allowedTools?: number;
 }

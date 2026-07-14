@@ -32,18 +32,43 @@ function authAwareError(err: unknown, auth: ResolvedAuth): string {
   return msg;
 }
 
+// Built-in tools hard-denied via `disallowedTools`, independent of `tools: []`
+// and `canUseTool` (layered — see the gate comment on runChatTurn). Names are
+// the SDK's built-in tool ids; keep the filesystem/exec/network ones covered.
+const DISALLOWED_BUILTIN_TOOLS = [
+  "Bash",
+  "BashOutput",
+  "KillShell",
+  "Read",
+  "Write",
+  "Edit",
+  "Glob",
+  "Grep",
+  "NotebookEdit",
+  "WebFetch",
+  "WebSearch",
+  "Task",
+  "Agent",
+  "Skill",
+];
+
 /**
  * Run a single chat turn against Claude with ddb-mcp attached, yielding typed
  * events.
  *
- * Security gate: `canUseTool` is the single permission authority — it allows a
- * call only if the tool is in the read-only ddb allowlist, and denies everything
- * else (the excluded destructive/browser ddb tools AND every built-in
- * filesystem/exec tool). We intentionally do NOT list the ddb tools in
- * `allowedTools`: a bare `allowedTools` entry auto-approves a tool *before*
- * `canUseTool` is consulted (the SDK's CAN_USE_TOOL_SHADOWED warning), which
- * would split enforcement. Routing every call through `canUseTool` keeps one
- * auditable gate.
+ * Security gate — three layers, because any one alone has a gap:
+ * 1. `tools: []` removes every built-in tool from the base set, so there is no
+ *    filesystem/exec/network tool to call at all.
+ * 2. `disallowedTools` hard-denies the known built-ins by name — belt and
+ *    braces should a future SDK default reintroduce a base tool.
+ * 3. `canUseTool` allows a call only if the tool is in the read-only ddb
+ *    allowlist and denies everything else. It cannot be the *sole* gate: the
+ *    SDK consults it only for calls that need permission, so an auto-permitted
+ *    read-only built-in (Read/Glob/Grep) could bypass it.
+ * We intentionally do NOT list the ddb tools in `allowedTools`: a bare
+ * `allowedTools` entry auto-approves a tool *before* `canUseTool` is consulted
+ * (the SDK's CAN_USE_TOOL_SHADOWED warning), which would split enforcement.
+ * Regression-pinned in agent.test.ts.
  */
 export async function* runChatTurn(
   message: string,
@@ -89,6 +114,9 @@ export async function* runChatTurn(
         systemPrompt: SYSTEM_PROMPT,
         // Hermetic: don't load this repo's CLAUDE.md, skills, or .mcp.json.
         settingSources: [],
+        // Layers 1+2 of the tool gate (see the runChatTurn doc comment).
+        tools: [],
+        disallowedTools: DISALLOWED_BUILTIN_TOOLS,
         mcpServers,
         canUseTool: async (toolName, input) =>
           ALLOWED_TOOL_SET.has(toolName)

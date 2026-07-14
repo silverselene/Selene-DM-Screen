@@ -18,9 +18,25 @@ export const spellSchoolColors: Record<string, string> = {
   Transmutation: "text-amber-400",
 };
 
+/**
+ * Label + value for the card's damage row. `damageSummary` is always present
+ * but only damage-dealers get a real dice string; healing spells carry
+ * "0 — Heals <dice>" and everything else "0 — <effect sentence>". Rendering
+ * those verbatim under a "Damage:" label reads as nonsense ("Damage: 0 — Heals
+ * 2d8") on the majority of the 557 spells, so relabel per the structured
+ * fields and strip the "0 — " prefix the label now conveys.
+ */
+export function spellEffectLine(spell: Spell): { label: string; value: string } {
+  if (spell.damage) return { label: "Damage", value: spell.damageSummary };
+  if (spell.healing)
+    return { label: "Healing", value: spell.damageSummary.replace(/^0 — Heals\s*/, "") };
+  return { label: "Effect", value: spell.damageSummary.replace(/^0 — /, "") };
+}
+
 /** The spell card body (no Back button / scroll wrapper). Rendered inside the
  *  Wizard's Tome detail view and inside an AI-chat spell card. */
 export function SpellCardBody({ spell }: { spell: Spell }) {
+  const effect = spellEffectLine(spell);
   return (
     <div className="bg-gray-900/80 border border-cyan-900/40 rounded p-3 space-y-2">
       <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -42,7 +58,7 @@ export function SpellCardBody({ spell }: { spell: Spell }) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
         <div><span className="text-gray-500 font-semibold">Casting Time: </span><span className="text-gray-300">{spell.castingTime}</span></div>
         <div><span className="text-gray-500 font-semibold">Range: </span><span className="text-gray-300">{spell.range}</span></div>
-        <div className="col-span-2"><span className="text-gray-500 font-semibold">Damage: </span><span className="text-gray-300">{spell.damageSummary}</span></div>
+        <div className="col-span-2"><span className="text-gray-500 font-semibold">{effect.label}: </span><span className="text-gray-300">{effect.value}</span></div>
         <div><span className="text-gray-500 font-semibold">Components: </span><span className="text-gray-300">{spell.components}</span></div>
         <div><span className="text-gray-500 font-semibold">Duration: </span><span className="text-gray-300">{spell.duration}</span></div>
       </div>

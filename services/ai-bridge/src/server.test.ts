@@ -138,6 +138,28 @@ describe("origin allowlist", () => {
     expect((await getHealth(port, "https://dm.example.com")).status).toBe(200);
   });
 
+  // The widget's isBridgeHealth validates exactly these consumed fields; a
+  // bridge that stops emitting them (or the version marker) breaks old SPAs.
+  it("emits the consumed health fields and the protocol version", async () => {
+    const body = await new Promise<Record<string, unknown>>((resolve, reject) => {
+      const req = http.request(
+        { host: "127.0.0.1", port, method: "GET", path: "/health" },
+        (res) => {
+          let buf = "";
+          res.setEncoding("utf8");
+          res.on("data", (c) => (buf += c));
+          res.on("end", () => resolve(JSON.parse(buf)));
+          res.on("error", reject);
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+    expect(typeof body.billing).toBe("string");
+    expect(typeof body.ddbMcpFound).toBe("boolean");
+    expect(body.protocolVersion).toBe(1);
+  });
+
   it("refuses an unlisted browser origin with 403", async () => {
     expect((await getHealth(port, "https://evil.example.com")).status).toBe(403);
   });
@@ -150,6 +172,136 @@ describe("origin allowlist", () => {
     const blocked = await getHealth(port, "https://evil.example.com");
     expect(blocked.status).toBe(403);
     expect(blocked.acao).toBe("https://evil.example.com");
+  });
+});
+
+describe("chat concurrency cap", () => {
+  let server: http.Server;
+  let port: number;
+
+  beforeEach(async () => {
+    process.env.AI_BRIDGE_PORT = "0";
+    vi.resetModules();
+    const { startServer } = await import("./server");
+    server = await startServer();
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterEach(async () => {
+    delete process.env.AI_BRIDGE_PORT;
+    mocks.chatTurnImpl = undefined;
+    // Sever any stream a failed assertion left open, so close() can't hang.
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  /** POST /chat and resolve with the status code once headers arrive. */
+  function chatStatus(p: number): Promise<{ status: number; req: http.ClientRequest }> {
+    return new Promise((resolve, reject) => {
+      const clientReq = http.request(
+        { host: "127.0.0.1", port: p, method: "POST", path: "/chat", headers: { "Content-Type": "application/json" } },
+        (clientRes) => {
+          clientRes.resume();
+          clientRes.on("error", () => {});
+          resolve({ status: clientRes.statusCode ?? 0, req: clientReq });
+        },
+      );
+      clientReq.on("error", reject);
+      clientReq.end(JSON.stringify({ message: "hello" }));
+    });
+  }
+
+  it("refuses a second concurrent turn with 429, then accepts once the first ends", async () => {
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((r) => (release = r));
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "first" };
+      await gate; // hold the first turn in-flight
+    };
+
+    const first = await chatStatus(port);
+    expect(first.status).toBe(200);
+
+    const second = await chatStatus(port);
+    expect(second.status).toBe(429);
+
+    // The slot must be released when the first turn finishes — a follow-up
+    // turn (mocked to complete immediately) is accepted again. Retry briefly:
+    // the release races the first turn's teardown.
+    release?.();
+    first.req.destroy();
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "later" };
+    };
+    let thirdStatus = 0;
+    const deadline = Date.now() + 2000;
+    while (Date.now() < deadline && thirdStatus !== 200) {
+      thirdStatus = (await chatStatus(port)).status;
+      if (thirdStatus !== 200) await sleep(20);
+    }
+    expect(thirdStatus).toBe(200);
+  });
+});
+
+describe("chat turn timeout", () => {
+  let server: http.Server;
+  let port: number;
+
+  beforeEach(async () => {
+    process.env.AI_BRIDGE_PORT = "0";
+    process.env.AI_BRIDGE_TURN_TIMEOUT_MS = "150"; // fast deadline for the test
+    vi.resetModules();
+    const { startServer } = await import("./server");
+    server = await startServer();
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterEach(async () => {
+    delete process.env.AI_BRIDGE_PORT;
+    delete process.env.AI_BRIDGE_TURN_TIMEOUT_MS;
+    mocks.chatTurnImpl = undefined;
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  /** POST /chat and collect the raw SSE body to completion. */
+  function chatBody(p: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        { host: "127.0.0.1", port: p, method: "POST", path: "/chat", headers: { "Content-Type": "application/json" } },
+        (res) => {
+          let buf = "";
+          res.setEncoding("utf8");
+          res.on("data", (c) => (buf += c));
+          res.on("end", () => resolve(buf));
+          res.on("error", reject);
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify({ message: "hello" }));
+    });
+  }
+
+  it("aborts a wedged turn past the deadline, reports it, and frees the slot", async () => {
+    // A turn that never completes on its own — it hangs until the server's
+    // timeout aborts it (the real SDK throws on abort; mirror that).
+    mocks.chatTurnImpl = async function* (abort?: AbortController) {
+      yield { type: "text", text: "working" };
+      await new Promise<void>((_resolve, rejectHang) => {
+        abort?.signal.addEventListener("abort", () => rejectHang(new Error("aborted")));
+      });
+    };
+
+    const body = await chatBody(port);
+    expect(body).toContain("time limit"); // the timeout-specific error message
+
+    // The slot must have been reclaimed by the timeout — a fresh, fast turn is
+    // accepted (a leaked slot would have hung this at 429 / no response).
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "later" };
+    };
+    const next = await chatBody(port);
+    expect(next).toContain("later");
   });
 });
 

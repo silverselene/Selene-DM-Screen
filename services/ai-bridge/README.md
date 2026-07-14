@@ -88,6 +88,7 @@ the SDK environment. To deliberately use a metered API key instead, set
 | `AI_BRIDGE_ALLOWED_ORIGINS` | unset | Extra browser origins allowed to call the bridge, comma-separated (the SPA's `http://{localhost,127.0.0.1}:38080` are always allowed). Needed when the SPA is served anywhere else — a custom `PORT`, a reverse proxy — or the bridge 403s it and the widget shows "AI bridge refused this page". |
 | `DDB_MCP_ENTRY` | bundled npm package | Override to a local ddb-mcp clone's `dist/index.js`. |
 | `AI_BRIDGE_MODEL` | SDK default | Optional model override. |
+| `AI_BRIDGE_TURN_TIMEOUT_MS` | `180000` (3 min) | Wall-clock budget per chat turn. A wedged turn is aborted at the deadline so it can't pin the single-turn slot forever (which would 429 all further chat until restart). Raise for very slow hosts; a non-positive/unparseable value keeps the default. |
 | `AI_BRIDGE_ALLOW_API_KEY` | unset | Opt in to metered `ANTHROPIC_API_KEY` billing. |
 | `CLAUDE_CODE_OAUTH_TOKEN` | unset | Subscription token from `claude setup-token`. |
 
@@ -96,7 +97,9 @@ the SDK environment. To deliberately use a metered API key instead, set
 - Binds `127.0.0.1` only — never `0.0.0.0`.
 - The model can call only a fixed **read-only** allowlist of ddb-mcp tools
   (`src/ddbTools.ts`); every other ddb-mcp tool (login, download, browser
-  navigation/interaction) and all built-in filesystem/exec tools are hard-denied
-  via the Agent SDK `canUseTool` gate.
+  navigation/interaction) is denied by the Agent SDK `canUseTool` gate, and the
+  built-in filesystem/exec/network tools are removed outright (`tools: []` +
+  `disallowedTools` in `src/agent.ts` — layered so an auto-permitted read-only
+  built-in can never bypass `canUseTool`). Regression-pinned in `agent.test.ts`.
 - ddb-mcp is consumed only through the standard MCP tool interface, preserving
   its `<untrusted_dndbeyond_content>` prompt-injection wrapping.

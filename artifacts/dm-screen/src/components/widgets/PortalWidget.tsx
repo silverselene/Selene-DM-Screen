@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PORTAL_URL_MAX, validateNullableStringMax } from "@/lib/backup";
 import { toEmbedUrl } from "@/lib/portalEmbed";
+import { isImeComposing } from "@/lib/keyboard";
 import { Link2, ExternalLink, Pencil, X } from "lucide-react";
 
 // URL → iframe mapping lives in @/lib/portalEmbed (pure, unit-tested there —
@@ -54,7 +55,7 @@ export function PortalWidget() {
                 setDraft(e.target.value);
                 setError(null);
               }}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
+              onKeyDown={(e) => e.key === "Enter" && !isImeComposing(e) && submit()}
               placeholder="Paste a YouTube, Spotify, SoundCloud, or Vimeo link…"
               maxLength={PORTAL_URL_MAX}
               className="flex-1 min-w-0 bg-gray-900/80 border border-purple-800/30 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60"

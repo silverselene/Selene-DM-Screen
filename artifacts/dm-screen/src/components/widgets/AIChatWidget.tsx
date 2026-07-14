@@ -15,6 +15,7 @@ import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { parseLookupCommand, lookupDataset, autoDetectLocal } from "@/lib/localLookup";
 import { ChatLocalAnswer, type LocalAnswer } from "./ChatLocalAnswer";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { isImeComposing } from "@/lib/keyboard";
 import {
   CHAT_HISTORY_KEY,
   CHAT_CHANGED_EVENT,
@@ -66,6 +67,8 @@ function FooterPicker<T extends string>({
         ref={setAnchor}
         type="button"
         title={title}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="inline-flex items-center gap-0.5 hover:text-amber-300/90 transition-colors"
       >
@@ -79,8 +82,11 @@ function FooterPicker<T extends string>({
             type="button"
             role="option"
             aria-selected={o.id === value}
-            onMouseDown={(e) => {
-              e.preventDefault();
+            // Commit on click (which Enter/Space also fire — keyboard operable),
+            // not mousedown; preventDefault on mousedown only stops the press
+            // from stealing focus before the click lands.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
               onChange(o.id);
               setOpen(false);
             }}
@@ -178,10 +184,18 @@ export function AIChatWidget() {
     void probe();
   }, [probe]);
 
-  // Auto-scroll to the newest content as the reply streams in.
+  // Auto-scroll to the newest content as the reply streams in — but only while
+  // the DM is already pinned to the bottom. Scrolling up to re-read a stat
+  // block mid-stream must not be yanked back down on every token (nor when an
+  // escalation mutates an older message). Sending a new message re-pins.
+  const pinnedRef = useRef(true);
+  const onTranscriptScroll = () => {
+    const el = scrollRef.current;
+    if (el) pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+  };
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   // Abort any in-flight turn if the widget unmounts (tile closed / type switched).
@@ -346,6 +360,9 @@ export function AIChatWidget() {
 
     const routed = routeLocal(text);
     setInput("");
+    // A deliberate send re-pins the transcript so the reply is in view even if
+    // the DM had scrolled up beforehand.
+    pinnedRef.current = true;
 
     if (routed) {
       // Answered from bundled data — no bridge call, no tokens. Keep sourceQuery
@@ -396,7 +413,7 @@ export function AIChatWidget() {
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isImeComposing(e)) {
       e.preventDefault();
       void send();
     }
@@ -477,7 +494,7 @@ export function AIChatWidget() {
         </div>
       )}
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
+      <div ref={scrollRef} onScroll={onTranscriptScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
             <Sparkles className="w-6 h-6 text-amber-400/70" />

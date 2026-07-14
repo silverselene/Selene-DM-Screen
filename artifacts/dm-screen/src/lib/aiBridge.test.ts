@@ -131,14 +131,27 @@ describe("isBridgeHealth", () => {
   it("accepts a null ddbMcpEntry", () => {
     expect(isBridgeHealth({ ...ok, ddbMcpEntry: null, ddbMcpFound: false })).toBe(true);
   });
+  // Version-skew tolerance: only the fields the widget actually consumes
+  // (billing, ddbMcpFound) are required. A future bridge renaming or dropping a
+  // cosmetic field must NOT brick AI Chat on an older deployed SPA.
+  it("accepts a minimal body carrying only the consumed fields", () => {
+    expect(isBridgeHealth({ billing: "subscription", ddbMcpFound: true })).toBe(true);
+  });
+  it("accepts unknown extra fields from a newer bridge", () => {
+    expect(isBridgeHealth({ ...ok, protocolVersion: 1, futureField: { deep: true } })).toBe(true);
+  });
   it("rejects a body missing billing (would render `undefined`)", () => {
     const { billing: _drop, ...noBilling } = ok;
     expect(isBridgeHealth(noBilling)).toBe(false);
   });
-  it("rejects a non-object or wrong-typed field", () => {
+  it("rejects a missing or wrong-typed ddbMcpFound", () => {
+    const { ddbMcpFound: _drop, ...noFound } = ok;
+    expect(isBridgeHealth(noFound)).toBe(false);
+    expect(isBridgeHealth({ ...ok, ddbMcpFound: "yes" })).toBe(false);
+  });
+  it("rejects a non-object", () => {
     expect(isBridgeHealth(null)).toBe(false);
     expect(isBridgeHealth("{}")).toBe(false);
-    expect(isBridgeHealth({ ...ok, allowedTools: "26" })).toBe(false);
   });
 });
 

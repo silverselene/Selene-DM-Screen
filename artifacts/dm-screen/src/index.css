@@ -217,6 +217,30 @@
 .light-mode [class~="text-purple-500"] { color: var(--dm-accent); }
 .light-mode [class~="text-purple-700"] { color: var(--dm-accent-strong); }
 
+/* Amber (AI Chat accents, warnings) and cyan (tool chips) — like the purple
+ * block above, these are hardcoded Tailwind text utilities tuned for the dark
+ * page; 200–500-level amber/cyan is ~1.3–1.5:1 on the near-white page (the
+ * Sidebar's "Includes AI-chat transcripts" warning disappears exactly when the
+ * DM is about to share a backup). Remap the base (non-hover) text utilities to
+ * AA-contrast dark shades (Tailwind amber-800 / cyan-800); hover variants are
+ * left to Tailwind so they only apply on :hover. */
+.light-mode [class~="text-amber-200"],
+.light-mode [class~="text-amber-200/90"],
+.light-mode [class~="text-amber-300"],
+.light-mode [class~="text-amber-300/70"],
+.light-mode [class~="text-amber-300/80"],
+.light-mode [class~="text-amber-300/90"],
+.light-mode [class~="text-amber-400"],
+.light-mode [class~="text-amber-400/60"],
+.light-mode [class~="text-amber-400/70"],
+.light-mode [class~="text-amber-400/80"],
+.light-mode [class~="text-amber-500"],
+.light-mode [class~="text-amber-500/80"] { color: #92400e; }
+.light-mode [class~="text-cyan-300"],
+.light-mode [class~="text-cyan-300/80"],
+.light-mode [class~="text-cyan-400"],
+.light-mode [class~="text-cyan-500"] { color: #155e75; }
+
 /* Placeholder */
 .light-mode [class~="placeholder-gray-500"]::placeholder,
 .light-mode [class~="placeholder-gray-600"]::placeholder { color: var(--dm-placeholder); }

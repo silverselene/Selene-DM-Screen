@@ -45,22 +45,18 @@ export function buildChatBody(
 }
 
 /**
- * Validate a decoded `/health` body is a well-formed `BridgeHealth`. The bytes
- * are as untrusted as the SSE stream — a different local process could sit on
- * :38900, or the bridge could drift — so we check the required fields rather
- * than blindly casting, keeping the widget from rendering `undefined` billing.
+ * Validate a decoded `/health` body is a usable `BridgeHealth`. The bytes are
+ * as untrusted as the SSE stream — a different local process could sit on
+ * :38900, or the bridge could drift — so we check the fields the widget
+ * actually consumes (`billing`, `ddbMcpFound`) rather than blindly casting,
+ * keeping it from rendering `undefined` billing. Deliberately NOT stricter:
+ * requiring every cosmetic field would turn benign version skew (a newer
+ * bridge renaming a diagnostic field) into total widget unavailability.
  */
 export function isBridgeHealth(value: unknown): value is BridgeHealth {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
-  return (
-    typeof v.ok === "boolean" &&
-    typeof v.service === "string" &&
-    typeof v.billing === "string" &&
-    (v.ddbMcpEntry === null || typeof v.ddbMcpEntry === "string") &&
-    typeof v.ddbMcpFound === "boolean" &&
-    typeof v.allowedTools === "number"
-  );
+  return typeof v.billing === "string" && typeof v.ddbMcpFound === "boolean";
 }
 
 /**

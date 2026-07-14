@@ -9,6 +9,24 @@ import { parseChatRequest } from "./chatRequest";
 
 const MAX_BODY_BYTES = 64 * 1024; // chat turns are short prompts, not uploads
 
+// Each turn cold-starts a Claude Code + ddb-mcp subprocess pair and spends the
+// DM's subscription, and concurrent `resume`s of one session race the SDK's
+// local store — so in-flight turns are capped, not queued. The widget already
+// serializes sends client-side; this guards the second tab / stray script.
+const MAX_CONCURRENT_TURNS = 1;
+let inFlightTurns = 0;
+
+// A turn that wedges — a hung ddb-mcp subprocess, a stalled model call — must
+// not pin the single slot forever: with MAX_CONCURRENT_TURNS = 1 that is a total
+// /chat outage until the process restarts. Abort any turn that overruns this
+// wall-clock budget so the slot is always reclaimed. (The client-disconnect
+// abort below does not cover this: a wedged turn can sit with the browser tab
+// still open, so no disconnect ever fires.) Overridable via env for tests /
+// slow hosts; a non-positive or unparseable value falls back to the default.
+const TURN_TIMEOUT_MS = Number(process.env.AI_BRIDGE_TURN_TIMEOUT_MS) > 0
+  ? Number(process.env.AI_BRIDGE_TURN_TIMEOUT_MS)
+  : 3 * 60 * 1000;
+
 // Binding to 127.0.0.1 keeps the LAN out, but it does NOT stop a request made
 // from inside the DM's own browser: any web page they visit could POST to
 // http://127.0.0.1:38900 and, with a wildcard `Access-Control-Allow-Origin`,
@@ -84,11 +102,17 @@ function canWrite(res: ServerResponse): boolean {
   return res.writable && !res.destroyed;
 }
 
+// Wire-contract revision reported in /health. Bump on a breaking /chat or
+// /health change; the value lives here because @workspace/bridge-protocol is
+// types-only and must not export runtime code.
+const BRIDGE_PROTOCOL_VERSION = 1;
+
 function handleHealth(res: ServerResponse) {
   const auth = resolveAuth();
   const health: BridgeHealth = {
     ok: true,
     service: "selene-ai-bridge",
+    protocolVersion: BRIDGE_PROTOCOL_VERSION,
     billing: auth.mode,
     ddbMcpEntry: config.ddbMcpEntry,
     ddbMcpFound: config.ddbMcpEntry != null && existsSync(config.ddbMcpEntry),
@@ -113,6 +137,16 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
     return;
   }
   const { message, resume, model, effort } = parsed.value;
+
+  // Claim the turn slot only for a valid request, and only after the body is
+  // fully read (a rejected oversized body must not hold the slot).
+  if (inFlightTurns >= MAX_CONCURRENT_TURNS) {
+    sendJson(res, 429, {
+      error: "A chat turn is already in progress. Wait for it to finish (or stop it) and retry.",
+    });
+    return;
+  }
+  inFlightTurns++;
 
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -139,6 +173,13 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
   res.on("close", () => {
     if (!abort.signal.aborted) abort.abort();
   });
+  // Reclaim the slot even if the turn wedges with the client still connected
+  // (so the disconnect-driven abort above never fires). See TURN_TIMEOUT_MS.
+  let timedOut = false;
+  const turnTimeout = setTimeout(() => {
+    timedOut = true;
+    if (!abort.signal.aborted) abort.abort();
+  }, TURN_TIMEOUT_MS);
 
   try {
     for await (const ev of runChatTurn(message, abort, resume, model, effort)) {
@@ -147,9 +188,16 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
     }
   } catch (err) {
     if (canWrite(res)) {
-      sse(res, "error", { type: "error", message: err instanceof Error ? err.message : String(err) });
+      const message = timedOut
+        ? `Chat turn exceeded the ${TURN_TIMEOUT_MS / 1000}s time limit and was stopped.`
+        : err instanceof Error
+          ? err.message
+          : String(err);
+      sse(res, "error", { type: "error", message });
     }
   } finally {
+    clearTimeout(turnTimeout);
+    inFlightTurns--;
     if (canWrite(res)) res.end();
   }
 }
