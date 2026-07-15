@@ -181,5 +181,19 @@ export function useLocalStorage<T>(
     [writeNow, debounceMs],
   );
 
-  return [storedValue, setValue] as const;
+  // Read the freshest value, including `setValue` calls already applied in this
+  // tick that React hasn't re-rendered for yet. The returned `storedValue` is
+  // render state and lags those; `valueRef` does not (setValue re-points it
+  // eagerly, and the effect above re-syncs it after any render).
+  //
+  // For rendering, always use `storedValue` — this exists for the case where a
+  // non-render caller must DECIDE against the current value and the decision
+  // can't live inside a `setValue` updater because it isn't pure (it blocks on
+  // a confirm, or its result has to escape). Mirroring the value into a
+  // component-level ref instead is the trap this replaces: such a mirror syncs
+  // on render, so it silently goes stale for exactly the back-to-back-writes
+  // case it was added to handle. Reference-stable, like `setValue`.
+  const getLatest = useCallback(() => valueRef.current, []);
+
+  return [storedValue, setValue, getLatest] as const;
 }

@@ -15,9 +15,11 @@ import {
 } from "@/lib/cardHandoff";
 import {
   addCombatantToInitiative,
+  confirmDuplicateViaWindow,
   initiativeFullMessage,
   rollD20,
 } from "@/lib/combatant";
+import { sameName } from "@/lib/names";
 import { addCharacter, loadParty, updateCharacter } from "@/lib/partyStore";
 
 const btn =
@@ -53,13 +55,20 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
       card.kind === "monster"
         ? monsterCardToCombatant(card, rollD20())
         : characterCardToCombatant(card, rollD20());
-    const result = addCombatantToInitiative(combatant);
+    // Monster cards produce isPlayer: false, which findDuplicatePlayer ignores —
+    // passing the confirm unconditionally is safe and keeps the two card kinds
+    // on one code path.
+    const result = addCombatantToInitiative(combatant, {
+      confirmDuplicate: confirmDuplicateViaWindow,
+    });
     if (result === "full") return void window.alert(initiativeFullMessage());
     if (result === "error") {
       return void window.alert(
         "Couldn't add to initiative — place the Initiative tile and try again.",
       );
     }
+    // "cancelled": the DM declined the duplicate confirm — no flash, nothing added.
+    if (result === "cancelled") return;
     showFlash("Added to Initiative ✓");
   };
 
@@ -69,9 +78,7 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
 
   const startAddToParty = () => {
     const draft = characterCardToPlayerDraft(card);
-    const match = loadParty().find(
-      (p) => p.name.trim().toLowerCase() === draft.name.trim().toLowerCase(),
-    );
+    const match = loadParty().find((p) => sameName(p.name, draft.name));
     if (!match) {
       try {
         addCharacter(draftToPlayerInput(draft, lists));

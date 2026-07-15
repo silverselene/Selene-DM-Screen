@@ -22,6 +22,7 @@ import {
 import {
   addCombatantToInitiative,
   clampInitiative,
+  confirmDuplicateViaWindow,
   initiativeFullMessage,
 } from "@/lib/combatant";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
@@ -580,7 +581,9 @@ export function PartyWidget() {
       ac: c.ac ?? undefined,
       isPlayer: true,
     };
-    const result = addCombatantToInitiative(combatant);
+    const result = addCombatantToInitiative(combatant, {
+      confirmDuplicate: confirmDuplicateViaWindow,
+    });
     if (result === "full") {
       window.alert(initiativeFullMessage());
       return;
@@ -591,6 +594,9 @@ export function PartyWidget() {
       );
       return;
     }
+    // "cancelled": the DM declined the duplicate confirm. Leave the form open
+    // with their typed initiative intact — a mis-click shouldn't cost the roll.
+    if (result === "cancelled") return;
     setInitiativeFor(null); setInitiativeVal("");
   };
 

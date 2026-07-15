@@ -54,6 +54,10 @@ docker-compose.*.yml
 # without having to touch this file each time one is added.
 HANDOVER-*.md
 CLAUDE.md
+MANUAL-TESTS-*.md
+# Design specs and other written-for-humans material. Directory-wide so a new
+# spec doesn't have to be listed here one file at a time.
+docs/
 
 # Data-generation script outputs that aren't part of the source tree
 # (lib/ was deleted in Phase 3, but cover .pnpm-store just in case).

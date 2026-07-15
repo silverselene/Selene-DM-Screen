@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Swords,
   SkipForward, RotateCcw, Search, Skull, User, Shield, ExternalLink, Users,
@@ -9,7 +9,6 @@ import { useParty } from "@/lib/partyStore";
 import { searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
 import {
   INITIATIVE_MODES,
-  MAX_COMBATANTS,
   mintCombatantId,
   validateBoundedInt,
   validateCombatants,
@@ -20,8 +19,13 @@ import {
 import {
   appendCombatant,
   clampInitiative,
+  confirmDuplicateViaWindow,
+  decideInitiativeAdd,
+  handleAddToInitiativeEvent,
   initiativeFullMessage,
   rollD20,
+  type AddOutcome,
+  type ConfirmDuplicate,
 } from "@/lib/combatant";
 import { isV1Empty } from "@/lib/migrations";
 import { isImeComposing } from "@/lib/keyboard";
@@ -124,7 +128,7 @@ export function InitiativeWidget() {
   // dm-initiative-turn / dm-round) lives in `src/lib/migrations.ts` and
   // runs from main.tsx BEFORE render — never in this (lazy-loaded) module,
   // where it wouldn't fire until the DM first mounts the widget.
-  const [combatants, setCombatants] = useLocalStorage<Combatant[]>(
+  const [combatants, setCombatants, getLatestCombatants] = useLocalStorage<Combatant[]>(
     "dm-initiative-v1",
     legacyInitialValue("dm-initiative", validateCombatants, []),
     validateCombatants,
@@ -199,8 +203,36 @@ export function InitiativeWidget() {
     if (activeId !== null && currentIndex < 0) setActiveId(null);
   }, [activeId, currentIndex, setActiveId]);
 
-  // ── Listen for dm-add-to-initiative events from PartyWidget ──
-  // useLayoutEffect, not useEffect: PartyWidget treats "nobody called
+  // The ONE add path for this widget: the three local forms below and the
+  // `dm-add-to-initiative` handler all land here, so the cap and
+  // duplicate-player rules can't diverge between "the DM typed it" and "the
+  // Party widget sent it". The rules themselves live in `decideInitiativeAdd`
+  // (shared with addCombatantToInitiative's no-widget-mounted fallback).
+  //
+  // While this widget is mounted, its list — not localStorage — is what the DM
+  // is looking at, so it is the authority every add must be decided against.
+  // Reads it via `getLatestCombatants()` rather than the `combatants` render
+  // value for two reasons: the layout effect below has stable deps, so a
+  // closure over `combatants` would pin the FIRST render's list forever; and
+  // the accessor also sees writes from earlier in this same tick, so two adds
+  // dispatched before React re-renders still see each other.
+  //
+  // Decides OUTSIDE the setCombatants updater: the decision can block on a
+  // window.confirm, and updaters must stay pure (see removeCombatant below) —
+  // a replayed updater would prompt the DM twice.
+  const commitAdd = useCallback(
+    (c: Combatant, confirmDuplicate?: ConfirmDuplicate): AddOutcome => {
+      const list = getLatestCombatants();
+      const decision = decideInitiativeAdd(list, c, confirmDuplicate);
+      if (decision !== "added") return decision;
+      setCombatants(appendCombatant(list, c));
+      return "added";
+    },
+    [getLatestCombatants, setCombatants],
+  );
+
+  // ── Listen for dm-add-to-initiative events from PartyWidget / AI-chat cards ──
+  // useLayoutEffect, not useEffect: the dispatcher treats "nobody called
   // preventDefault()" as "no Initiative widget mounted" and falls back to
   // writing dm-initiative-v1 directly. A passive effect attaches this
   // listener only AFTER first paint, leaving a window where the widget is
@@ -208,26 +240,17 @@ export function InitiativeWidget() {
   // the fallback then writes a combatant this widget's next setCombatants
   // would clobber with its stale in-memory list. Layout effects run
   // synchronously before paint, so no click can land in that gap.
+  //
+  // The listener body itself is `handleAddToInitiativeEvent` in @/lib/combatant
+  // — it sits next to the `addCombatantToInitiative` that dispatches to it so
+  // the two halves of the contract are tested against each other rather than
+  // against a stub. All this widget supplies is `commitAdd`, the half that
+  // genuinely needs React.
   useLayoutEffect(() => {
-    const handler = (e: Event) => {
-      const combatant = (e as CustomEvent<{ combatant: Combatant }>).detail?.combatant;
-      if (!combatant) return;
-      // Signal consumption: PartyWidget dispatches this event cancelable
-      // and falls back to a direct storage write when NO mounted widget
-      // preventDefault()s it (tile absent / lazy chunk still pending).
-      e.preventDefault();
-      // Cap guard mirrors the local add paths: `validateCombatants`
-      // truncates past MAX_COMBATANTS on the next read, so letting the
-      // list grow beyond it live would silently delete the excess on
-      // reload. PartyWidget checks the cap (and alerts) before
-      // dispatching; this is the belt to that suspenders.
-      setCombatants(prev =>
-        prev.length >= MAX_COMBATANTS ? prev : appendCombatant(prev, combatant)
-      );
-    };
+    const handler = (e: Event) => handleAddToInitiativeEvent(e, commitAdd);
     window.addEventListener("dm-add-to-initiative", handler);
     return () => window.removeEventListener("dm-add-to-initiative", handler);
-  }, [setCombatants]);
+  }, [commitAdd]);
 
   // ── Monster search (local index, debounced) ──
   useEffect(() => {
@@ -272,18 +295,21 @@ export function InitiativeWidget() {
   };
 
   // ── Add combatant helpers ──
-  // Refuse adds at the MAX_COMBATANTS ceiling instead of letting the list
-  // grow past what `validateCombatants` preserves — the validator slices
-  // to the cap on the next read and the heal-on-read write-back would
-  // make that loss permanent and silent.
-  const combatListFull = (): boolean => {
-    if (combatants.length < MAX_COMBATANTS) return false;
-    window.alert(initiativeFullMessage());
-    return true;
+  // Every local form routes through `commitAdd`, which refuses at the
+  // MAX_COMBATANTS ceiling rather than letting the list grow past what
+  // `validateCombatants` preserves — the validator slices to the cap on the
+  // next read and the heal-on-read write-back would make that loss permanent
+  // and silent. Returns true when the caller should keep its form open: the
+  // add was refused at the cap, or the DM declined the duplicate confirm. A
+  // mis-click shouldn't cost the DM their typed row.
+  const addRefused = (c: Combatant): boolean => {
+    const outcome = commitAdd(c, confirmDuplicateViaWindow);
+    if (outcome === "full") window.alert(initiativeFullMessage());
+    return outcome !== "added";
   };
 
   const addPlayer = () => {
-    if (!form.name.trim() || combatListFull()) return;
+    if (!form.name.trim()) return;
     const hp = clampInt(form.hp, 0, HP_MAX);
     const newC: Combatant = {
       id: mintCombatantId(), name: form.name.trim(),
@@ -292,13 +318,13 @@ export function InitiativeWidget() {
       ac: form.ac ? clampInt(form.ac, 0, AC_MAX) : undefined,
       isPlayer: form.isPlayer,
     };
-    setCombatants(appendCombatant(combatants, newC));
+    if (addRefused(newC)) return;
     setForm(freshForm());
     setShowForm(false);
   };
 
   const addMonster = () => {
-    if (!selectedMonster || combatListFull()) return;
+    if (!selectedMonster) return;
     const overrideHp = parseInt(monsterHpOverride, 10);
     const hp = Number.isFinite(overrideHp)
       ? Math.max(0, Math.min(HP_MAX, overrideHp))
@@ -308,21 +334,23 @@ export function InitiativeWidget() {
       initiative: clampInitiative(monsterInitiative),
       hp, maxHp: hp, ac: selectedMonster.ac, isPlayer: false,
     };
-    setCombatants(appendCombatant(combatants, newC));
+    // Monsters can't be duplicates (findDuplicatePlayer ignores them), so the
+    // confirm never fires here — passing it anyway keeps one add path.
+    if (addRefused(newC)) return;
     setSelectedMonster(null); setMonsterQuery("");
     setMonsterD20Roll(""); setMonsterInitiative(""); setMonsterHpOverride("");
     setShowForm(false);
   };
 
   const addFromParty = () => {
-    if (!selectedPc || combatListFull()) return;
+    if (!selectedPc) return;
     const newC: Combatant = {
       id: mintCombatantId(), name: selectedPc.name,
       initiative: clampInitiative(pcInitiative),
       hp: selectedPc.hp || 0, maxHp: selectedPc.hp || 0,
       ac: selectedPc.ac ?? undefined, isPlayer: true,
     };
-    setCombatants(appendCombatant(combatants, newC));
+    if (addRefused(newC)) return;
     setSelectedPc(null); setPcInitiative("");
     setShowForm(false);
   };
