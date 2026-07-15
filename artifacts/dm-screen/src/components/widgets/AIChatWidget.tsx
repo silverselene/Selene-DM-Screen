@@ -112,11 +112,12 @@ function FooterPicker<T extends string>({
   );
 }
 
-// Phase 2: chat shell only. Talks to the optional local AI bridge, streams the
-// assistant reply, and degrades to a clear "bridge not running" state when the
-// bridge is unreachable. No persistence yet (session React state) — chat history
-// persistence is a later phase. Structured preview cards + "Add to ___" hand-off
-// (tool events beyond a lightweight indicator) also land in later phases.
+// Talks to the optional local AI bridge and streams the assistant reply. When
+// the bridge is unreachable the chat view STAYS mounted and a banner explains
+// why: the bundled-data lookups (/spell, /monster, /rule) need no bridge, so
+// the transcript and composer must remain usable. Only the initial reachability
+// probe replaces the view, via the "checking" screen. The transcript persists
+// to localStorage (CHAT_HISTORY_KEY) through useLocalStorage.
 
 // Message types (ChatMessage / AssistantMessage / UserMessage) live in the
 // React-free @/lib/chatHistory module so the persistence validator can share
@@ -127,6 +128,75 @@ function FooterPicker<T extends string>({
 // remedy is the AI_BRIDGE_ALLOWED_ORIGINS env var, not starting the bridge,
 // so it must not collapse into "offline".
 type BridgeStatus = "checking" | "online" | "offline" | "blocked";
+// The statuses /health can settle on — i.e. BridgeStatus minus the transient
+// "checking". Named so refreshHealth can hand one back to a caller that needs
+// to tell "bridge down" from "origin refused".
+type SettledStatus = Exclude<BridgeStatus, "checking">;
+
+// Shown on a message when a bridge-bound question fails. These render in an
+// error bubble as raw text, NOT through MiniMarkdown — so no markdown syntax
+// (backticks around `pnpm dev:ai` would reach the DM as literal backticks).
+const BRIDGE_DOWN_MESSAGE =
+  "The AI bridge isn't running, so Selene can't answer that. Start it with pnpm dev:ai, or look things up from your bundled data with /spell, /monster, or /rule.";
+const BRIDGE_BLOCKED_MESSAGE =
+  "The AI bridge is running but refused this page's origin, so Selene can't answer that. See the banner above for the fix, or look things up from your bundled data with /spell, /monster, or /rule.";
+
+/**
+ * The bridge-unreachable notice. This is a banner *above* the chat view, not a
+ * replacement for it: the bundled-data lookups (/spell, /monster, /rule) need no
+ * bridge, so the composer and transcript must stay reachable while it shows —
+ * including while a retry is in flight, which is why `onRetry` re-probes in
+ * place (via refreshHealth) rather than flipping the widget to "checking".
+ * Tracks the retry locally so the button can show progress without the caller
+ * having to thread a `retrying` flag down.
+ */
+function BridgeDownBanner({
+  status,
+  onRetry,
+}: {
+  status: "offline" | "blocked";
+  onRetry: () => Promise<void>;
+}) {
+  const [retrying, setRetrying] = useState(false);
+  return (
+    <div className="shrink-0 mb-2 flex items-start gap-2 rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1.5">
+      <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0 text-amber-500/80" />
+      <div className="flex-1 min-w-0 text-[10px] leading-relaxed text-amber-300/90">
+        {status === "offline" ? (
+          <>
+            <span className="font-semibold">AI bridge not running.</span> Lookups from your bundled
+            data still work. For Selene, start it with{" "}
+            <code className="px-1 py-0.5 rounded bg-black/30">pnpm dev:ai</code> (or{" "}
+            <code className="px-1 py-0.5 rounded bg-black/30">pnpm dev</code>), then retry.
+          </>
+        ) : (
+          <>
+            <span className="font-semibold">AI bridge refused this page.</span> Lookups from your
+            bundled data still work. To reach Selene, restart the bridge with{" "}
+            <code className="px-1 py-0.5 rounded bg-black/30 break-all">
+              AI_BRIDGE_ALLOWED_ORIGINS={window.location.origin}
+            </code>
+            , then retry.
+          </>
+        )}
+      </div>
+      <button
+        onClick={() => {
+          if (retrying) return;
+          setRetrying(true);
+          // A successful retry unmounts this banner, so the settled state is
+          // whatever `status` becomes — nothing to clean up but the flag.
+          void onRetry().finally(() => setRetrying(false));
+        }}
+        disabled={retrying}
+        className="shrink-0 flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-amber-700/50 text-amber-300/90 hover:bg-amber-900/20 disabled:opacity-50 transition-colors"
+      >
+        <RefreshCw className={`w-2.5 h-2.5 ${retrying ? "animate-spin" : ""}`} />{" "}
+        {retrying ? "Retrying…" : "Retry"}
+      </button>
+    </div>
+  );
+}
 
 export function AIChatWidget() {
   const [status, setStatus] = useState<BridgeStatus>("checking");
@@ -178,22 +248,51 @@ export function AIChatWidget() {
   // callback (and the send/escalate callbacks that depend on it) on every probe.
   const healthRef = useRef<BridgeHealth | null>(health);
   healthRef.current = health;
+  // Mirror of `status`, so a stream event can clear a stale "bridge down" banner
+  // (the DM started the bridge but never hit Retry) without the callback
+  // depending on `status` and re-creating on every probe.
+  const statusRef = useRef<BridgeStatus>(status);
+  statusRef.current = status;
   // Synchronous in-flight guard. `sending` state lags a render behind, so a fast
   // double Enter/click could fire two turns before it flips; this ref is set the
   // instant a bridge turn begins and read by the send/escalate guards.
   const sendingRef = useRef(false);
 
-  const probe = useCallback(async () => {
-    setStatus("checking");
+  // Re-read /health and settle the status, WITHOUT flipping through "checking".
+  // The "checking" state replaces the whole view, so any refresh that happens
+  // with a transcript on screen must not route through it or the transcript
+  // would vanish under the DM. Returns the settled status so a caller can word
+  // its message from it (see the BridgeUnreachableError catch in streamTurn).
+  const refreshHealth = useCallback(async (): Promise<SettledStatus> => {
     try {
       const h = await checkHealth();
       setHealth(h);
       setStatus("online");
+      return "online";
     } catch (err) {
+      const settled: SettledStatus = err instanceof BridgeOriginError ? "blocked" : "offline";
       setHealth(null);
-      setStatus(err instanceof BridgeOriginError ? "blocked" : "offline");
+      setStatus(settled);
+      return settled;
     }
   }, []);
+
+  // Re-read /health for the footer's billing line ONLY — never touches `status`.
+  // For use when something else has already proven the bridge reachable (a
+  // streamed event): checkHealth has a short timeout, so a probe that loses a
+  // race with a busy bridge must not be allowed to contradict that proof.
+  const refreshBilling = useCallback(() => {
+    void checkHealth()
+      .then(setHealth)
+      .catch(() => {});
+  }, []);
+
+  // Full probe, including the "checking" screen. Only for mount, where there is
+  // no transcript on screen to protect.
+  const probe = useCallback(async () => {
+    setStatus("checking");
+    await refreshHealth();
+  }, [refreshHealth]);
 
   useEffect(() => {
     void probe();
@@ -294,6 +393,23 @@ export function AIChatWidget() {
           text,
           (event) => {
             if (!isCurrent()) return;
+            // An event proves the bridge is reachable, which a stale "bridge
+            // down" banner would be contradicting (the DM can start the bridge
+            // without ever hitting Retry). Mutate the ref up front so the
+            // remaining events in this turn don't each re-run this block.
+            //
+            // Refresh the footer's billing line only — deliberately NOT
+            // refreshHealth. This event IS the reachability proof; letting a
+            // concurrent /health probe re-decide `status` would mean a probe
+            // that times out against a busy bridge could throw the "bridge not
+            // running" banner back up mid-stream, and (since statusRef re-syncs
+            // from `status` on the next render) re-arm this block to fire again
+            // on the following event — one probe per token, banner flickering.
+            if (statusRef.current !== "online") {
+              statusRef.current = "online";
+              setStatus("online");
+              refreshBilling();
+            }
             if (event.type === "text") {
               updateAssistantAt(targetIndex, (m) => ({ ...m, text: m.text + event.text }));
             } else if (event.type === "tool") {
@@ -335,9 +451,31 @@ export function AIChatWidget() {
         if (err instanceof DOMException && err.name === "AbortError") {
           updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false, error: m.text ? undefined : "Cancelled." }));
         } else if (err instanceof BridgeUnreachableError) {
-          // Flip to the "bridge not running" screen, which replaces the whole
-          // chat view — so a per-message error bubble here would never render.
-          setStatus("offline");
+          // A failed POST /chat cannot itself tell "bridge down" from "origin
+          // refused": the bridge reflects CORS headers on the 403 for GET
+          // /health ONLY, so /chat's 403 is opaque to fetch and arrives as the
+          // same TypeError a connection-refused does. Hard-coding "offline"
+          // here would tell a DM whose origin isn't allowlisted to go start a
+          // bridge that is already running. Re-probe /health, which CAN tell
+          // them apart, and word both the banner and the bubble from whatever
+          // it settles on. Both real cases answer immediately (connection
+          // refused, or a 403 from a live bridge), so this await does not hold
+          // the Stop button up for checkHealth's full timeout in practice.
+          const settled = await refreshHealth();
+          // Re-gate: `isCurrent` was checked before the await above, and "New
+          // chat" during it would have re-pointed targetIndex at another turn's
+          // message. (refreshHealth's own status/health writes are turn-global
+          // and stay correct either way.)
+          if (!isCurrent()) return false;
+          // Raise the banner AND explain it on the message itself. The banner
+          // sits above a still-mounted chat view (bundled-data lookups work
+          // without the bridge), so this bubble does render — without it the
+          // turn would just stop with no reason given.
+          updateAssistantAt(targetIndex, (m) => ({
+            ...m,
+            pending: false,
+            error: settled === "blocked" ? BRIDGE_BLOCKED_MESSAGE : BRIDGE_DOWN_MESSAGE,
+          }));
         } else {
           updateAssistantAt(targetIndex, (m) => ({
             ...m,
@@ -356,7 +494,7 @@ export function AIChatWidget() {
       }
       return true;
     },
-    [updateAssistantAt, model, effort],
+    [updateAssistantAt, model, effort, refreshHealth, refreshBilling],
   );
 
   // Build the local answer for a message, or null if it should go to the bridge.
@@ -465,56 +603,6 @@ export function AIChatWidget() {
     }
   };
 
-  /* ── Bridge running but this origin isn't allowlisted ── */
-  if (status === "blocked") {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-4">
-        <AlertTriangle className="w-7 h-7 text-amber-500/80" />
-        <div className="text-sm font-semibold" style={{ color: "var(--dm-t2)" }}>
-          AI bridge refused this page
-        </div>
-        <p className="text-xs leading-relaxed max-w-[18rem]" style={{ color: "var(--dm-t3)" }}>
-          The bridge is running, but it only accepts requests from its allowlisted origins. Restart
-          it with{" "}
-          <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90 break-all">
-            AI_BRIDGE_ALLOWED_ORIGINS={window.location.origin}
-          </code>{" "}
-          to allow this page, then retry.
-        </p>
-        <button
-          onClick={() => void probe()}
-          className="mt-1 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-amber-700/50 text-amber-300/90 hover:bg-amber-900/20 transition-colors"
-        >
-          <RefreshCw className="w-3 h-3" /> Retry
-        </button>
-      </div>
-    );
-  }
-
-  /* ── Bridge not running ── */
-  if (status === "offline") {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-4">
-        <AlertTriangle className="w-7 h-7 text-amber-500/80" />
-        <div className="text-sm font-semibold" style={{ color: "var(--dm-t2)" }}>
-          AI bridge not running
-        </div>
-        <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
-          The chat assistant needs the optional local bridge. Start it with{" "}
-          <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">pnpm dev:ai</code>{" "}
-          (or <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">pnpm dev</code>,
-          which runs it alongside the app), then retry.
-        </p>
-        <button
-          onClick={() => void probe()}
-          className="mt-1 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-amber-700/50 text-amber-300/90 hover:bg-amber-900/20 transition-colors"
-        >
-          <RefreshCw className="w-3 h-3" /> Retry
-        </button>
-      </div>
-    );
-  }
-
   /* ── Checking reachability ── */
   if (status === "checking") {
     return (
@@ -524,9 +612,22 @@ export function AIChatWidget() {
     );
   }
 
-  /* ── Online: chat ── */
+  /* ── Chat. Rendered for "online" AND for the two bridge-down states: the
+     bundled-data lookups need no bridge, so the composer stays reachable and a
+     banner explains what is (and isn't) available. ── */
   return (
     <div className="h-full flex flex-col min-h-0">
+      {(status === "offline" || status === "blocked") && (
+        // refreshHealth, not probe: probe's "checking" state replaces this whole
+        // view, so retrying with a transcript on screen would blank it (and reset
+        // its scroll) for the duration of the probe.
+        <BridgeDownBanner
+          status={status}
+          onRetry={async () => {
+            await refreshHealth();
+          }}
+        />
+      )}
       {/* Header: new-chat reset (only once a conversation has started) */}
       {messages.length > 0 && (
         <div className="shrink-0 flex justify-end pb-1.5 mb-1.5 border-b" style={{ borderBottomColor: "var(--dm-border)" }}>

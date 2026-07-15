@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required. An **optional** local AI-bridge service (`services/ai-bridge`) and a shared types-only wire-contract package (`packages/bridge-protocol`) power the AI Chat widget; **neither is part of the deployable** — the SPA builds and runs without them (the widget just shows a "bridge not running" state).
+pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required. An **optional** local AI-bridge service (`services/ai-bridge`) and a shared types-only wire-contract package (`packages/bridge-protocol`) power the AI Chat widget; **neither is part of the deployable** — the SPA builds and runs without them (the widget stays usable for bundled-data lookups and shows a "bridge not running" banner over the chat).
 
 History: this used to be a three-tier app (React + Express + PostgreSQL on Replit), migrated to a fully static, self-hostable SPA. Anything pre-migration (the API server, Drizzle, the OpenAPI/Orval codegen, the mockup sandbox, Replit infra) has been deleted; if you find references to them in old commits or comments, they're historical.
 

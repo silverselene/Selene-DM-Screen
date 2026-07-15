@@ -10,6 +10,10 @@
 **/dist
 **/build
 
+# Test output. `vitest run --coverage` writes a whole HTML report tree that the
+# image has no use for. Keep in sync with .gitignore's `coverage`.
+**/coverage
+
 # Git metadata.
 .git
 .gitignore
