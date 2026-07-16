@@ -11,7 +11,7 @@ import {
   validateTiles,
 } from "@/lib/backup";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
-import { PLACEABLE_WIDGET_TYPES, type TileEntry, type WidgetType } from "@/types";
+import { PLACEABLE_WIDGET_TYPES, SINGLETON_WIDGET_TYPES, type TileEntry, type WidgetType } from "@/types";
 
 const empty = (): TileEntry => ({ widget: "empty", colSpan: 1, rowSpan: 1 });
 
@@ -132,6 +132,19 @@ function AppContent() {
     if (gridTiles !== tiles) setTiles(gridTiles);
   }, [gridTiles, tiles, setTiles]);
 
+  // Widget types currently on the dashboard — used to refuse a second copy of
+  // a singleton widget (AI Chat: two mounted copies clobber the shared saved
+  // transcript) in the selector and the recent-widgets restore. The widget
+  // itself carries a mount-time guard too, for tiles that arrive by other
+  // routes (restored backup, hand-edited storage).
+  const placedWidgets = useMemo(
+    () =>
+      new Set<WidgetType>(
+        gridTiles.flatMap((t) => (t !== null && t.widget !== "empty" ? [t.widget] : [])),
+      ),
+    [gridTiles],
+  );
+
   useEffect(() => {
     const handler = (e: Event) => {
       const name = (e as CustomEvent<{ name: string }>).detail?.name;
@@ -164,6 +177,14 @@ function AppContent() {
 
   const handleSelectWidget = (widget: WidgetType) => {
     if (selectingTile === null) return;
+    // The modal renders an already-placed singleton widget disabled; this
+    // holds the no-duplicates invariant even if that UI changes. Close the
+    // modal rather than no-op silently — a dead click would otherwise strand it
+    // open with no feedback (the widget is already on the board).
+    if (SINGLETON_WIDGET_TYPES.has(widget) && placedWidgets.has(widget)) {
+      setSelectingTile(null);
+      return;
+    }
     update((t) => {
       const entry = t[selectingTile];
       if (entry) t[selectingTile] = { ...entry, widget };
@@ -231,6 +252,13 @@ function AppContent() {
   };
 
   const handleRestoreRecent = (widget: WidgetType) => {
+    // A singleton widget can sit in "recently removed" while a copy of it was
+    // re-added through the selector; restoring the chip then would place a
+    // duplicate tile. It's already on the board — just retire the stale chip.
+    if (SINGLETON_WIDGET_TYPES.has(widget) && placedWidgets.has(widget)) {
+      setRecentWidgets((prev) => prev.filter((w) => w !== widget));
+      return;
+    }
     const firstEmpty = tiles.findIndex(
       (t) => t !== null && t.widget === "empty"
     );
@@ -355,6 +383,7 @@ function AppContent() {
         <WidgetSelectorModal
           onSelect={handleSelectWidget}
           onClose={() => setSelectingTile(null)}
+          placedWidgets={placedWidgets}
         />
       )}
     </div>

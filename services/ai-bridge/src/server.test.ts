@@ -337,6 +337,30 @@ describe("chat turn timeout", () => {
     const next = await chatBody(port);
     expect(next).toContain("later");
   });
+
+  // The reclamation above is cooperative — it needs the generator to settle
+  // once aborted. This pins the HARD fallback: a turn that ignores the abort
+  // entirely (never yields, never throws) is declared wedged after the grace
+  // period and abandoned, so the slot is still reclaimed and /chat keeps
+  // working. Before the wedge race, this exact shape pinned the slot forever:
+  // permanent 429s while /health stayed green.
+  it("reclaims the slot even when the turn ignores the abort entirely", async () => {
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "working" };
+      // Never settles — not even on abort. Mirrors an SDK/subprocess hang that
+      // doesn't observe its signal.
+      await new Promise(() => {});
+    };
+
+    const body = await chatBody(port);
+    expect(body).toContain("time limit");
+
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "later" };
+    };
+    const next = await chatBody(port);
+    expect(next).toContain("later");
+  });
 });
 
 describe("client disconnect mid-stream", () => {

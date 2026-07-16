@@ -25,6 +25,14 @@ export const PLACEABLE_WIDGET_TYPES = WIDGET_TYPES.filter(
   (w): w is Exclude<WidgetType, "empty"> => w !== "empty",
 );
 
+// Widgets that may appear on at most one tile. AI Chat persists a single
+// shared transcript (see chatHistory.ts): two mounted copies would clobber
+// each other's debounced writes last-writer-wins. Enforced at placement time
+// (widget selector + recent-widgets restore, see App.tsx) and again at mount
+// time inside the widget itself, which also covers tiles arriving via a
+// restored backup or hand-edited storage.
+export const SINGLETON_WIDGET_TYPES: ReadonlySet<WidgetType> = new Set(["ai-chat"]);
+
 export type TileEntry = {
   widget: WidgetType;
   colSpan: 1 | 2;

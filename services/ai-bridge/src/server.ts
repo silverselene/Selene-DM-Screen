@@ -27,6 +27,21 @@ const TURN_TIMEOUT_MS = Number(process.env.AI_BRIDGE_TURN_TIMEOUT_MS) > 0
   ? Number(process.env.AI_BRIDGE_TURN_TIMEOUT_MS)
   : 3 * 60 * 1000;
 
+// The abort above is only *cooperative*: reclaiming the slot still requires the
+// SDK generator to settle its pending next() once the signal fires. A turn that
+// ignores the abort entirely (the exact failure the timeout exists for) would
+// leave the `for await` suspended forever — slot pinned, /chat a permanent 429
+// while /health stays green. So once a turn is aborted (timeout OR client
+// disconnect), it gets this long to settle; past that it is declared wedged and
+// abandoned: the slot is released and the response ended without waiting on the
+// generator again. Capped by TURN_TIMEOUT_MS so tests (and operators) that
+// shrink the turn budget shrink the grace with it.
+const WEDGE_GRACE_MS = Math.min(10_000, TURN_TIMEOUT_MS);
+
+// Sentinel raced against the generator's next() — see the wedge race in
+// handleChat.
+const WEDGED = Symbol("wedged");
+
 // Binding to 127.0.0.1 keeps the LAN out, but it does NOT stop a request made
 // from inside the DM's own browser: any web page they visit could POST to
 // http://127.0.0.1:38900 and, with a wildcard `Access-Control-Allow-Origin`,
@@ -182,45 +197,113 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
     });
     return;
   }
-  inFlightTurns++;
-
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
-  // When the client disconnects mid-stream (Stop button, closed tile, network
-  // drop) the socket is destroyed and any later write emits 'error' on the
-  // response. Without a listener that is an unhandled 'error' — it would crash
-  // this process. Swallow it: the `res.writable` guards below already stop the
-  // stream, this only covers a write that races the disconnect.
-  res.on("error", () => {});
+  // The slot is claimed as the FIRST statement inside the try below — never
+  // here. Its matching decrement lives ONLY in the guarded release the finally
+  // runs, so the claim has to sit where every throw between it and that release
+  // (writeHead on a just-destroyed socket, a generator rejection) is guaranteed
+  // to reach the finally. A leaked slot is a permanent /chat outage at
+  // MAX_CONCURRENT_TURNS = 1. The once-guard keeps the count honest should any
+  // future path release early (e.g. on declaring the turn wedged). Nothing
+  // between the `inFlightTurns >= MAX` check above and the claim below awaits,
+  // so the check-then-claim stays atomic on the single-threaded event loop.
+  let slotReleased = false;
+  const releaseSlot = () => {
+    if (!slotReleased) {
+      slotReleased = true;
+      inFlightTurns--;
+    }
+  };
 
   // Abort the Agent turn as soon as the client goes away, instead of only
   // noticing between streamed events — a turn can sit for seconds inside a
-  // single ddb-mcp tool call. Listen on `res`, not `req`: on Node 24 the
-  // request emits `close` when its (already-consumed) body ends — before this
-  // line runs — and never again, so a `req` listener misses the disconnect.
-  // `res` emits `close` when the connection actually goes away. It also fires
-  // after a normal end; aborting there is a deliberate no-op as long as nothing
-  // observes the signal once the turn's generator is exhausted (the `for await`
-  // has already returned), so guard against a redundant post-turn abort.
+  // single ddb-mcp tool call. (Wired to `res` inside the try, below.)
   const abort = new AbortController();
-  res.on("close", () => {
-    if (!abort.signal.aborted) abort.abort();
-  });
-  // Reclaim the slot even if the turn wedges with the client still connected
-  // (so the disconnect-driven abort above never fires). See TURN_TIMEOUT_MS.
   let timedOut = false;
-  const turnTimeout = setTimeout(() => {
-    timedOut = true;
-    if (!abort.signal.aborted) abort.abort();
-  }, TURN_TIMEOUT_MS);
+  let finished = false;
+  let turnTimeout: NodeJS.Timeout | undefined;
+  let wedgeTimer: NodeJS.Timeout | undefined;
+  // Calling the generator function only *creates* the iterator (nothing runs
+  // until the first next()), and it happens BEFORE the slot is claimed, so even
+  // if it threw no slot would leak. Hoisted so the finally can hand it its
+  // end-of-iteration signal.
+  const turn = runChatTurn(message, abort, resume, model, effort)[Symbol.asyncIterator]();
 
   try {
-    for await (const ev of runChatTurn(message, abort, resume, model, effort)) {
+    // Claim the turn slot as the very first thing in the guarded region so the
+    // finally's releaseSlot() is guaranteed to pair with it — see the claim
+    // comment above.
+    inFlightTurns++;
+    // When the client disconnects mid-stream (Stop button, closed tile, network
+    // drop) the socket is destroyed and any later write emits 'error' on the
+    // response. Without a listener that is an unhandled 'error' — it would crash
+    // this process. Swallow it: the `canWrite` guards below already stop the
+    // stream, this only covers a write that races the disconnect. Registered
+    // before writeHead so even the very first write is covered.
+    res.on("error", () => {});
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    // Listen on `res`, not `req`: on Node 24 the request emits `close` when its
+    // (already-consumed) body ends — before this line runs — and never again,
+    // so a `req` listener misses the disconnect. `res` emits `close` when the
+    // connection actually goes away. It also fires after a normal end; aborting
+    // there is a deliberate no-op as long as nothing observes the signal once
+    // the turn's generator is exhausted, so guard against a redundant post-turn
+    // abort (and `finished` keeps it from arming a pointless wedge timer).
+    res.on("close", () => {
+      if (!abort.signal.aborted) abort.abort();
+    });
+    // Reclaim the slot even if the turn wedges with the client still connected
+    // (so the disconnect-driven abort above never fires). See TURN_TIMEOUT_MS.
+    turnTimeout = setTimeout(() => {
+      timedOut = true;
+      if (!abort.signal.aborted) abort.abort();
+    }, TURN_TIMEOUT_MS);
+
+    // Resolves WEDGE_GRACE_MS after the turn is aborted (by the timeout above
+    // or a client disconnect) — the hard fallback for a generator that ignores
+    // its signal and never settles. Armed lazily so a turn that completes
+    // normally never starts the timer (the post-end `close` abort finds
+    // `finished` set).
+    const wedged = new Promise<typeof WEDGED>((resolve) => {
+      abort.signal.addEventListener(
+        "abort",
+        () => {
+          if (finished) return;
+          wedgeTimer = setTimeout(() => resolve(WEDGED), WEDGE_GRACE_MS);
+        },
+        { once: true },
+      );
+    });
+
+    for (;;) {
+      const pull = turn.next();
+      // If the wedge race abandons this pull, its eventual settlement (if any)
+      // must not surface as an unhandled rejection and kill the process.
+      pull.catch(() => {});
+      const result = await Promise.race([pull, wedged]);
+      if (result === WEDGED) {
+        // The turn ignored its abort for the whole grace period. Stop waiting
+        // on it: report, release the slot, and end the response — the abandoned
+        // generator keeps whatever it's stuck on, but it can no longer pin the
+        // slot. (In the disconnect case there's no one to write to and canWrite
+        // is already false.)
+        if (canWrite(res)) {
+          sse(res, "error", {
+            type: "error",
+            message: timedOut
+              ? `Chat turn exceeded the ${TURN_TIMEOUT_MS / 1000}s time limit and was stopped.`
+              : "Chat turn was cancelled.",
+          });
+        }
+        break;
+      }
+      if (result.done) break;
       if (!canWrite(res)) break;
-      sse(res, ev.type, ev);
+      sse(res, result.value.type, result.value);
     }
   } catch (err) {
     if (canWrite(res)) {
@@ -232,8 +315,15 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
       sse(res, "error", { type: "error", message });
     }
   } finally {
-    clearTimeout(turnTimeout);
-    inFlightTurns--;
+    finished = true;
+    if (turnTimeout !== undefined) clearTimeout(turnTimeout);
+    if (wedgeTimer !== undefined) clearTimeout(wedgeTimer);
+    // Signal end-of-iteration to a still-live generator so its finally blocks
+    // run (`for await`'s break used to do this implicitly). Deliberately NOT
+    // awaited: on a wedged generator return() queues behind the pending next()
+    // and would reintroduce the exact hang the wedge race exists to prevent.
+    void turn.return?.(undefined)?.catch(() => {});
+    releaseSlot();
     if (canWrite(res)) res.end();
   }
 }
@@ -281,7 +371,17 @@ export function startServer() {
       return;
     }
     if (method === "POST" && path === "/chat") {
-      void handleChat(req, res);
+      // Never `void` this: a rejection out of handleChat (its own try/finally
+      // starts only after the slot claim; readBody/parse sit before it) would
+      // be an unhandled rejection — fatal by default on Node.
+      handleChat(req, res).catch((err) => {
+        console.error("[ai-bridge] unexpected /chat handler failure:", err);
+        if (!res.headersSent) {
+          sendJson(res, 500, { error: "Internal error" });
+        } else {
+          res.destroy();
+        }
+      });
       return;
     }
     sendJson(res, 404, { error: "Not found" });

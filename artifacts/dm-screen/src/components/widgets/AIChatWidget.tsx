@@ -17,6 +17,7 @@ import { parseLookupCommand, lookupDataset, autoDetectLocal } from "@/lib/localL
 import { ChatLocalAnswer, type LocalAnswer } from "./ChatLocalAnswer";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { isImeComposing } from "@/lib/keyboard";
+import { createSingletonSlot, useSingletonSlot } from "@/lib/singletonWidget";
 import {
   CHAT_HISTORY_KEY,
   CHAT_CHANGED_EVENT,
@@ -198,7 +199,40 @@ function BridgeDownBanner({
   );
 }
 
+// One live AI Chat per dashboard. Every mounted copy holds its own in-memory
+// snapshot of the persisted transcript with debounced whole-array writes, so a
+// second copy would silently clobber the first's messages last-writer-wins
+// (and its sends would 429 against the bridge's single turn slot). The widget
+// selector and recent-widgets restore already refuse a duplicate tile, but
+// tiles also arrive via restored backups and hand-edited storage — this mount
+// guard is the layer that holds regardless of the path. The duplicate renders
+// a placeholder INSTEAD of the chat (the transcript store must never mount
+// twice), and takes over automatically when the owning tile is removed.
+const AI_CHAT_MOUNT_SLOT = createSingletonSlot();
+
 export function AIChatWidget() {
+  const mount = useSingletonSlot(AI_CHAT_MOUNT_SLOT);
+  // "pending" is the pre-layout-effect first render — render nothing, not the
+  // placeholder. The slot's claim runs in a layout effect (before paint), so a
+  // legitimate single mount resolves to "owner" without this frame ever
+  // painting an empty tile.
+  if (mount === "pending") return null;
+  if (mount === "duplicate") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
+        <Sparkles className="w-6 h-6 text-amber-400/70" />
+        <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
+          AI Chat is already open in another tile. It keeps one saved
+          conversation, so it can only be open once — remove this tile, or close
+          the other one to use it here.
+        </p>
+      </div>
+    );
+  }
+  return <AIChatSession />;
+}
+
+function AIChatSession() {
   const [status, setStatus] = useState<BridgeStatus>("checking");
   const [health, setHealth] = useState<BridgeHealth | null>(null);
   // Persisted transcript. The hook debounces writes (streaming mutates

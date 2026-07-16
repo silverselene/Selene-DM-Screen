@@ -1,9 +1,13 @@
 import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, Sparkles } from "lucide-react";
-import type { WidgetType } from "@/types";
+import { SINGLETON_WIDGET_TYPES, type WidgetType } from "@/types";
 
 interface Props {
   onSelect: (widget: WidgetType) => void;
   onClose: () => void;
+  /** Widget types already on the dashboard — singleton widgets among them are
+   *  offered as disabled so a second AI Chat tile can't be placed (two mounted
+   *  copies would clobber the shared saved transcript). */
+  placedWidgets: ReadonlySet<WidgetType>;
 }
 
 const widgets: { type: WidgetType; label: string; description: string; icon: React.ReactNode; color: string }[] = [
@@ -72,7 +76,7 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
   },
 ];
 
-export function WidgetSelectorModal({ onSelect, onClose }: Props) {
+export function WidgetSelectorModal({ onSelect, onClose, placedWidgets }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -85,17 +89,27 @@ export function WidgetSelectorModal({ onSelect, onClose }: Props) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {widgets.map((w) => (
-            <button
-              key={w.type}
-              onClick={() => onSelect(w.type)}
-              className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br ${w.color} border rounded-lg transition-all hover:scale-105 hover:shadow-[0_0_12px_rgba(139,43,226,0.3)] text-center`}
-            >
-              <div className="text-white/80">{w.icon}</div>
-              <div className="text-sm font-bold text-gray-100">{w.label}</div>
-              <div className="text-xs text-gray-400 leading-tight">{w.description}</div>
-            </button>
-          ))}
+          {widgets.map((w) => {
+            const alreadyPlaced = SINGLETON_WIDGET_TYPES.has(w.type) && placedWidgets.has(w.type);
+            return (
+              <button
+                key={w.type}
+                onClick={() => onSelect(w.type)}
+                disabled={alreadyPlaced}
+                className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br ${w.color} border rounded-lg transition-all text-center ${
+                  alreadyPlaced
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:scale-105 hover:shadow-[0_0_12px_rgba(139,43,226,0.3)]"
+                }`}
+              >
+                <div className="text-white/80">{w.icon}</div>
+                <div className="text-sm font-bold text-gray-100">{w.label}</div>
+                <div className="text-xs text-gray-400 leading-tight">
+                  {alreadyPlaced ? "Already on the dashboard — it can only be open once." : w.description}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
