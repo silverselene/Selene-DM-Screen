@@ -241,6 +241,24 @@
 .light-mode [class~="text-cyan-400"],
 .light-mode [class~="text-cyan-500"] { color: #155e75; }
 
+/* Red (error text: AI Chat error/tool-error bubbles, Portal errors, downed-HP
+ * markers) and emerald (success text: card-action "Added ✓" flashes, Party
+ * accents) — same story as the amber/cyan block above: 300–500-level red is
+ * ~3:1 and emerald-400/90 ~1.8:1 on the near-white page, so error and success
+ * feedback effectively disappears in light mode. Remap to AA-contrast dark
+ * shades (Tailwind red-700 / emerald-700). Deliberately NOT remapped: bare
+ * text-red-300 / text-emerald-300, which only appear on dark colored chip
+ * backgrounds (Initiative's remove button, the party-mode toggle) that the
+ * light theme keeps dark — darkening that text would break those. Hover
+ * variants are left to Tailwind so they only apply on :hover. */
+.light-mode [class~="text-red-300/90"],
+.light-mode [class~="text-red-400"],
+.light-mode [class~="text-red-400/90"],
+.light-mode [class~="text-red-500"] { color: #b91c1c; }
+.light-mode [class~="text-emerald-400"],
+.light-mode [class~="text-emerald-400/90"],
+.light-mode [class~="text-emerald-500"] { color: #047857; }
+
 /* Placeholder */
 .light-mode [class~="placeholder-gray-500"]::placeholder,
 .light-mode [class~="placeholder-gray-600"]::placeholder { color: var(--dm-placeholder); }

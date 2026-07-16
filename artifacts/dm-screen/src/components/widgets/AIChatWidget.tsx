@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { memo, useEffect, useRef, useState, useCallback } from "react";
 import { Sparkles, Send, Loader2, Search, AlertTriangle, RefreshCw, Square, SquarePen, ChevronDown } from "lucide-react";
 import {
   checkHealth,
@@ -198,6 +198,94 @@ function BridgeDownBanner({
     </div>
   );
 }
+
+/**
+ * One transcript row, memoized: streaming replaces ONLY the target message
+ * object per SSE chunk (updateAssistantAt copies the array but keeps every
+ * other element's identity), so memo limits the per-chunk render to the
+ * streaming row instead of re-tokenizing the entire transcript — the cost that
+ * made long sessions jank. Props must stay memo-friendly: `onEscalate` is the
+ * parent's stable `escalate` callback (the per-row sourceQuery fallback lives
+ * in here so no per-row closure is created in the parent).
+ */
+const MessageRow = memo(function MessageRow({
+  message: m,
+  index,
+  onEscalate,
+}: {
+  message: ChatMessage;
+  index: number;
+  onEscalate: (index: number, query: string) => void;
+}) {
+  if (m.role === "user") {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] rounded-lg rounded-br-sm px-2.5 py-1.5 text-xs whitespace-pre-wrap break-words bg-amber-900/25 border border-amber-800/40" style={{ color: "var(--dm-t2)" }}>
+          {m.text}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      {m.tools.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {m.tools.map((t, j) => (
+            <span
+              key={j}
+              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-cyan-800/50 text-cyan-300/80 bg-cyan-950/30"
+            >
+              <Search className="w-2.5 h-2.5" /> {t}
+            </span>
+          ))}
+        </div>
+      )}
+      {m.cards.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {m.cards.map((c, j) => (<ChatToolCard key={j} card={c} />))}
+        </div>
+      )}
+      {m.toolErrors.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {m.toolErrors.map((te, j) => (
+            <div key={j} className="flex items-start gap-1.5 text-xs text-red-400/90">
+              <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+              <span className="whitespace-pre-wrap break-words">
+                <span className="font-semibold">{te.tool}:</span> {te.message}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {m.local && (
+        <ChatLocalAnswer
+          answer={m.local}
+          escalated={!!m.escalated}
+          onEscalate={(query) => {
+            const q = query || m.sourceQuery;
+            if (q) onEscalate(index, q);
+          }}
+        />
+      )}
+      {m.text && (
+        <div className="max-w-[92%]" style={{ color: "var(--dm-t2)" }}>
+          <MiniMarkdown text={m.text} variant="prose" />
+        </div>
+      )}
+      {m.pending && !m.text && m.tools.length === 0 && m.cards.length === 0 && m.toolErrors.length === 0 && (
+        <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--dm-t3)" }}>
+          <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
+        </div>
+      )}
+      {m.error && (
+        <div className="flex items-start gap-1.5 text-xs text-red-400/90">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <span className="whitespace-pre-wrap break-words">{m.error}</span>
+        </div>
+      )}
+    </div>
+  );
+});
 
 // One live AI Chat per dashboard. Every mounted copy holds its own in-memory
 // snapshot of the persisted transcript with debounced whole-array writes, so a
@@ -608,7 +696,22 @@ function AIChatSession() {
   const escalate = useCallback(
     async (index: number, query: string) => {
       if (sendingRef.current) return;
-      updateAssistantAt(index, (m) => ({ ...m, escalated: true, pending: true }));
+      // Reset every bridge-answer field, not just the flags: a RETRY (the first
+      // escalation failed, gave the link back, and the DM clicked again after
+      // fixing the bridge) would otherwise stream the new answer in under the
+      // stale error banner and duplicate any partial text/cards from the failed
+      // attempt. The local answer (m.local / m.sourceQuery) is untouched — it's
+      // what's being escalated.
+      updateAssistantAt(index, (m) => ({
+        ...m,
+        escalated: true,
+        pending: true,
+        error: undefined,
+        text: "",
+        tools: [],
+        cards: [],
+        toolErrors: [],
+      }));
       const ownedTurn = await streamTurn(query, index);
       // `escalated` was set optimistically above and is what hides the
       // "Ask Selene instead" link — a failed or aborted escalation must give
@@ -688,77 +791,12 @@ function AIChatSession() {
             </p>
           </div>
         )}
-        {messages.map((m, i) =>
-          m.role === "user" ? (
-            // Keyed by the minted per-message id, NOT the index: at the
-            // message cap every send shifts indexes, which would reattach
-            // per-card component state (an open collision form) to the wrong
-            // message.
-            <div key={m.id} className="flex justify-end">
-              <div className="max-w-[85%] rounded-lg rounded-br-sm px-2.5 py-1.5 text-xs whitespace-pre-wrap break-words bg-amber-900/25 border border-amber-800/40" style={{ color: "var(--dm-t2)" }}>
-                {m.text}
-              </div>
-            </div>
-          ) : (
-            <div key={m.id} className="flex flex-col gap-1">
-              {m.tools.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {m.tools.map((t, j) => (
-                    <span
-                      key={j}
-                      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-cyan-800/50 text-cyan-300/80 bg-cyan-950/30"
-                    >
-                      <Search className="w-2.5 h-2.5" /> {t}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {m.cards.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  {m.cards.map((c, j) => (<ChatToolCard key={j} card={c} />))}
-                </div>
-              )}
-              {m.toolErrors.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  {m.toolErrors.map((te, j) => (
-                    <div key={j} className="flex items-start gap-1.5 text-xs text-red-400/90">
-                      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-                      <span className="whitespace-pre-wrap break-words">
-                        <span className="font-semibold">{te.tool}:</span> {te.message}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {m.local && (
-                <ChatLocalAnswer
-                  answer={m.local}
-                  escalated={!!m.escalated}
-                  onEscalate={(query) => {
-                    const q = query || m.sourceQuery;
-                    if (q) void escalate(i, q);
-                  }}
-                />
-              )}
-              {m.text && (
-                <div className="max-w-[92%]" style={{ color: "var(--dm-t2)" }}>
-                  <MiniMarkdown text={m.text} variant="prose" />
-                </div>
-              )}
-              {m.pending && !m.text && m.tools.length === 0 && m.cards.length === 0 && m.toolErrors.length === 0 && (
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--dm-t3)" }}>
-                  <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
-                </div>
-              )}
-              {m.error && (
-                <div className="flex items-start gap-1.5 text-xs text-red-400/90">
-                  <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-                  <span className="whitespace-pre-wrap break-words">{m.error}</span>
-                </div>
-              )}
-            </div>
-          ),
-        )}
+        {/* Keyed by the minted per-message id, NOT the index: at the message
+            cap every send shifts indexes, which would reattach per-card
+            component state (an open collision form) to the wrong message. */}
+        {messages.map((m, i) => (
+          <MessageRow key={m.id} message={m} index={i} onEscalate={escalate} />
+        ))}
       </div>
 
       {/* Persist failure: storage writes are throwing (quota / private mode),

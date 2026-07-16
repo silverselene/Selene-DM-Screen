@@ -182,6 +182,48 @@ describe("origin allowlist", () => {
     expect(blocked.acao).toBe("https://evil.example.com");
   });
 
+  /** OPTIONS preflight carrying the Chromium Private Network Access request
+   *  header, as sent by a public-origin page fetching a loopback service. */
+  function preflightPna(p: number, origin: string): Promise<{ status: number; pna?: string }> {
+    return new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          host: "127.0.0.1",
+          port: p,
+          method: "OPTIONS",
+          path: "/chat",
+          headers: {
+            Origin: origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Private-Network": "true",
+          },
+        },
+        (res) => {
+          res.resume();
+          resolve({
+            status: res.statusCode ?? 0,
+            pna: res.headers["access-control-allow-private-network"] as string | undefined,
+          });
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  }
+
+  // Chromium PNA: a remote-origin deploy's preflight to the loopback bridge
+  // fails as an opaque network error (misread by the widget as "offline")
+  // unless the response asserts Access-Control-Allow-Private-Network — but
+  // only allowlisted origins may receive the assertion.
+  it("asserts Access-Control-Allow-Private-Network for allowlisted origins only", async () => {
+    const allowed = await preflightPna(port, "https://dm.example.com");
+    expect(allowed.status).toBe(204);
+    expect(allowed.pna).toBe("true");
+    const blocked = await preflightPna(port, "https://evil.example.com");
+    expect(blocked.status).toBe(204);
+    expect(blocked.pna).toBeUndefined();
+  });
+
   /** GET /health with an explicit Host header (the DNS-rebinding probe shape:
    *  same-origin, so no Origin header — only Host betrays the rebound page). */
   function getHealthWithHost(p: number, host: string): Promise<number> {
@@ -318,7 +360,9 @@ describe("chat turn timeout", () => {
 
   it("aborts a wedged turn past the deadline, reports it, and frees the slot", async () => {
     // A turn that never completes on its own — it hangs until the server's
-    // timeout aborts it (the real SDK throws on abort; mirror that).
+    // timeout aborts it. Throwing on abort is runChatTurn's real contract
+    // (an aborted turn rethrows instead of yielding an error event — pinned
+    // in agent.test.ts), so this mock mirrors production.
     mocks.chatTurnImpl = async function* (abort?: AbortController) {
       yield { type: "text", text: "working" };
       await new Promise<void>((_resolve, rejectHang) => {

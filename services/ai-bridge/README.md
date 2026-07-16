@@ -79,6 +79,28 @@ mid-turn (Stop button, closed tile) aborts the in-flight Agent turn; the server
 guards every write on the response still being writable and not destroyed
 (`canWrite` in `server.ts`), so a disconnect can't crash it.
 
+## Serving the SPA from a remote origin
+
+`AI_BRIDGE_ALLOWED_ORIGINS` makes the bridge *accept* a remote origin, but the
+browser adds gates of its own on a public page fetching `http://127.0.0.1`:
+
+- **Chromium (Chrome/Edge) — Private Network Access.** The browser sends a
+  preflight with `Access-Control-Request-Private-Network: true` before letting
+  a public origin reach a loopback service. The bridge answers it
+  (`Access-Control-Allow-Private-Network: true`) for allowlisted origins, so
+  this path works once the origin is in `AI_BRIDGE_ALLOWED_ORIGINS`. Chromium's
+  PNA rollout also requires the *initiating page* to be a secure context
+  (https) — serve the SPA over https if chat stays blocked.
+- **Safari — mixed content.** Safari blocks `http://127.0.0.1` subresource
+  fetches from an https page outright (it doesn't exempt loopback the way
+  Chromium/Firefox do), with no bridge-side fix. Use Chrome/Edge/Firefox for a
+  remote https deploy, or serve the SPA from a local origin.
+
+When one of these gates (rather than a stopped bridge) blocks the fetch, the
+widget can only see an opaque network error, so its banner says the bridge
+isn't running — if you're on a remote origin and the bridge *is* running,
+check these gates first.
+
 ## Billing / auth
 
 By default the bridge draws on your **Claude subscription** and refuses to touch

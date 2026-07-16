@@ -1,16 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // The real query() spawns the Claude Code subprocess; capture its options
 // instead so we can assert on the exact tool-gate configuration handed to the
-// SDK. The generator yields nothing — runChatTurn just drains it.
+// SDK. The generator yields nothing (runChatTurn just drains it) unless a test
+// sets `queryError`, in which case it throws — the failing-SDK-turn shape.
 const mocks = vi.hoisted(() => ({
   capturedOptions: undefined as Record<string, unknown> | undefined,
+  queryError: undefined as Error | undefined,
 }));
 
 vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
   query: (args: { options: Record<string, unknown> }) => {
     mocks.capturedOptions = args.options;
-    return (async function* () {})();
+    return (async function* () {
+      if (mocks.queryError) throw mocks.queryError;
+    })();
   },
 }));
 
@@ -73,5 +77,36 @@ describe("runChatTurn tool gate", () => {
     expect((await canUseTool(someAllowed, {})).behavior).toBe("allow");
     expect((await canUseTool("Read", {})).behavior).toBe("deny");
     expect((await canUseTool("mcp__dndbeyond__ddb_interact", {})).behavior).toBe("deny");
+  });
+});
+
+// The abort contract with server.ts: an aborted turn (timeout or client
+// disconnect) THROWS out of runChatTurn — handleChat's catch owns the wording
+// (friendly "time limit" message when its timeout fired). Flattening the abort
+// into a yielded error event would make that branch dead code and surface the
+// SDK's raw "operation was aborted" to the DM instead.
+describe("runChatTurn abort/error contract", () => {
+  afterEach(() => {
+    mocks.queryError = undefined;
+  });
+
+  it("rethrows an SDK failure when the turn's signal has been aborted", async () => {
+    mocks.queryError = new Error("The operation was aborted");
+    const abort = new AbortController();
+    abort.abort();
+    await expect(async () => {
+      for await (const _ev of runChatTurn("hello", abort)) {
+        /* drain */
+      }
+    }).rejects.toThrow("The operation was aborted");
+  });
+
+  it("yields an error event for a non-abort SDK failure", async () => {
+    mocks.queryError = new Error("boom");
+    const events: Array<{ type: string; message?: string }> = [];
+    for await (const ev of runChatTurn("hello", new AbortController())) {
+      events.push(ev as { type: string; message?: string });
+    }
+    expect(events).toEqual([{ type: "error", message: expect.stringContaining("boom") }]);
   });
 });

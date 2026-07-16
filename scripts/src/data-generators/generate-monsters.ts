@@ -579,11 +579,18 @@ function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
   // block. A miss here is expected and silent — most of the CSV is
   // third-party content (Tome of Beasts, Creature Codex, A5e Monstrous
   // Menagerie) that 5etools-src, an official-WotC-content mirror, doesn't
-  // carry at all. LOSSY name matches (slash-split / parenthetical-stripped)
-  // are logged for review and gated on CR + base-type agreement with the CSV
-  // row, so a different creature's block can't silently overwrite curated stats.
+  // carry at all. Two match shapes are gated on CR + base-type agreement with
+  // the CSV row (and logged for review), so a different creature's block can't
+  // silently overwrite curated stats:
+  //   - LOSSY name matches (slash-split / parenthetical-stripped);
+  //   - CROSS-SOURCE matches — the CSV row's source is one of the Open5e
+  //     third-party books, so even an EXACT name hit in 5etools is a name
+  //     collision with a *different* official creature, not this row's
+  //     creature (e.g. Tome of Beasts and the MM both have creatures of the
+  //     same name). A skipped row stays thin here and the Open5e pass below
+  //     fills it from its own source book instead.
   let bulkMatched = 0;
-  let lossySkipped = 0;
+  let gatedSkipped = 0;
   for (const entry of thin) {
     const key = entry.name.toLowerCase();
     if (rich.has(key)) continue;
@@ -592,21 +599,27 @@ function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
     const candidates = index.get(resolved.key)!;
     const picked = pickMonster(candidates as Array<FiveToolsMonster & { _file: string }>);
     const fields = transformRich(picked);
-    if (resolved.lossy) {
+    const crossSource = OPEN5E_SLUG_BY_CSV_SOURCE[entry.source] !== undefined;
+    if (resolved.lossy || crossSource) {
+      const how = [resolved.lossy ? "lossy name" : null, crossSource ? "cross-source" : null]
+        .filter(Boolean)
+        .join(" + ");
       if (!richMatchesCsv(entry, fields)) {
         console.warn(
-          `  ⚠ lossy match skipped: "${entry.name}" → "${picked.name}" (${picked._file}) — CR ${entry.cr}/${entry.type} vs ${fields.cr}/${fields.type}; entry stays thin`,
+          `  ⚠ ${how} match skipped: "${entry.name}" (${entry.source}) → "${picked.name}" (${picked._file}) — CR ${entry.cr}/${entry.type} vs ${fields.cr}/${fields.type}; entry stays thin`,
         );
-        lossySkipped++;
+        gatedSkipped++;
         continue;
       }
-      console.log(`  ~ lossy match accepted (CR+type agree): "${entry.name}" → "${picked.name}" (${picked._file})`);
+      console.log(
+        `  ~ ${how} match accepted (CR+type agree): "${entry.name}" (${entry.source}) → "${picked.name}" (${picked._file})`,
+      );
     }
     rich.set(key, fields);
     bulkMatched++;
   }
   console.log(`  bulk-matched ${bulkMatched} additional thin entries against official 5etools data`);
-  if (lossySkipped > 0) console.log(`  ${lossySkipped} lossy matches skipped on CR disagreement (stay thin)`);
+  if (gatedSkipped > 0) console.log(`  ${gatedSkipped} lossy/cross-source matches skipped on CR disagreement (stay thin)`);
 
   return rich;
 }

@@ -335,6 +335,24 @@ export function startServer() {
     const path = url.split("?")[0];
 
     if (method === "OPTIONS") {
+      // Chromium Private Network Access: a preflight from a public origin to
+      // this loopback service carries `Access-Control-Request-Private-Network:
+      // true`, and the browser fails the whole request unless the response
+      // asserts the matching allow header. Without it the documented
+      // reverse-proxy deploy (SPA on a remote origin listed in
+      // AI_BRIDGE_ALLOWED_ORIGINS) dies at the preflight with an opaque
+      // network error the widget misreads as "bridge not running". Assert it
+      // only for allowlisted origins — the same set cors() reflects ACAO for —
+      // so a drive-by page's preflight gains nothing. (Safari has no PNA; its
+      // blocker is mixed content instead — see the README's remote-origin
+      // section.)
+      if (
+        req.headers["access-control-request-private-network"] === "true" &&
+        req.headers.origin !== undefined &&
+        ALLOWED_ORIGINS.has(req.headers.origin)
+      ) {
+        res.setHeader("Access-Control-Allow-Private-Network", "true");
+      }
       res.writeHead(204);
       res.end();
       return;

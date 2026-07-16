@@ -193,6 +193,14 @@ export async function* runChatTurn(
       }
     }
   } catch (err) {
+    // An aborted turn must propagate as a THROW, not flatten into a yielded
+    // error event: handleChat's catch owns the abort wording — the friendly
+    // time-limit message when its turn timeout fired, silence on a client
+    // disconnect (no one left to write to). Yielding here instead would hand
+    // the DM the SDK's raw "operation was aborted" and leave that branch dead
+    // code. Detected via the signal, not the error shape, because the SDK's
+    // abort error type isn't part of its public contract.
+    if (abortController?.signal.aborted) throw err;
     yield { type: "error", message: authAwareError(err, auth) };
   }
 }

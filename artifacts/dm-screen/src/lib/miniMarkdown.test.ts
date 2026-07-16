@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseMarkdownBlocks, tokenizeInline } from "./miniMarkdown";
+import { linkHost, parseMarkdownBlocks, tokenizeInline } from "./miniMarkdown";
 
 describe("parseMarkdownBlocks", () => {
   it("parses headings by level", () => {
@@ -105,5 +105,36 @@ describe("tokenizeInline", () => {
     expect(tokenizeInline("[x](javascript:alert)")).toEqual([
       { kind: "text", text: "[x](javascript:alert)" },
     ]);
+  });
+});
+
+// The exfiltration disclosure: a model-authored [text](https://…) link shows
+// only its text, so the destination host must be surfaced beside it — unless
+// the text already names the host (a bare pasted URL needs no second copy).
+describe("linkHost", () => {
+  it("returns the host of an http(s) link whose text hides it", () => {
+    expect(linkHost("https://evil.example/x?d=secret", "the grapple rules")).toBe("evil.example");
+    expect(linkHost("http://evil.example", "click here")).toBe("evil.example");
+  });
+
+  it("is null when the visible text already names the host", () => {
+    expect(linkHost("https://example.com/x", "https://example.com/x")).toBeNull();
+    expect(linkHost("https://example.com/x", "see example.com")).toBeNull();
+    expect(linkHost("https://EXAMPLE.com/x", "example.COM docs")).toBeNull();
+  });
+
+  it("is null for hrefs that carry no host to disclose", () => {
+    expect(linkHost("mailto:dm@example.com", "mail me")).toBeNull();
+    expect(linkHost("/local/path", "local")).toBeNull();
+    expect(linkHost("#anchor", "anchor")).toBeNull();
+  });
+
+  it("discloses a host that only appears as a substring of a larger domain in the text", () => {
+    // The host `ail.com` is a substring of `mail.com`, so a plain includes()
+    // would wrongly treat the link as self-naming and hide the true destination.
+    expect(linkHost("https://ail.com/?d=x", "email me at mail.com")).toBe("ail.com");
+    // Host `evil.com` sits inside the larger domain `notevil.com.example` — the
+    // text does not name evil.com itself, so it must still be disclosed.
+    expect(linkHost("https://evil.com/x", "see notevil.com.example for details")).toBe("evil.com");
   });
 });
