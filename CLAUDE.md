@@ -72,7 +72,7 @@ artifacts/
   dm-screen/                  React 19 + Vite + Tailwind v4 — the only deployable
     src/data/                 Bundled reference data (spells, monsters, weapons, …)
     src/lib/                  localStorage stores, backup/restore, shared UI primitives
-    src/components/widgets/   The eight widgets (AI Chat requires the optional bridge)
+    src/components/widgets/   The nine widgets (AI Chat requires the optional bridge)
     public/                   PWA icons + static assets
     docker/nginx.conf         SPA-aware nginx config used by the Docker image
 packages/

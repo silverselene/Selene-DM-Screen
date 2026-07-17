@@ -18,7 +18,7 @@ widget. Open, close, resize (1×1 or 2×2), and rearrange widgets freely; recent
 widgets are saved in the sidebar for quick restore. Layout persists across
 sessions via `localStorage`.
 
-### Eight widgets
+### Nine widgets
 
 - **Compendium** — search and browse D&D 5.5e rules entries: hand-curated DM
   summaries plus a bulk set of feats, combat actions, skills, senses, and
@@ -212,7 +212,7 @@ artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only dep
   src/data/                  Bundled reference data: spells, monsters,
                              weapons, generators, compendium
   src/lib/                   localStorage stores, backup/restore, shared UI primitives
-  src/components/widgets/    The eight widgets (AI Chat needs the optional bridge)
+  src/components/widgets/    The nine widgets (AI Chat needs the optional bridge)
   public/                    PWA icons + static assets
   docker/nginx.conf          SPA-aware nginx config (used by the Docker image)
   scripts/verify-precache.mjs  Post-build guard: fails the build if a dataset
