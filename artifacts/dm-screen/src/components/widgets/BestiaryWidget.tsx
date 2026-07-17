@@ -375,11 +375,14 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   }, [deferredQuery, sortMode, crFilter]);
 
   // ── Broader thin-entry results when searching ────────────────────────────
-  // Local filter over the ~2,120 thin entries; full-stat-block entries are
-  // excluded (they already appear via localFiltered). Collection is capped at
-  // MAX_RESULTS to keep the list short, but the scan runs the whole dataset so
-  // `total` is the real match count — the footer's "of N" must be a total, not
-  // a floor that silently stops counting at the cap.
+  // Local filter over the thin entries — only 14 of the 2,160, since the
+  // rich-data backfill left nearly the whole dataset carrying a full stat
+  // block. Full-stat-block entries are excluded here (they already appear via
+  // localFiltered), so the bulk pressure both caps guard against lives in
+  // localFiltered, not this path. The MAX_RESULTS cap below is therefore
+  // inert at the current ratio and kept only in case it shifts back; `total`
+  // still counts every match so the footer's "of N" is a real total rather
+  // than a floor that stops at the cap.
   const { thinResults, thinTotal } = useMemo(() => {
     if (!deferredQuery.trim()) return { thinResults: [] as MonsterEntry[], thinTotal: 0 };
     const q = deferredQuery.toLowerCase();

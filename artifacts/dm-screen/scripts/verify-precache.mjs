@@ -48,17 +48,22 @@ console.log(`verify-precache: all ${dataChunks.length} dataset chunks are precac
 // `AI_BRIDGE_PORT` override silently no-ops in the shipped bundle. Assert the
 // baked URL is actually present so that breakage fails the build instead of
 // shipping. (The unit test in aiBridge.test.ts only covers the fallback path.)
-const widgetChunk = assets.find((f) => f.startsWith("AIChatWidget-") && f.endsWith(".js"));
-if (!widgetChunk) {
-  console.error("verify-precache: AIChatWidget-*.js chunk not found — did the lazy-chunk naming change?");
-  process.exit(1);
-}
-const widgetJs = readFileSync(path.join(dist, "assets", widgetChunk), "utf8");
-if (!/https?:\/\/127\.0\.0\.1:\d+/.test(widgetJs)) {
+// Scan every JS asset rather than a single named chunk. Which chunk carries
+// the URL is Rollup's call, not ours: `data-*` above is a name we declare in
+// manualChunks, but the AI-chat chunk's name is derived from the lazy import,
+// and aiBridge.ts lands in a shared chunk the moment a second module imports
+// it at runtime. Neither is the invariant we care about — that's simply "the
+// define injected the URL somewhere in the shipped bundle".
+const jsAssets = assets.filter((f) => f.endsWith(".js"));
+const bakedIn = jsAssets.filter((f) =>
+  /https?:\/\/127\.0\.0\.1:\d+/.test(readFileSync(path.join(dist, "assets", f), "utf8")),
+);
+if (bakedIn.length === 0) {
   console.error(
-    `verify-precache: no baked bridge URL (http://127.0.0.1:<port>) found in assets/${widgetChunk} — ` +
-      "the AI_BRIDGE_URL define in vite.config.ts may have stopped injecting.",
+    "verify-precache: no baked bridge URL (http://127.0.0.1:<port>) found in any of the " +
+      `${jsAssets.length} JS assets — the AI_BRIDGE_URL define in vite.config.ts may have ` +
+      "stopped injecting.",
   );
   process.exit(1);
 }
-console.log("verify-precache: AI-bridge URL define is baked into the widget chunk.");
+console.log(`verify-precache: AI-bridge URL define is baked into ${bakedIn.join(", ")}.`);

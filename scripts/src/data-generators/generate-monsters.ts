@@ -508,12 +508,14 @@ function resolveFiveToolsKey(
 // Numeric CR for agreement checks ("1/2" → 0.5). Null when unparseable — the
 // empty/whitespace string included: Number("") is 0, which would otherwise
 // masquerade as a real CR 0 and let a blank-CR row "agree" with a CR-0 block.
+// Both paths route through the finiteness check so a malformed "n/0" resolves
+// to null rather than Infinity, which would compare equal to another Infinity
+// and read as agreement.
 function crValue(cr: string): number | null {
   const s = cr.trim();
   if (s === "") return null;
   const frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
-  if (frac) return Number(frac[1]) / Number(frac[2]);
-  const n = Number(s);
+  const n = frac ? Number(frac[1]) / Number(frac[2]) : Number(s);
   return Number.isFinite(n) ? n : null;
 }
 
