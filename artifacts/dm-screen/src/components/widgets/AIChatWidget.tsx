@@ -32,10 +32,19 @@ import {
 // Model catalog for the footer picker — the single source of truth for the menu
 // (the bridge forwards the chosen id opaquely). Session-only selection; defaults
 // to Sonnet 5 + Medium effort.
+//
+// Ids are ALIASES (never dated snapshots): this bundle is SW-precached, so a
+// hardcoded dated id can outlive the model's retirement and fail every turn
+// from a cached SPA with no remedy short of a redeploy. Aliases track the
+// current snapshot server-side. The "" id is the escape hatch for exactly that
+// scenario: it omits `model` from the request entirely, so the bridge falls
+// back to AI_BRIDGE_MODEL / the Agent-SDK default — which keeps working no
+// matter how stale this list gets.
 const MODELS = [
   { id: "claude-opus-4-8", label: "Opus 4.8" },
   { id: "claude-sonnet-5", label: "Sonnet 5" },
-  { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5" },
+  { id: "claude-haiku-4-5", label: "Haiku 4.5" },
+  { id: "", label: "Default" },
 ] as const;
 const EFFORTS: { id: EffortLevel; label: string }[] = [
   { id: "low", label: "Low" },
@@ -53,10 +62,24 @@ const BILLING_LABELS: Record<string, string> = {
   apiKey: "API key (metered)",
 };
 
+// A `done` event's non-success `subtype` is a raw Agent-SDK enum
+// ("error_max_turns") — map the known ones to plain language for the error
+// bubble, mirroring BILLING_LABELS. An unknown future subtype falls through
+// verbatim (still better than swallowing it).
+const STOP_REASON_LABELS: Record<string, string> = {
+  error_max_turns: "it hit the per-turn tool-call limit",
+  error_during_execution: "something failed while it was working",
+};
+
 /**
  * A compact footer dropdown (model or effort). Portals via AnchoredDropdown so
  * the menu escapes the tile's `overflow: hidden`. Selection is applied to the
  * next turn only — picking a value never aborts or resets the conversation.
+ *
+ * Keyboard: the listbox role promises arrow-key behavior, so it's implemented —
+ * opening moves focus to the selected option, ArrowUp/Down roves (wrapping),
+ * Enter/Space commit (native button click), Escape closes and returns focus to
+ * the trigger. Focus is moved via refs because the options live in a portal.
  */
 function FooterPicker<T extends string>({
   value,
@@ -71,7 +94,50 @@ function FooterPicker<T extends string>({
 }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const current = options.find((o) => o.id === value);
+
+  // Focus the selected option once the portal content exists. AnchoredDropdown
+  // mounts its children a tick after `open` flips (it must measure the anchor
+  // rect first), so the focus move is deferred one frame.
+  useEffect(() => {
+    if (!open) return;
+    const raf = requestAnimationFrame(() => {
+      const idx = Math.max(0, options.findIndex((o) => o.id === value));
+      optionRefs.current[idx]?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+    // Focus only on open/close — not when `value` changes while the menu is up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const close = (refocusTrigger: boolean) => {
+    setOpen(false);
+    if (refocusTrigger) anchor?.focus();
+  };
+
+  const onOptionKeyDown = (e: React.KeyboardEvent, i: number) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      optionRefs.current[(i + 1) % options.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      optionRefs.current[(i - 1 + options.length) % options.length]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      optionRefs.current[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      optionRefs.current[options.length - 1]?.focus();
+    } else if (e.key === "Escape") {
+      // AnchoredDropdown's own Escape handler also closes; this adds the focus
+      // return (closing is idempotent).
+      close(true);
+    } else if (e.key === "Tab") {
+      close(false);
+    }
+  };
+
   return (
     <>
       <button
@@ -81,15 +147,24 @@ function FooterPicker<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
         className="inline-flex items-center gap-0.5 hover:text-amber-300/90 transition-colors"
       >
         {current?.label ?? value}
         <ChevronDown className="w-2.5 h-2.5 opacity-70" />
       </button>
       <AnchoredDropdown anchor={anchor} open={open} role="listbox" autoWidth onRequestClose={() => setOpen(false)}>
-        {options.map((o) => (
+        {options.map((o, i) => (
           <button
             key={o.id}
+            ref={(el) => {
+              optionRefs.current[i] = el;
+            }}
             type="button"
             role="option"
             aria-selected={o.id === value}
@@ -97,11 +172,12 @@ function FooterPicker<T extends string>({
             // not mousedown; preventDefault on mousedown only stops the press
             // from stealing focus before the click lands.
             onMouseDown={(e) => e.preventDefault()}
+            onKeyDown={(e) => onOptionKeyDown(e, i)}
             onClick={() => {
               onChange(o.id);
-              setOpen(false);
+              close(true);
             }}
-            className={`block w-full text-left px-2 py-1 text-[11px] whitespace-nowrap hover:bg-amber-900/30 transition-colors ${
+            className={`block w-full text-left px-2 py-1 text-[11px] whitespace-nowrap hover:bg-amber-900/30 focus:bg-amber-900/30 outline-none transition-colors ${
               o.id === value ? "text-amber-300" : "text-gray-200"
             }`}
           >
@@ -116,9 +192,10 @@ function FooterPicker<T extends string>({
 // Talks to the optional local AI bridge and streams the assistant reply. When
 // the bridge is unreachable the chat view STAYS mounted and a banner explains
 // why: the bundled-data lookups (/spell, /monster, /rule) need no bridge, so
-// the transcript and composer must remain usable. Only the initial reachability
-// probe replaces the view, via the "checking" screen. The transcript persists
-// to localStorage (CHAT_HISTORY_KEY) through useLocalStorage.
+// the transcript and composer must remain usable — including during the
+// mount-time reachability probe, which surfaces only as a footer chip. The
+// transcript persists to localStorage (CHAT_HISTORY_KEY) through
+// useLocalStorage.
 
 // Message types (ChatMessage / AssistantMessage / UserMessage) live in the
 // React-free @/lib/chatHistory module so the persistence validator can share
@@ -201,7 +278,7 @@ function BridgeDownBanner({
 
 /**
  * One transcript row, memoized: streaming replaces ONLY the target message
- * object per SSE chunk (updateAssistantAt copies the array but keeps every
+ * object per SSE chunk (updateAssistantById copies the array but keeps every
  * other element's identity), so memo limits the per-chunk render to the
  * streaming row instead of re-tokenizing the entire transcript — the cost that
  * made long sessions jank. Props must stay memo-friendly: `onEscalate` is the
@@ -210,12 +287,10 @@ function BridgeDownBanner({
  */
 const MessageRow = memo(function MessageRow({
   message: m,
-  index,
   onEscalate,
 }: {
   message: ChatMessage;
-  index: number;
-  onEscalate: (index: number, query: string) => void;
+  onEscalate: (id: string, query: string) => void;
 }) {
   if (m.role === "user") {
     return (
@@ -263,7 +338,7 @@ const MessageRow = memo(function MessageRow({
           escalated={!!m.escalated}
           onEscalate={(query) => {
             const q = query || m.sourceQuery;
-            if (q) onEscalate(index, q);
+            if (q) onEscalate(m.id, q);
           }}
         />
       )}
@@ -358,11 +433,10 @@ function AIChatSession() {
   // turn's `done` event and echoed back on the next turn so follow-up questions
   // keep context. Resets when the widget remounts (tile closed/reopened).
   const sessionIdRef = useRef<string | null>(null);
-  // Mirror of `messages`, kept current on every render, so an event handler can
-  // read the authoritative length synchronously to compute the index of a
-  // message it is about to append — without relying on a setState updater's
-  // side-effect running before the next line (it does not, because the preceding
-  // setInput marks the fiber dirty and defeats React's eager-state shortcut).
+  // Mirror of `messages`, kept current on every render, so an event handler
+  // (newChat's confirm gate) can read the authoritative transcript
+  // synchronously without depending on `messages` and re-creating on every
+  // streamed token.
   const messagesRef = useRef<ChatMessage[]>(messages);
   messagesRef.current = messages;
   // Mirror of `health`, kept current on every render, so streamTurn can size the
@@ -380,10 +454,9 @@ function AIChatSession() {
   // instant a bridge turn begins and read by the send/escalate guards.
   const sendingRef = useRef(false);
 
-  // Re-read /health and settle the status, WITHOUT flipping through "checking".
-  // The "checking" state replaces the whole view, so any refresh that happens
-  // with a transcript on screen must not route through it or the transcript
-  // would vanish under the DM. Returns the settled status so a caller can word
+  // Re-read /health and settle the status, WITHOUT flipping through "checking"
+  // (which would momentarily swap an "offline"/"blocked" banner for the
+  // connecting chip mid-retry). Returns the settled status so a caller can word
   // its message from it (see the BridgeUnreachableError catch in streamTurn).
   const refreshHealth = useCallback(async (): Promise<SettledStatus> => {
     try {
@@ -409,8 +482,9 @@ function AIChatSession() {
       .catch(() => {});
   }, []);
 
-  // Full probe, including the "checking" screen. Only for mount, where there is
-  // no transcript on screen to protect.
+  // Full probe, flipping through "checking" (the footer chip). Only for mount —
+  // the chat view renders regardless, so nothing on screen is replaced; the
+  // chip just says why the banner/billing line hasn't settled yet.
   const probe = useCallback(async () => {
     setStatus("checking");
     await refreshHealth();
@@ -452,13 +526,20 @@ function AIChatSession() {
     );
   }, [hasChat]);
 
-  // Mutate a specific assistant message by index (escalation targets the clicked
-  // card's message, which may not be the last one).
-  const updateAssistantAt = useCallback(
-    (index: number, fn: (m: AssistantMessage) => AssistantMessage) => {
+  // Mutate a specific assistant message by its minted id (escalation targets
+  // the clicked card's message, which may not be the last one). Keyed by id —
+  // NOT index — so the transcript can change under an in-flight stream: a
+  // local /spell lookup appended mid-turn can push the array past a cap and
+  // trim the front, shifting every index; an id keeps following the message.
+  // A vanished id (the message itself was trimmed, or "New chat" cleared the
+  // list) is a silent no-op, which is exactly right for a stale stream event.
+  const updateAssistantById = useCallback(
+    (id: string, fn: (m: AssistantMessage) => AssistantMessage) => {
       setMessages((prev) => {
+        const index = prev.findIndex((m) => m.id === id);
+        if (index === -1) return prev;
         const m = prev[index];
-        if (!m || m.role !== "assistant") return prev;
+        if (m.role !== "assistant") return prev;
         const next = [...prev];
         next[index] = fn(m);
         return next;
@@ -490,26 +571,46 @@ function AIChatSession() {
   }, []);
 
   // Stream a bridge turn into a specific assistant message (identified by its
-  // index in `messages`). Extracted so both a fresh send and an escalation
+  // minted id). Extracted so both a fresh send and an escalation
   // ("Ask Selene instead") share one implementation — escalation targets the
   // clicked card's message, which may not be the last one. Resolves `true` when
   // this turn settled as the current one (its writes landed), `false` when it
   // was superseded (e.g. "New chat" mid-stream) — so a caller can safely apply
   // follow-up state to the target message only when the turn really owned it.
   const streamTurn = useCallback(
-    async (text: string, targetIndex: number): Promise<boolean> => {
+    async (text: string, targetId: string): Promise<boolean> => {
       sendingRef.current = true;
       setSending(true);
       const abort = new AbortController();
       abortRef.current = abort;
       // This turn's abort controller doubles as its identity token. A turn
       // aborted via "New chat" can settle (reject + run catch/finally, or emit a
-      // buffered event) after the *next* turn has already begun — and because
-      // "New chat" clears the message list, `targetIndex` may now point at the
-      // new turn's message. Gate every turn-global and index-targeted write on
-      // still being the current turn so a stale settlement can't clobber the new
-      // one's sending flags, abort handle, session id, or message content.
+      // buffered event) after the *next* turn has already begun. Gate every
+      // turn-global write on still being the current turn so a stale settlement
+      // can't clobber the new one's sending flags, abort handle, or session id.
+      // (Message writes are already safe on their own: they're keyed by the
+      // minted targetId, which "New chat" removes from the list.)
       const isCurrent = () => abortRef.current === abort;
+      // Refresh the turn-cap snapshot so the stall watchdog stays sized from the
+      // bridge's CURRENT turn cap — stale after a bridge restart with a raised
+      // AI_BRIDGE_TURN_TIMEOUT_MS, where an undersized watchdog would abandon
+      // (and thereby cancel) a still-healthy long turn. Fire-and-forget, NOT
+      // awaited: a blocking /health round-trip on every send is latency on the
+      // hot path, and up to checkHealth's full timeout against a half-open
+      // bridge. THIS turn sizes from the last known snapshot below; the refresh
+      // lands in time for the next one (an operator's raised cap takes effect a
+      // turn later, not never). Health-only, never status — streamChat is the
+      // reachability authority, and a probe losing a race with a busy bridge
+      // must not raise the "bridge down" banner over a turn that's about to
+      // work.
+      void checkHealth()
+        .then((h) => {
+          setHealth(h);
+          healthRef.current = h;
+        })
+        .catch(() => {
+          /* keep the last known health snapshot */
+        });
       try {
         await streamChat(
           text,
@@ -533,13 +634,13 @@ function AIChatSession() {
               refreshBilling();
             }
             if (event.type === "text") {
-              updateAssistantAt(targetIndex, (m) => ({ ...m, text: m.text + event.text }));
+              updateAssistantById(targetId, (m) => ({ ...m, text: m.text + event.text }));
             } else if (event.type === "tool") {
-              updateAssistantAt(targetIndex, (m) => ({ ...m, tools: [...m.tools, friendlyToolName(event.name)] }));
+              updateAssistantById(targetId, (m) => ({ ...m, tools: [...m.tools, friendlyToolName(event.name)] }));
             } else if (event.type === "tool_result") {
-              updateAssistantAt(targetIndex, (m) => ({ ...m, cards: [...m.cards, event] }));
+              updateAssistantById(targetId, (m) => ({ ...m, cards: [...m.cards, event] }));
             } else if (event.type === "tool_error") {
-              updateAssistantAt(targetIndex, (m) => ({
+              updateAssistantById(targetId, (m) => ({
                 ...m,
                 toolErrors: [...m.toolErrors, { tool: friendlyToolName(event.tool), message: event.message }],
               }));
@@ -549,12 +650,14 @@ function AIChatSession() {
               // starts fresh instead of replaying the same failing resume id on
               // every subsequent turn (which would wedge the conversation).
               sessionIdRef.current = null;
-              updateAssistantAt(targetIndex, (m) => ({ ...m, error: event.message, pending: false }));
+              updateAssistantById(targetId, (m) => ({ ...m, error: event.message, pending: false }));
             } else if (event.type === "done") {
               if (event.sessionId) sessionIdRef.current = event.sessionId;
-              updateAssistantAt(targetIndex, (m) => {
+              updateAssistantById(targetId, (m) => {
                 if (event.subtype === "success") return { ...m, text: m.text || event.result, pending: false };
-                return { ...m, pending: false, error: m.error ?? `The assistant stopped early (${event.subtype}).` };
+                // Map the raw SDK subtype to plain language (see STOP_REASON_LABELS).
+                const reason = STOP_REASON_LABELS[event.subtype] ?? event.subtype;
+                return { ...m, pending: false, error: m.error ?? `The assistant stopped early — ${reason}.` };
               });
             }
           },
@@ -571,7 +674,7 @@ function AIChatSession() {
         // the turn that replaced it.
         if (!isCurrent()) return false;
         if (err instanceof DOMException && err.name === "AbortError") {
-          updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false, error: m.text ? undefined : "Cancelled." }));
+          updateAssistantById(targetId, (m) => ({ ...m, pending: false, error: m.text ? undefined : "Cancelled." }));
         } else if (err instanceof BridgeUnreachableError) {
           // A failed POST /chat cannot itself tell "bridge down" from "origin
           // refused": the bridge reflects CORS headers on the 403 for GET
@@ -584,22 +687,23 @@ function AIChatSession() {
           // refused, or a 403 from a live bridge), so this await does not hold
           // the Stop button up for checkHealth's full timeout in practice.
           const settled = await refreshHealth();
-          // Re-gate: `isCurrent` was checked before the await above, and "New
-          // chat" during it would have re-pointed targetIndex at another turn's
-          // message. (refreshHealth's own status/health writes are turn-global
-          // and stay correct either way.)
+          // Re-gate: `isCurrent` was checked before the await above; a "New
+          // chat" during it means this turn's flags/handles are no longer ours
+          // to touch. (refreshHealth's own status/health writes are turn-global
+          // and stay correct either way; the message write below is id-keyed,
+          // so it would no-op regardless.)
           if (!isCurrent()) return false;
           // Raise the banner AND explain it on the message itself. The banner
           // sits above a still-mounted chat view (bundled-data lookups work
           // without the bridge), so this bubble does render — without it the
           // turn would just stop with no reason given.
-          updateAssistantAt(targetIndex, (m) => ({
+          updateAssistantById(targetId, (m) => ({
             ...m,
             pending: false,
             error: settled === "blocked" ? BRIDGE_BLOCKED_MESSAGE : BRIDGE_DOWN_MESSAGE,
           }));
         } else {
-          updateAssistantAt(targetIndex, (m) => ({
+          updateAssistantById(targetId, (m) => ({
             ...m,
             pending: false,
             error: err instanceof Error ? err.message : String(err),
@@ -608,7 +712,7 @@ function AIChatSession() {
         return true;
       } finally {
         if (isCurrent()) {
-          updateAssistantAt(targetIndex, (m) => ({ ...m, pending: false }));
+          updateAssistantById(targetId, (m) => ({ ...m, pending: false }));
           sendingRef.current = false;
           setSending(false);
           abortRef.current = null;
@@ -616,7 +720,7 @@ function AIChatSession() {
       }
       return true;
     },
-    [updateAssistantAt, model, effort, refreshHealth, refreshBilling],
+    [updateAssistantById, model, effort, refreshHealth, refreshBilling],
   );
 
   // Build the local answer for a message, or null if it should go to the bridge.
@@ -648,15 +752,19 @@ function AIChatSession() {
       newChat();
       return;
     }
-    if (sendingRef.current) return;
 
+    // Local lookups are routed BEFORE the in-flight guard: /spell etc. read
+    // bundled data and never touch the bridge's single turn slot, so blocking
+    // them while a turn streams would be a silent no-op with zero feedback.
+    // The append is safe under an in-flight stream because stream writes are
+    // keyed by message id, not index (see updateAssistantById), and the
+    // updater form composes with any queued stream setState.
     const routed = routeLocal(text);
-    setInput("");
-    // A deliberate send re-pins the transcript so the reply is in view even if
-    // the DM had scrolled up beforehand.
-    pinnedRef.current = true;
-
     if (routed) {
+      setInput("");
+      // A deliberate send re-pins the transcript so the reply is in view even
+      // if the DM had scrolled up beforehand.
+      pinnedRef.current = true;
       // Answered from bundled data — no bridge call, no tokens. Keep sourceQuery
       // (the command arg for a lookup, else the raw text) so "Ask Selene instead"
       // sends something sensible to the bridge.
@@ -671,30 +779,34 @@ function AIChatSession() {
       return;
     }
 
-    // Build the next transcript up front and apply BOTH caps here so
-    // targetIndex is the pending assistant's REAL post-cap index. A count-only
-    // formula (`min(len + 2, MAX) − 1`) is wrong now that capChatMessages also
-    // enforces MAX_CHAT_BYTES: the byte cap can drop more messages than the
-    // count cap, which would leave targetIndex pointing past the trimmed array
-    // and the streamed reply written to a stale slot (lost + a stuck "Thinking…"
-    // bubble). capChatMessages keeps most-recent, so the pending assistant is
-    // always the last surviving element → its index is (length − 1). Read from
-    // messagesRef (authoritative), not the `messages` closure (can be stale — a
-    // local answer mutates messages without re-creating this callback).
-    const next = capChatMessages([
-      ...messagesRef.current,
-      { id: mintMessageId(), role: "user", text },
-      { id: mintMessageId(), role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
-    ]);
-    const targetIndex = next.length - 1;
-    setMessages(next);
-    await streamTurn(text, targetIndex);
+    // Bridge-bound: one turn at a time (the bridge itself 429s a second one).
+    // The guard leaves the composer text intact so nothing is lost.
+    if (sendingRef.current) return;
+    setInput("");
+    pinnedRef.current = true;
+
+    // Mint the pending assistant's id up front — it's the stream target.
+    // Id-keyed (not index-keyed) targeting means the caps applied here (or by
+    // any concurrent append) can trim the front of the array freely: the
+    // stream keeps finding its message wherever it lands. capChatMessages
+    // keeps most-recent, so the just-appended pending assistant always
+    // survives. Updater form, not messagesRef: a local lookup can land
+    // between renders, and a snapshot-based write would clobber it.
+    const targetId = mintMessageId();
+    setMessages((prev) =>
+      capChatMessages([
+        ...prev,
+        { id: mintMessageId(), role: "user", text },
+        { id: targetId, role: "assistant", text: "", tools: [], cards: [], toolErrors: [], pending: true },
+      ]),
+    );
+    await streamTurn(text, targetId);
   }, [input, newChat, routeLocal, streamTurn]);
 
   // Escalate a local answer: mark it escalated, flip to pending, and stream the
   // bridge answer into the SAME assistant message (renders below the local card).
   const escalate = useCallback(
-    async (index: number, query: string) => {
+    async (id: string, query: string) => {
       if (sendingRef.current) return;
       // Reset every bridge-answer field, not just the flags: a RETRY (the first
       // escalation failed, gave the link back, and the DM clicked again after
@@ -702,7 +814,7 @@ function AIChatSession() {
       // stale error banner and duplicate any partial text/cards from the failed
       // attempt. The local answer (m.local / m.sourceQuery) is untouched — it's
       // what's being escalated.
-      updateAssistantAt(index, (m) => ({
+      updateAssistantById(id, (m) => ({
         ...m,
         escalated: true,
         pending: true,
@@ -712,7 +824,7 @@ function AIChatSession() {
         cards: [],
         toolErrors: [],
       }));
-      const ownedTurn = await streamTurn(query, index);
+      const ownedTurn = await streamTurn(query, id);
       // `escalated` was set optimistically above and is what hides the
       // "Ask Selene instead" link — a failed or aborted escalation must give
       // the link back, or one transient bridge hiccup removes the affordance
@@ -720,18 +832,30 @@ function AIChatSession() {
       // nothing to show: prose text OR a tool_result card both count as a
       // successful answer (a "look up X" escalation often returns a card with
       // no prose, which must NOT read as a failure). Only reset when this turn
-      // still owned the message ("New chat" mid-stream must not touch whatever
-      // now lives at this index).
+      // still owned the message ("New chat" mid-stream cleared the list; the
+      // id-keyed write below would no-op, but skip it for clarity).
       if (ownedTurn) {
-        updateAssistantAt(index, (m) =>
+        updateAssistantById(id, (m) =>
           m.error || (!m.text && m.cards.length === 0) ? { ...m, escalated: false } : m,
         );
       }
     },
-    [updateAssistantAt, streamTurn],
+    [updateAssistantById, streamTurn],
   );
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
+
+  // Auto-grow the composer with its content (a multi-line prompt in a fixed
+  // 1-row box scrolls invisibly). Height resets to the content height on every
+  // input change; the className's max-h-24 caps growth, past which the
+  // overflow-y-auto scrollbar appears.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !isImeComposing(e)) {
@@ -740,24 +864,18 @@ function AIChatSession() {
     }
   };
 
-  /* ── Checking reachability ── */
-  if (status === "checking") {
-    return (
-      <div className="h-full flex items-center justify-center gap-2 text-xs" style={{ color: "var(--dm-t3)" }}>
-        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting to AI bridge…
-      </div>
-    );
-  }
-
-  /* ── Chat. Rendered for "online" AND for the two bridge-down states: the
-     bundled-data lookups need no bridge, so the composer stays reachable and a
-     banner explains what is (and isn't) available. ── */
+  /* ── Chat. Rendered for EVERY bridge status, including the mount-time
+     "checking" probe: the persisted transcript and the bundled-data lookups
+     (/spell, /monster, /rule) need no bridge, so a wedged half-open bridge
+     must not hold them hostage for the probe's timeout. While "checking", a
+     small chip in the footer says the probe is running; "offline"/"blocked"
+     raise the banner. ── */
   return (
     <div className="h-full flex flex-col min-h-0">
       {(status === "offline" || status === "blocked") && (
-        // refreshHealth, not probe: probe's "checking" state replaces this whole
-        // view, so retrying with a transcript on screen would blank it (and reset
-        // its scroll) for the duration of the probe.
+        // refreshHealth, not probe: probe's "checking" state would drop this
+        // banner (and its wording) for the duration of the retry instead of
+        // resolving in place.
         <BridgeDownBanner
           status={status}
           onRetry={async () => {
@@ -794,8 +912,8 @@ function AIChatSession() {
         {/* Keyed by the minted per-message id, NOT the index: at the message
             cap every send shifts indexes, which would reattach per-card
             component state (an open collision form) to the wrong message. */}
-        {messages.map((m, i) => (
-          <MessageRow key={m.id} message={m} index={i} onEscalate={escalate} />
+        {messages.map((m) => (
+          <MessageRow key={m.id} message={m} onEscalate={escalate} />
         ))}
       </div>
 
@@ -805,8 +923,9 @@ function AIChatSession() {
         <div className="shrink-0 mt-1.5 flex items-start gap-1.5 text-[10px] rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1 text-amber-300/90">
           <AlertTriangle className="w-3 h-3 mt-px shrink-0" />
           <span>
-            Chat history can't be saved — browser storage is full. This conversation will be lost
-            on reload; use New chat to free space.
+            Chat history isn't being saved (browser storage may be full, or blocked in private
+            browsing). This conversation will be lost on reload — starting a New chat or freeing
+            storage elsewhere may fix it.
           </span>
         </div>
       )}
@@ -814,12 +933,13 @@ function AIChatSession() {
       <div className="shrink-0 pt-2 mt-2 border-t" style={{ borderTopColor: "var(--dm-border)" }}>
         <div className="flex items-end gap-1.5">
           <textarea
+            ref={composerRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
             rows={1}
             placeholder="Ask Selene…"
-            className="flex-1 resize-none max-h-24 text-xs px-2 py-1.5 rounded-md bg-black/20 border outline-none focus:border-amber-600/60"
+            className="flex-1 resize-none max-h-24 overflow-y-auto text-xs px-2 py-1.5 rounded-md bg-black/20 border outline-none focus:border-amber-600/60"
             style={{ borderColor: "var(--dm-border)", color: "var(--dm-t2)" }}
           />
           {sending ? (
@@ -846,6 +966,14 @@ function AIChatSession() {
           <span className="opacity-40">·</span>
           <span>Effort:</span>
           <FooterPicker<EffortLevel> value={effort} options={EFFORTS} onChange={setEffort} title="Reasoning effort" />
+          {status === "checking" && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="inline-flex items-center gap-1">
+                <Loader2 className="w-2.5 h-2.5 animate-spin" /> Connecting to AI bridge…
+              </span>
+            </>
+          )}
           {health && (
             <>
               <span className="opacity-40">·</span>

@@ -109,7 +109,12 @@ export function PortalWidget() {
                 <Pencil className="w-3 h-3" />
               </button>
               <button
-                onClick={() => setSavedUrl(null)}
+                onClick={() => {
+                  // Confirm-gated like "New chat": the saved share URL may be
+                  // long and unrecoverable, and this button sits 20 px from
+                  // Edit — a mis-click must not destroy it with no undo.
+                  if (window.confirm("Remove this link?")) setSavedUrl(null);
+                }}
                 title="Remove link"
                 className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors"
               >

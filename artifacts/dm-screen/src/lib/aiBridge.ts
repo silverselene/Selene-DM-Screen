@@ -181,17 +181,27 @@ export const STREAM_STALL_TIMEOUT_MS = 200_000;
 // event delivered before the client gives up.
 export const STREAM_STALL_MARGIN_MS = 20_000;
 
+// Ceiling on the trust extended to the bridge's reported turn cap. The value
+// arrives over the wire from whatever sits on :38900, so an absurd or garbage
+// number (Number.MAX_VALUE, a typo'd env var with an extra digit) must not be
+// allowed to effectively disable the stall watchdog — a wedged bridge would
+// then show "Thinking…" forever. 30 minutes comfortably exceeds any sane
+// AI_BRIDGE_TURN_TIMEOUT_MS; an operator raising the cap past this accepts
+// that the client may abandon (and thereby cancel) a longer-running turn.
+export const MAX_TRUSTED_TURN_TIMEOUT_MS = 30 * 60 * 1000;
+
 /**
  * Client stall-watchdog timeout for a turn, given the bridge's reported per-turn
  * cap (`BridgeHealth.turnTimeoutMs`, possibly absent/untrusted). Always the
- * larger of the built-in floor and `cap + margin`, so the client can never
- * abandon a turn the bridge would still complete — regardless of how high an
- * operator sets AI_BRIDGE_TURN_TIMEOUT_MS.
+ * larger of the built-in floor and `min(cap, ceiling) + margin`, so the client
+ * never abandons a turn the bridge would still complete under any sane
+ * AI_BRIDGE_TURN_TIMEOUT_MS — while an untrusted/garbage cap can't disable the
+ * watchdog outright (see MAX_TRUSTED_TURN_TIMEOUT_MS).
  */
 export function stallTimeoutForTurn(turnTimeoutMs?: number): number {
   const cap =
     typeof turnTimeoutMs === "number" && Number.isFinite(turnTimeoutMs) && turnTimeoutMs > 0
-      ? turnTimeoutMs
+      ? Math.min(turnTimeoutMs, MAX_TRUSTED_TURN_TIMEOUT_MS)
       : 0;
   return Math.max(STREAM_STALL_TIMEOUT_MS, cap + STREAM_STALL_MARGIN_MS);
 }
@@ -255,6 +265,16 @@ export async function streamChat(
   };
   const decoder = new TextDecoder();
   let buffer = "";
+  // A healthy turn always ends with a terminal event (`done`, or the bridge's
+  // own `error`). A stream that closes CLEANLY without one — the bridge process
+  // killed mid-turn, a proxy dropping the connection with a graceful FIN —
+  // would otherwise resolve normally and present whatever partial text made it
+  // through as a finished answer the DM might act on mid-session.
+  let terminal = false;
+  const dispatch = (event: BridgeEvent) => {
+    if (event.type === "done" || event.type === "error") terminal = true;
+    onEvent(event);
+  };
   try {
     armStallTimer();
     while (true) {
@@ -268,7 +288,7 @@ export async function streamChat(
         const record = buffer.slice(0, sep);
         buffer = buffer.slice(sep + 2);
         const event = parseSseRecord(record);
-        if (event) onEvent(event);
+        if (event) dispatch(event);
       }
     }
   } finally {
@@ -281,7 +301,12 @@ export async function streamChat(
   }
   // Flush a trailing record with no final blank line (defensive).
   const tail = parseSseRecord(buffer);
-  if (tail) onEvent(tail);
+  if (tail) dispatch(tail);
+  if (!terminal) {
+    throw new Error(
+      "The connection to the bridge closed before the reply finished — the answer above may be incomplete. Try again.",
+    );
+  }
 }
 
 /**

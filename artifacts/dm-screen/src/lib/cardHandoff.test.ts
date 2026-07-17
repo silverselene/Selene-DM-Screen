@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseLeadingInt,
   parseHp,
+  cardHasParseableHp,
   monsterCardToCombatant,
   characterCardToCombatant,
   characterCardToPlayerDraft,
@@ -50,6 +51,33 @@ describe("parseHp", () => {
   it("falls back to zeros when unparseable or absent", () => {
     expect(parseHp("abc")).toEqual({ cur: 0, max: 0 });
     expect(parseHp(undefined)).toEqual({ cur: 0, max: 0 });
+  });
+});
+
+describe("cardHasParseableHp", () => {
+  // parseHp maps unreadable HP to {0,0}, which renders as a downed combatant —
+  // the add-to-initiative UI checks this first so a parse failure gets an
+  // explicit "set HP manually" note instead of a silent 0/0.
+  it("is true when the hp field carries a number parseHp can read", () => {
+    expect(cardHasParseableHp(monsterCard({ hp: "7 (2d6)" }))).toBe(true);
+    expect(cardHasParseableHp(characterCard({ hp: "18/24" }))).toBe(true);
+  });
+  it("is false for a missing, empty, or numberless hp field", () => {
+    expect(cardHasParseableHp(monsterCard({}))).toBe(false);
+    expect(cardHasParseableHp(monsterCard({ hp: "" }))).toBe(false);
+    expect(cardHasParseableHp(monsterCard({ hp: "unknown" }))).toBe(false);
+    // No fields object at all (summary-only sheet).
+    expect(
+      cardHasParseableHp({ type: "tool_result", tool: "t", kind: "monster", title: "X", markdown: "" }),
+    ).toBe(false);
+  });
+  // A field that parses to a 0 max (a summary sheet showing "0", or "0 (unknown)")
+  // still mints a 0/0 downed combatant, so it must get the manual-HP note — the
+  // guard tracks parseHp's real result, not mere digit-presence.
+  it("is false when the hp field parses to a 0 max even though it has a digit", () => {
+    expect(cardHasParseableHp(monsterCard({ hp: "0" }))).toBe(false);
+    expect(cardHasParseableHp(monsterCard({ hp: "0 (unknown)" }))).toBe(false);
+    expect(cardHasParseableHp(characterCard({ hp: "0/0" }))).toBe(false);
   });
 });
 

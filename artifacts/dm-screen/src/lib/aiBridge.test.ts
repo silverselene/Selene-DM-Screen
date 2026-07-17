@@ -10,6 +10,7 @@ import {
   stallTimeoutForTurn,
   STREAM_STALL_TIMEOUT_MS,
   STREAM_STALL_MARGIN_MS,
+  MAX_TRUSTED_TURN_TIMEOUT_MS,
 } from "./aiBridge";
 
 describe("BRIDGE_URL", () => {
@@ -247,6 +248,19 @@ describe("stallTimeoutForTurn", () => {
     expect(stallTimeoutForTurn(-5)).toBe(STREAM_STALL_TIMEOUT_MS);
     expect(stallTimeoutForTurn(Infinity)).toBe(STREAM_STALL_TIMEOUT_MS);
   });
+
+  // The cap comes over the wire from whatever sits on :38900 — an absurd
+  // finite value must not effectively disable the watchdog (a wedged bridge
+  // would then show "Thinking…" forever).
+  it("clamps an absurd finite cap to the trust ceiling instead of disabling the watchdog", () => {
+    expect(stallTimeoutForTurn(Number.MAX_SAFE_INTEGER)).toBe(
+      MAX_TRUSTED_TURN_TIMEOUT_MS + STREAM_STALL_MARGIN_MS,
+    );
+    // At exactly the ceiling nothing is lost.
+    expect(stallTimeoutForTurn(MAX_TRUSTED_TURN_TIMEOUT_MS)).toBe(
+      MAX_TRUSTED_TURN_TIMEOUT_MS + STREAM_STALL_MARGIN_MS,
+    );
+  });
 });
 
 describe("streamChat stall watchdog", () => {
@@ -296,6 +310,53 @@ describe("streamChat stall watchdog", () => {
       const events: unknown[] = [];
       await streamChat("hi", (e) => events.push(e), undefined, undefined, undefined, undefined, 5000);
       expect(events).toEqual([{ type: "done", result: "ok", subtype: "success" }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("streamChat terminal-event guard", () => {
+  // A stream that closes CLEANLY (graceful FIN — bridge killed mid-turn, a
+  // proxy dropping the connection) without `done`/`error` must not resolve as
+  // success: the partial text would render as a finished answer the DM may
+  // act on mid-session.
+  it("rejects when the stream closes cleanly without a done/error event", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode('event: text\ndata: {"type":"text","text":"partial answ"}\n\n'),
+        );
+        controller.close(); // clean close, no terminal event
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 200 })));
+    try {
+      const events: unknown[] = [];
+      await expect(
+        streamChat("hi", (e) => events.push(e), undefined, undefined, undefined, undefined, 5000),
+      ).rejects.toThrow(/may be incomplete/);
+      // The partial text was still delivered before the rejection.
+      expect(events).toEqual([{ type: "text", text: "partial answ" }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("treats a bridge-reported error event as terminal (no false incompleteness)", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode('event: error\ndata: {"type":"error","message":"boom"}\n\n'),
+        );
+        controller.close();
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 200 })));
+    try {
+      const events: unknown[] = [];
+      await streamChat("hi", (e) => events.push(e), undefined, undefined, undefined, undefined, 5000);
+      expect(events).toEqual([{ type: "error", message: "boom" }]);
     } finally {
       vi.unstubAllGlobals();
     }

@@ -116,16 +116,14 @@ describe("origin allowlist", () => {
   }
 
   beforeEach(async () => {
-    process.env.AI_BRIDGE_PORT = "0";
     process.env.AI_BRIDGE_ALLOWED_ORIGINS = "https://dm.example.com/";
     vi.resetModules();
     const { startServer } = await import("./server");
-    server = await startServer();
+    server = await startServer(0); // ephemeral port so parallel test runs never collide
     port = (server.address() as AddressInfo).port;
   });
 
   afterEach(async () => {
-    delete process.env.AI_BRIDGE_PORT;
     delete process.env.AI_BRIDGE_ALLOWED_ORIGINS;
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
@@ -174,12 +172,64 @@ describe("origin allowlist", () => {
 
   // Without a reflected ACAO the browser turns the 403 into an opaque network
   // error the widget can't tell apart from "bridge not running" — so a blocked
-  // origin's /health MUST still echo Access-Control-Allow-Origin (the body is
-  // non-sensitive; /chat stays hard-blocked at its CORS preflight).
-  it("reflects ACAO on the /health 403 so the browser can read the block", async () => {
+  // LOCAL origin's /health must still echo Access-Control-Allow-Origin (the
+  // body is non-sensitive; /chat stays hard-blocked at its CORS preflight).
+  // Local origins are the ones the "add it to AI_BRIDGE_ALLOWED_ORIGINS"
+  // remedy exists for: a different localhost port, a LAN IP serve.
+  it("reflects ACAO on the /health 403 for loopback/LAN origins so the widget can read the block", async () => {
+    for (const origin of ["http://localhost:5173", "http://192.168.1.50:38080", "http://[::1]:9999"]) {
+      const blocked = await getHealth(port, origin);
+      expect(blocked.status).toBe(403);
+      expect(blocked.acao).toBe(origin);
+    }
+  });
+
+  // …but a PUBLIC origin's 403 stays opaque: reflecting ACAO there would let
+  // any web page the DM visits distinguish "bridge up" (readable 403) from
+  // "bridge down" (network error) — a fingerprint for a service fronting
+  // their Claude subscription.
+  it("does not reflect ACAO on the 403 for public origins (no drive-by fingerprinting)", async () => {
     const blocked = await getHealth(port, "https://evil.example.com");
     expect(blocked.status).toBe(403);
-    expect(blocked.acao).toBe("https://evil.example.com");
+    expect(blocked.acao).toBeUndefined();
+  });
+
+  it("classifies origins as private (loopback/RFC1918/link-local) vs public", async () => {
+    const { isPrivateOrigin } = await import("./server");
+    for (const priv of [
+      "http://localhost:38080",
+      "http://sub.localhost:1",
+      "http://127.0.0.1:38080",
+      "http://127.5.5.5",
+      "http://[::1]:38080",
+      "http://10.0.0.2",
+      "http://172.16.0.1",
+      "http://172.31.255.255",
+      "http://192.168.0.10:8080",
+      "http://169.254.1.1",
+      "http://[0:0:0:0:0:0:0:1]:38080", // expanded IPv6 loopback (URL-normalized to ::1)
+      "http://[fd00::1]:38080", // unique-local fc00::/7
+      "http://[fc00::abcd]", // unique-local fc00::/7
+      "http://[fe80::1]", // link-local fe80::/10
+      "http://[feb0::1]", // link-local (upper end of fe80::/10)
+    ]) {
+      expect(isPrivateOrigin(priv), priv).toBe(true);
+    }
+    for (const pub of [
+      "https://evil.example.com",
+      "http://172.15.0.1", // just outside 172.16/12
+      "http://172.32.0.1",
+      "http://11.0.0.1",
+      "http://192.169.0.1",
+      "http://8.8.8.8",
+      "http://[2001:db8::1]", // public IPv6 (documentation range)
+      "http://[fe00::1]", // just below fe80::/10
+      "http://[fec0::1]", // above fe80::/10 (deprecated site-local, treated public)
+      "not-a-url",
+      "null", // the literal "null" Origin an opaque sandbox sends
+    ]) {
+      expect(isPrivateOrigin(pub), pub).toBe(false);
+    }
   });
 
   /** OPTIONS preflight carrying the Chromium Private Network Access request
@@ -256,15 +306,13 @@ describe("chat concurrency cap", () => {
   let port: number;
 
   beforeEach(async () => {
-    process.env.AI_BRIDGE_PORT = "0";
     vi.resetModules();
     const { startServer } = await import("./server");
-    server = await startServer();
+    server = await startServer(0); // ephemeral port so parallel test runs never collide
     port = (server.address() as AddressInfo).port;
   });
 
   afterEach(async () => {
-    delete process.env.AI_BRIDGE_PORT;
     mocks.chatTurnImpl = undefined;
     // Sever any stream a failed assertion left open, so close() can't hang.
     server.closeAllConnections();
@@ -324,16 +372,14 @@ describe("chat turn timeout", () => {
   let port: number;
 
   beforeEach(async () => {
-    process.env.AI_BRIDGE_PORT = "0";
     process.env.AI_BRIDGE_TURN_TIMEOUT_MS = "150"; // fast deadline for the test
     vi.resetModules();
     const { startServer } = await import("./server");
-    server = await startServer();
+    server = await startServer(0); // ephemeral port so parallel test runs never collide
     port = (server.address() as AddressInfo).port;
   });
 
   afterEach(async () => {
-    delete process.env.AI_BRIDGE_PORT;
     delete process.env.AI_BRIDGE_TURN_TIMEOUT_MS;
     mocks.chatTurnImpl = undefined;
     server.closeAllConnections();
@@ -412,15 +458,13 @@ describe("client disconnect mid-stream", () => {
   let port: number;
 
   beforeEach(async () => {
-    process.env.AI_BRIDGE_PORT = "0"; // ephemeral port, read before ./config loads
     vi.resetModules();
     const { startServer } = await import("./server");
-    server = await startServer();
+    server = await startServer(0); // ephemeral port so parallel test runs never collide
     port = (server.address() as AddressInfo).port;
   });
 
   afterEach(async () => {
-    delete process.env.AI_BRIDGE_PORT;
     mocks.chatTurnImpl = undefined;
     // Await close so a torn-down-mid-stream socket from the prior test can't
     // still be alive when the next beforeEach imports a fresh module graph.
@@ -431,6 +475,7 @@ describe("client disconnect mid-stream", () => {
     mocks.chatTurnImpl = async function* () {
       yield { type: "text", text: "one" };
       yield { type: "text", text: "two" };
+      yield { type: "done", subtype: "success", result: "onetwo" };
     };
 
     const { events, ended } = await collectStream(port);
@@ -439,6 +484,27 @@ describe("client disconnect mid-stream", () => {
     expect(events).toEqual([
       { event: "text", data: { type: "text", text: "one" } },
       { event: "text", data: { type: "text", text: "two" } },
+      { event: "done", data: { type: "done", subtype: "success", result: "onetwo" } },
+    ]);
+  });
+
+  // A turn's generator that completes WITHOUT yielding a terminal event (an SDK
+  // stream that ends with no `result` message) must not close the response
+  // silently: the widget reads a clean close with no done/error as an
+  // incomplete answer. The server synthesizes an error terminal so the DM is
+  // told, rather than shown a partial reply as finished.
+  it("synthesizes an error terminal when the turn ends without a done/error event", async () => {
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "partial" };
+      // returns here — no `done`
+    };
+
+    const { events, ended } = await collectStream(port);
+
+    expect(ended).toBe(true);
+    expect(events).toEqual([
+      { event: "text", data: { type: "text", text: "partial" } },
+      { event: "error", data: { type: "error", message: "The turn ended without a final result." } },
     ]);
   });
 

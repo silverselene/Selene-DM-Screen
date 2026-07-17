@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Swords, UserPlus } from "lucide-react";
 import type { PlayerCharacter } from "@/types";
 import {
+  cardHasParseableHp,
   cardSpellWeaponLists,
   characterCardToCombatant,
   characterCardToPlayerDraft,
@@ -69,6 +70,13 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
     }
     // "cancelled": the DM declined the duplicate confirm — no flash, nothing added.
     if (result === "cancelled") return;
+    // A card whose HP didn't parse (summary-only sheet, drifted format) minted
+    // a 0/0 combatant — added fine, but it renders as downed. Say so, instead
+    // of a bare success flash that leaves the DM to discover it mid-combat.
+    if (!cardHasParseableHp(card)) {
+      showFlash("Added — no HP on card, set it in Initiative");
+      return;
+    }
     showFlash("Added to Initiative ✓");
   };
 

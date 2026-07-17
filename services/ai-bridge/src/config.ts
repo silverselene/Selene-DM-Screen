@@ -2,11 +2,21 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
-function envInt(name: string, fallback: number): number {
+/**
+ * Read a TCP port from the environment, failing startup loudly on garbage —
+ * matching vite.config.ts, which throws on the same var. A silent fallback
+ * here would split the two sides (`AI_BRIDGE_PORT=0` binds an ephemeral port
+ * while the SPA bakes in :38900 → permanent "bridge offline" with no error
+ * anywhere). Exported for unit tests.
+ */
+export function envPort(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) ? n : fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    throw new Error(`Invalid ${name} value: "${raw}" (expected an integer 1–65535)`);
+  }
+  return n;
 }
 
 /**
@@ -61,7 +71,7 @@ export const config = {
   /**
    * Distinct from the SPA's 38080 so the two never collide when both run.
    */
-  port: envInt("AI_BRIDGE_PORT", 38900),
+  port: envPort("AI_BRIDGE_PORT", 38900),
   /**
    * Browser origins allowed to reach the bridge. See parseAllowedOrigins.
    * Note the coupling: changing AI_BRIDGE_PORT also requires the AI Chat

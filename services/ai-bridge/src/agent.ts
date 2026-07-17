@@ -23,9 +23,11 @@ function authAwareError(err: unknown, auth: ResolvedAuth): string {
   const msg = err instanceof Error ? err.message : String(err);
   const looksLikeAuth = /auth|api key|api_key|credential|401|unauthor|login/i.test(msg);
   if (looksLikeAuth && auth.mode === "subscription") {
+    // Plain text, no markdown: the widget renders error events as raw text, so
+    // backticks would reach the DM as literal characters.
     return (
       `${msg}\n\nThe bridge is in subscription mode. Ensure you are logged in with the ` +
-      `\`claude\` CLI, or run \`claude setup-token\` and export CLAUDE_CODE_OAUTH_TOKEN. ` +
+      `claude CLI, or run "claude setup-token" and export CLAUDE_CODE_OAUTH_TOKEN. ` +
       `(To use a metered API key instead, set AI_BRIDGE_ALLOW_API_KEY=1 and ANTHROPIC_API_KEY.)`
     );
   }

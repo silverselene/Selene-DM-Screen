@@ -86,6 +86,48 @@ function isAllowedHost(req: IncomingMessage): boolean {
   }
 }
 
+/**
+ * True when a browser Origin points at a loopback/LAN host — localhost names,
+ * IPv4 127/8, RFC1918 and link-local ranges, plus their IPv6 analogues
+ * (::1 loopback, fc00::/7 unique-local, fe80::/10 link-local). Gates the
+ * /health 403 ACAO reflection below: a local-but-unlisted SPA origin (different
+ * port, LAN IP, IPv6 serve) still gets a readable 403 so the widget can say
+ * "blocked, fix the allowlist", while a drive-by public web page's probe stays
+ * an opaque network error — otherwise any site the DM visits could fingerprint
+ * that a service fronting their Claude subscription is running. Exported for
+ * tests.
+ */
+export function isPrivateOrigin(origin: string): boolean {
+  let hostname: string;
+  try {
+    hostname = new URL(origin).hostname;
+  } catch {
+    return false;
+  }
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+  // IPv6 hostnames arrive bracketed and URL-normalized to canonical/compressed
+  // form (e.g. "[0:0:0:0:0:0:0:1]" → "[::1]"), so prefix checks are reliable.
+  if (hostname.startsWith("[") && hostname.endsWith("]")) {
+    const v6 = hostname.slice(1, -1).toLowerCase();
+    return (
+      v6 === "::1" || // loopback
+      v6.startsWith("fc") || // unique-local fc00::/7
+      v6.startsWith("fd") || // unique-local fc00::/7
+      /^fe[89ab]/.test(v6) // link-local fe80::/10 (fe80–febf)
+    );
+  }
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+  if (!v4) return false;
+  const [a, b] = [Number(v4[1]), Number(v4[2])];
+  return (
+    a === 127 || // loopback
+    a === 10 || // RFC1918
+    (a === 172 && b >= 16 && b <= 31) || // RFC1918
+    (a === 192 && b === 168) || // RFC1918
+    (a === 169 && b === 254) // link-local
+  );
+}
+
 function cors(req: IncomingMessage, res: ServerResponse) {
   const origin = req.headers.origin;
   if (origin !== undefined && ALLOWED_ORIGINS.has(origin)) {
@@ -220,6 +262,13 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
   const abort = new AbortController();
   let timedOut = false;
   let finished = false;
+  // Whether a terminal (`done`/`error`) event has been written to the client.
+  // The widget's stream reader treats a clean close WITHOUT one as an
+  // incomplete answer (aiBridge.ts), so the finally synthesizes an error
+  // terminal if the loop ever exits without having sent one — e.g. an SDK
+  // stream that ends without a `result` message, so runChatTurn returns having
+  // yielded no `done`.
+  let sentTerminal = false;
   let turnTimeout: NodeJS.Timeout | undefined;
   let wedgeTimer: NodeJS.Timeout | undefined;
   // Calling the generator function only *creates* the iterator (nothing runs
@@ -298,12 +347,14 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
               ? `Chat turn exceeded the ${TURN_TIMEOUT_MS / 1000}s time limit and was stopped.`
               : "Chat turn was cancelled.",
           });
+          sentTerminal = true;
         }
         break;
       }
       if (result.done) break;
       if (!canWrite(res)) break;
       sse(res, result.value.type, result.value);
+      if (result.value.type === "done" || result.value.type === "error") sentTerminal = true;
     }
   } catch (err) {
     if (canWrite(res)) {
@@ -313,6 +364,7 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
           ? err.message
           : String(err);
       sse(res, "error", { type: "error", message });
+      sentTerminal = true;
     }
   } finally {
     finished = true;
@@ -324,11 +376,24 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
     // and would reintroduce the exact hang the wedge race exists to prevent.
     void turn.return?.(undefined)?.catch(() => {});
     releaseSlot();
-    if (canWrite(res)) res.end();
+    if (canWrite(res)) {
+      // Never close cleanly without a terminal event: the widget would present
+      // the partial reply as complete-but-truncated (see sentTerminal).
+      if (!sentTerminal) {
+        sse(res, "error", { type: "error", message: "The turn ended without a final result." });
+      }
+      res.end();
+    }
   }
 }
 
-export function startServer() {
+/**
+ * `port` override exists for tests, which bind 0 (kernel-assigned ephemeral) to
+ * avoid collisions. The env-var path (config.port via envPort) deliberately
+ * REJECTS 0 — an operator's AI_BRIDGE_PORT=0 would bind a random port while the
+ * SPA bakes in :38900, a permanent silent "bridge offline".
+ */
+export function startServer(port: number = config.port) {
   const server = createServer((req, res) => {
     cors(req, res);
     const { method = "GET", url = "/" } = req;
@@ -376,8 +441,14 @@ export function startServer() {
       // from "bridge not running" (remedy: start it). The health body carries
       // nothing sensitive, and /chat stays hard-blocked: its application/json
       // POST triggers a CORS preflight that gets no ACAO and never reaches here.
+      // Reflection is limited to loopback/LAN origins (see isPrivateOrigin):
+      // that covers every misconfigured-but-local SPA the message exists for,
+      // without letting an arbitrary public web page distinguish "bridge up"
+      // from "bridge down". (The cost: a remote-origin reverse-proxy deploy
+      // that forgot the allowlist reads as "offline" instead of "blocked" —
+      // the README's remote-origin section is the remedy there.)
       const origin = req.headers.origin;
-      if (method === "GET" && path === "/health" && origin !== undefined) {
+      if (method === "GET" && path === "/health" && origin !== undefined && isPrivateOrigin(origin)) {
         res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Vary", "Origin");
       }
@@ -416,6 +487,6 @@ export function startServer() {
 
   return new Promise<ReturnType<typeof createServer>>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(config.port, config.host, () => resolve(server));
+    server.listen(port, config.host, () => resolve(server));
   });
 }

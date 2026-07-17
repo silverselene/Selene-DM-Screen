@@ -376,20 +376,23 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
 
   // ── Broader thin-entry results when searching ────────────────────────────
   // Local filter over the ~2,120 thin entries; full-stat-block entries are
-  // excluded (they already appear via localFiltered). Capped to keep the
-  // list short.
-  const thinResults = useMemo(() => {
-    if (!deferredQuery.trim()) return [] as MonsterEntry[];
+  // excluded (they already appear via localFiltered). Collection is capped at
+  // MAX_RESULTS to keep the list short, but the scan runs the whole dataset so
+  // `total` is the real match count — the footer's "of N" must be a total, not
+  // a floor that silently stops counting at the cap.
+  const { thinResults, thinTotal } = useMemo(() => {
+    if (!deferredQuery.trim()) return { thinResults: [] as MonsterEntry[], thinTotal: 0 };
     const q = deferredQuery.toLowerCase();
     const hits: MonsterEntry[] = [];
+    let total = 0;
     for (const m of monsters) {
       if (hasFullStatBlock(m)) continue;
       if (m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q)) {
-        hits.push(m);
-        if (hits.length >= 200) break;
+        total++;
+        if (hits.length < MAX_RESULTS) hits.push(m);
       }
     }
-    return hits;
+    return { thinResults: hits, thinTotal: total };
   }, [deferredQuery]);
 
   // Merge rich + thin for display when searching, capped: a broad query (or a
@@ -404,8 +407,12 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
       ? [...localFiltered, ...thinResults].sort((a, b) =>
           sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr))
       : localFiltered;
-    return { visibleList: merged.slice(0, cap).map(toUnified), totalResults: merged.length };
-  }, [isFiltered, deferredQuery, localFiltered, thinResults, sortMode]);
+    // thinResults is collection-capped; thinTotal carries the matches beyond
+    // the cap so the footer total is real (thinTotal === thinResults.length
+    // when nothing was cut).
+    const total = merged.length + (thinTotal - thinResults.length);
+    return { visibleList: merged.slice(0, cap).map(toUnified), totalResults: total };
+  }, [isFiltered, deferredQuery, localFiltered, thinResults, thinTotal, sortMode]);
 
   const handleBack = () => {
     setSelected(null);
@@ -483,7 +490,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
         ))}
         {!isFiltered && totalResults > UNFILTERED_PREVIEW && (
           <div className="text-center py-2 text-[10px] text-gray-600">
-            Showing {UNFILTERED_PREVIEW} of {totalResults} — search to filter
+            Showing {UNFILTERED_PREVIEW} of {totalResults.toLocaleString()} — search to filter
           </div>
         )}
         {isFiltered && totalResults > MAX_RESULTS && (

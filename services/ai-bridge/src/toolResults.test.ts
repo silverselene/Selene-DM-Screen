@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseToolResult, extractToolResultText } from "./toolResults";
+import {
+  parseToolResult,
+  extractToolResultText,
+  capCardMarkdown,
+  MAX_CARD_MARKDOWN_CHARS,
+} from "./toolResults";
 
 const MONSTER_MD = `# Goblin
 *Small humanoid, neutral evil*
@@ -443,6 +448,29 @@ describe("parseToolResult — generic + degradation", () => {
     expect(ev.fields ?? {}).toEqual({});
     expect(ev.markdown).toBe(garbled);
     expect(ev.title).toBe("Goblin — AC fifteen, HP seven"); // no heading → falls back to the text's first line
+  });
+});
+
+describe("card markdown size cap", () => {
+  it("leaves normal-sized markdown untouched", () => {
+    expect(capCardMarkdown("short")).toBe("short");
+  });
+
+  // One oversized result (ddb_read_book returning a chapter) must not ride
+  // into the widget's persisted transcript, where a single message can blow
+  // the 900 KB store budget and backup's 1 MB per-value restore cap.
+  it("truncates an oversized result with a visible marker", () => {
+    const capped = capCardMarkdown("x".repeat(MAX_CARD_MARKDOWN_CHARS + 5_000));
+    expect(capped.length).toBe(MAX_CARD_MARKDOWN_CHARS);
+    expect(capped.endsWith("… (result truncated — ask Selene for a specific part)")).toBe(true);
+  });
+
+  it("applies the cap to parsed cards AFTER field extraction (fields survive)", () => {
+    const huge = MONSTER_MD + "\n\n## Lore\n" + "y".repeat(MAX_CARD_MARKDOWN_CHARS);
+    const ev = parseToolResult("ddb_get_monster", huge)!;
+    expect(ev.markdown.length).toBe(MAX_CARD_MARKDOWN_CHARS);
+    expect(ev.fields).toMatchObject({ ac: "15 (leather armor, shield)", hp: "7 (2d6)" });
+    expect(ev.title).toBe("Goblin");
   });
 });
 

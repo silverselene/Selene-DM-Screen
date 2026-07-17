@@ -4,6 +4,7 @@ import {
   MAX_CHAT_MESSAGES,
   MAX_CHAT_BYTES,
   capChatMessages,
+  clampOversizedMessage,
   validateCard,
   validateChatHistory,
   hasPersistedChat,
@@ -130,10 +131,39 @@ describe("capChatMessages", () => {
     expect((out[0] as { text: string }).text.startsWith("m0 ")).toBe(false);
   });
 
-  it("always keeps the newest message even if it alone exceeds the budget", () => {
+  // A message that alone exceeds the budget can't be dropped (it's the newest,
+  // which the cap always keeps) — so its bulky strings are trimmed in place.
+  // Untrimmed it would pass 900 KB and eventually backup's 1 MB per-value cap,
+  // where the transcript exports fine but is SILENTLY SKIPPED on restore.
+  it("keeps but trims the newest message when it alone exceeds the budget", () => {
     const huge: ChatMessage = { id: "huge", role: "user", text: "x".repeat(MAX_CHAT_BYTES + 100) };
     const out = capChatMessages([...mk(3), huge]);
-    expect(out).toEqual([huge]);
+    // Trimming the newest brings it well under budget, so the older messages
+    // survive too (dropping them is only for genuine multi-message overflow).
+    expect(out).toHaveLength(4);
+    const last = out[out.length - 1];
+    expect(last.id).toBe("huge");
+    expect((last as { text: string }).text.endsWith("… (trimmed to fit saved history)")).toBe(true);
+    expect(JSON.stringify(out).length).toBeLessThanOrEqual(MAX_CHAT_BYTES);
+  });
+
+  it("trims an oversized lone card message (e.g. a huge book excerpt) under the budget", () => {
+    const huge: ChatMessage = {
+      id: "card",
+      role: "assistant",
+      text: "",
+      tools: [],
+      cards: [goodCard({ markdown: "m".repeat(MAX_CHAT_BYTES) }) as never],
+      toolErrors: [],
+      pending: false,
+    };
+    const out = capChatMessages([huge]);
+    expect(out).toHaveLength(1);
+    expect(JSON.stringify(out).length).toBeLessThanOrEqual(MAX_CHAT_BYTES);
+    const m = out[0] as Extract<ChatMessage, { role: "assistant" }>;
+    // The card survives with its identity; only the markdown body is trimmed.
+    expect(m.cards[0].title).toBe("Goblin");
+    expect(m.cards[0].markdown.length).toBeLessThan(MAX_CHAT_BYTES);
   });
 
   it("keeps the transcript under the byte budget on restore too", () => {
@@ -141,6 +171,53 @@ describe("capChatMessages", () => {
     const out = validateChatHistory(msgs)!;
     expect(JSON.stringify(out).length).toBeLessThanOrEqual(MAX_CHAT_BYTES);
     expect((out[out.length - 1] as { text: string }).text.startsWith("m7 ")).toBe(true);
+  });
+});
+
+describe("clampOversizedMessage", () => {
+  it("returns the same reference for a message within the budget", () => {
+    const m: ChatMessage = { id: "ok", role: "user", text: "small" };
+    expect(clampOversizedMessage(m)).toBe(m);
+  });
+
+  it("trims cards nested inside a LocalAnswer too", () => {
+    const m: ChatMessage = {
+      id: "local",
+      role: "assistant",
+      text: "",
+      tools: [],
+      cards: [],
+      toolErrors: [],
+      pending: false,
+      local: { card: goodCard({ markdown: "z".repeat(MAX_CHAT_BYTES) }) as never },
+    };
+    const out = clampOversizedMessage(m);
+    expect(out).not.toBe(m);
+    expect(JSON.stringify(out).length + 1).toBeLessThanOrEqual(MAX_CHAT_BYTES);
+    const local = (out as Extract<ChatMessage, { role: "assistant" }>).local!;
+    expect(local.card!.markdown.length).toBeLessThan(MAX_CHAT_BYTES);
+    expect(local.card!.title).toBe("Goblin");
+  });
+
+  // Hundreds of cards on one message: even the budget-divided pass's 4 K
+  // per-card floor sums past the budget, so the guaranteed-fit pass must kick
+  // in and drop every card body to the marker rather than return a still-
+  // oversized message that vanishes on backup restore.
+  it("guarantees fit when the per-card floor alone busts the budget (many cards)", () => {
+    const m: ChatMessage = {
+      id: "many",
+      role: "assistant",
+      text: "",
+      tools: [],
+      cards: Array.from({ length: 300 }, () => goodCard({ markdown: "c".repeat(4_100) }) as never),
+      toolErrors: [],
+      pending: false,
+    };
+    const out = clampOversizedMessage(m) as Extract<ChatMessage, { role: "assistant" }>;
+    expect(JSON.stringify(out).length + 1).toBeLessThanOrEqual(MAX_CHAT_BYTES);
+    // Structural identity survives even though the bodies were dropped.
+    expect(out.cards).toHaveLength(300);
+    expect(out.cards[0].title).toBe("Goblin");
   });
 });
 

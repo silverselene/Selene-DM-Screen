@@ -70,7 +70,7 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
   {
     type: "ai-chat",
     label: "AI Chat",
-    description: "Ask Selene rules & lookup questions. Needs the optional local AI bridge.",
+    description: "Instant lookups from bundled data; ask Selene anything via the optional local AI bridge.",
     icon: <Sparkles className="w-6 h-6" />,
     color: "from-amber-900/60 to-amber-800/40 border-amber-600/50 hover:border-amber-400",
   },

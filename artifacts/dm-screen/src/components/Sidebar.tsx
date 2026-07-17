@@ -37,6 +37,7 @@ const KEY_LABELS: Record<string, string> = {
   "dm-bestiary-sort-v1": "Bestiary",
   "dm-bestiary-cr-v1": "Bestiary",
   "dm-portal-url-v1": "Portal",
+  "dm-ai-chat-v1": "AI Chat",
 };
 
 function friendlyKeyLabels(keys: string[]): string[] {

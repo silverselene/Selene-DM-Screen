@@ -46,6 +46,40 @@ describe("parseChatRequest", () => {
     if (r.ok) expect(r.value.resume).toBeUndefined();
   });
 
+  // resume/model are the /chat fields that reach into the Agent SDK (session
+  // store lookup, query options) — they're constrained to session-id / model-id
+  // shapes; out-of-shape values fall back like an invalid effort does.
+  it("accepts a session-uuid resume and dotted/dashed model ids", () => {
+    const r = parseChatRequest(
+      JSON.stringify({
+        message: "hi",
+        resume: "0f6a2c1e-9d4b-4f3a-8e21-5c0a9b7d6e42",
+        model: "claude-haiku-4-5",
+      }),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.resume).toBe("0f6a2c1e-9d4b-4f3a-8e21-5c0a9b7d6e42");
+      expect(r.value.model).toBe("claude-haiku-4-5");
+    }
+  });
+
+  it("drops a resume with path separators, whitespace, or absurd length", () => {
+    for (const bad of ["../../etc/passwd", "a b", "sess/1", "x".repeat(129)]) {
+      const r = parseChatRequest(JSON.stringify({ message: "hi", resume: bad }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.value.resume, bad).toBeUndefined();
+    }
+  });
+
+  it("drops a model with out-of-charset characters or absurd length", () => {
+    for (const bad of ["claude opus", "model\n", "../claude", "m".repeat(200)]) {
+      const r = parseChatRequest(JSON.stringify({ message: "hi", model: bad }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.value.model, bad).toBeUndefined();
+    }
+  });
+
   it("rejects a missing, empty, or non-string message", () => {
     expect(parseChatRequest(JSON.stringify({}))).toEqual({
       ok: false,

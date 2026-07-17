@@ -83,12 +83,92 @@ export interface AssistantMessage {
 
 export type ChatMessage = UserMessage | AssistantMessage;
 
+// Per-string clamps used when a single message alone exceeds MAX_CHAT_BYTES
+// (see clampOversizedMessage). The bridge already caps each card's markdown at
+// 96 K chars (toolResults.ts MAX_CARD_MARKDOWN_CHARS); these re-clamp on the
+// client as defense-in-depth against an older bridge, and bound the assistant
+// prose the model itself streams.
+const CLAMP_CARD_MARKDOWN_CHARS = 96_000;
+const CLAMP_TEXT_CHARS = 200_000;
+const CLAMP_MARKER = "\n\n… (trimmed to fit saved history)";
+
+function clampString(s: string, max: number): string {
+  if (s.length <= max) return s;
+  // Guard the slice end for a max below the marker length (the guaranteed-fit
+  // pass uses max 0): keep nothing, just the marker, rather than a negative
+  // slice that would drop the marker's tail off the end of `s` instead.
+  return s.slice(0, Math.max(0, max - CLAMP_MARKER.length)) + CLAMP_MARKER;
+}
+
+/** One clamp pass at the given limits over every bulky string the message can
+ *  carry: assistant prose plus card markdown, including cards nested inside a
+ *  LocalAnswer's card/candidates. */
+function clampPass(m: ChatMessage, textMax: number, cardMax: number): ChatMessage {
+  if (m.role === "user") return { ...m, text: clampString(m.text, textMax) };
+  const clampCard = (c: ToolResultCard): ToolResultCard =>
+    c.markdown.length <= cardMax ? c : { ...c, markdown: clampString(c.markdown, cardMax) };
+  const next: AssistantMessage = {
+    ...m,
+    text: clampString(m.text, textMax),
+    cards: m.cards.map(clampCard),
+  };
+  if (m.local) {
+    const local: LocalAnswer = { ...m.local };
+    if (local.card) local.card = clampCard(local.card);
+    if (local.candidates) {
+      local.candidates = local.candidates.map((c) => ({ ...c, card: clampCard(c.card) }));
+    }
+    next.local = local;
+  }
+  return next;
+}
+
+/** If a message alone busts MAX_CHAT_BYTES, trim its bulky strings (assistant
+ *  prose, card markdown — including cards inside a LocalAnswer) so the stored
+ *  value stays under backup's 1 MB per-value cap, where an oversized value
+ *  exports fine but is SILENTLY SKIPPED on restore. Whole-message drops can't
+ *  help here — this IS the newest message, which the cap always keeps. Three
+ *  passes, each re-checked against the budget: generous per-string limits first
+ *  (only pathological inputs go further), then budget-divided limits sized so
+ *  the message fits even at the bridge's per-turn tool-call maximum, then — for
+ *  a card count so large the divided pass's 4 K floor alone busts the budget —
+ *  a guaranteed-fit pass that reduces every card body to just the marker. The
+ *  last pass is bounded and small for any realistic tool-call count, so a
+ *  message returned from here is under budget rather than merely closer to it.
+ *  Returns the same reference when nothing needs trimming. */
+export function clampOversizedMessage(m: ChatMessage): ChatMessage {
+  const fits = (x: ChatMessage) => JSON.stringify(x).length + 1 <= MAX_CHAT_BYTES;
+  if (fits(m)) return m;
+  let next = clampPass(m, CLAMP_TEXT_CHARS, CLAMP_CARD_MARKDOWN_CHARS);
+  if (fits(next)) return next;
+  // Still over: many capped cards on one message. Divide most of the budget
+  // across the cards (floor 4 K so each stays a usable preview).
+  const cardCount =
+    next.role === "assistant"
+      ? next.cards.length + (next.local?.card ? 1 : 0) + (next.local?.candidates?.length ?? 0)
+      : 0;
+  const perCard = Math.max(4_000, Math.floor(600_000 / Math.max(1, cardCount)));
+  next = clampPass(next, 50_000, perCard);
+  if (fits(next)) return next;
+  // The 4 K floor × cardCount can itself exceed the budget (hundreds of cards
+  // on one message). Reduce every card body to just the marker (structural
+  // fields survive) and hard-cap the prose — the storable data is now a few
+  // dozen bytes per card, well under budget for any real tool-call count.
+  return clampPass(next, 20_000, 0);
+}
+
 /** Enforce MAX_CHAT_MESSAGES and MAX_CHAT_BYTES (keep-most-recent) at the
  *  mutation site, mirroring the read/import cap so a single long session can't
  *  grow the persisted transcript past the caps before the next reload trims
- *  it. The newest message is always kept, even if it alone exceeds the byte
- *  budget. Returns the same reference when already within both caps (no copy). */
+ *  it. The newest message is always kept — but if it ALONE exceeds the byte
+ *  budget its bulky strings are trimmed (see clampOversizedMessage). Returns
+ *  the same reference when already within both caps (no copy). */
 export function capChatMessages(msgs: ChatMessage[]): ChatMessage[] {
+  if (msgs.length > 0) {
+    const last = msgs[msgs.length - 1];
+    const clamped = clampOversizedMessage(last);
+    if (clamped !== last) msgs = [...msgs.slice(0, -1), clamped];
+  }
   const counted = msgs.length > MAX_CHAT_MESSAGES ? msgs.slice(-MAX_CHAT_MESSAGES) : msgs;
   // Walk newest → oldest, keeping messages while the running serialized size
   // fits the budget. `+ 1` per message approximates the array's comma/bracket

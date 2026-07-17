@@ -30,6 +30,17 @@ export function parseHp(s: string | undefined): { cur: number; max: number } {
   return { cur: n, max: n };
 }
 
+/** True when a card's HP field yields a usable (> 0) max through the SAME
+ *  parseHp the mappers use, so this can't drift from what actually gets minted.
+ *  parseHp maps a missing/unreadable field — and a literal "0"/"0 (unknown)",
+ *  which a summary-only sheet emits — to a 0 max, which downstream renders as a
+ *  downed combatant, indistinguishable from a PC actually at 0 HP. The
+ *  add-to-initiative UI checks this first so those cases get an explicit "set HP
+ *  manually" note instead of silently minting a 0/0 combatant. */
+export function cardHasParseableHp(card: ToolResultCard): boolean {
+  return parseHp(card.fields?.hp).max > 0;
+}
+
 /** Monster → combatant: full HP, no init modifier available (plain d20). */
 export function monsterCardToCombatant(card: ToolResultCard, d20: number): Combatant {
   const f = card.fields ?? {};

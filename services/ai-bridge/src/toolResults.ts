@@ -236,6 +236,28 @@ function parseSpellCard(text: string): ToolResultEvent {
 const SUPPRESSED_CARD_TOOLS = new Set(["ddb_list_characters"]);
 
 /**
+ * Cap on a single card's `markdown`. One oversized tool result (ddb_read_book
+ * can return a whole chapter) would otherwise ride the wire into the widget's
+ * persisted transcript, where a single message can blow the 900 KB store
+ * budget — and past backup's 1 MB per-value cap, where it exports fine but is
+ * SILENTLY SKIPPED on restore. 96 K chars keeps even a several-card message
+ * comfortably under both while preserving far more than a preview card ever
+ * renders. The client clamps again on persist (capChatMessages) as the
+ * defense-in-depth for old bridges. Exported for tests.
+ */
+export const MAX_CARD_MARKDOWN_CHARS = 96_000;
+
+const CARD_TRUNCATION_MARKER = "\n\n… (result truncated — ask Selene for a specific part)";
+
+/** Truncate card markdown to MAX_CARD_MARKDOWN_CHARS with a visible marker.
+ *  Fields/title parse from the full text BEFORE this runs, so a truncated
+ *  stat block keeps its extracted AC/HP/CR. Exported for tests. */
+export function capCardMarkdown(text: string): string {
+  if (text.length <= MAX_CARD_MARKDOWN_CHARS) return text;
+  return text.slice(0, MAX_CARD_MARKDOWN_CHARS - CARD_TRUNCATION_MARKER.length) + CARD_TRUNCATION_MARKER;
+}
+
+/**
  * Turn one resolved tool call into a `tool_result` event, or `null` to suppress
  * the card (see `SUPPRESSED_CARD_TOOLS`). `markdown` is always the full raw text
  * (graceful-degradation fallback); rich parsers extract best-effort `fields`.
@@ -245,16 +267,22 @@ const SUPPRESSED_CARD_TOOLS = new Set(["ddb_list_characters"]);
  */
 export function parseToolResult(bareToolName: string, text: string): ToolResultEvent | null {
   if (SUPPRESSED_CARD_TOOLS.has(bareToolName)) return null;
-  if (bareToolName === "ddb_get_monster") return parseMonsterCard(text);
-  if (bareToolName === "ddb_get_character") return parseCharacterCard(text);
-  if (bareToolName === "ddb_get_spell") return parseSpellCard(text);
-  return {
-    type: "tool_result",
-    tool: bareToolName,
-    kind: "generic",
-    // Generic prose has no reliable title in its body; prefer an explicit `#`
-    // heading (spell/feature lookups have one), else the humanized tool name.
-    title: firstHeading(text) || humanizeToolName(bareToolName),
-    markdown: text,
-  };
+  let card: ToolResultEvent;
+  if (bareToolName === "ddb_get_monster") card = parseMonsterCard(text);
+  else if (bareToolName === "ddb_get_character") card = parseCharacterCard(text);
+  else if (bareToolName === "ddb_get_spell") card = parseSpellCard(text);
+  else {
+    card = {
+      type: "tool_result",
+      tool: bareToolName,
+      kind: "generic",
+      // Generic prose has no reliable title in its body; prefer an explicit `#`
+      // heading (spell/feature lookups have one), else the humanized tool name.
+      title: firstHeading(text) || humanizeToolName(bareToolName),
+      markdown: text,
+    };
+  }
+  // Cap the markdown LAST so the rich parsers extracted fields/title/spell
+  // lists from the complete text (see capCardMarkdown).
+  return { ...card, markdown: capCardMarkdown(card.markdown) };
 }
