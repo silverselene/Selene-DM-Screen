@@ -12,6 +12,7 @@ import {
   validateTiles,
 } from "./backup";
 import { registerPendingWrite } from "./pendingWrites";
+import { validateChatHistory } from "./chatHistory";
 
 // ── Pure shape validators (no storage) ────────────────────────────────────
 
@@ -160,6 +161,30 @@ describe("full backup round-trip", () => {
     expect(JSON.parse(window.localStorage.getItem("dm-recent-widgets")!)).toEqual(
       ["party"],
     );
+  });
+});
+
+describe("dm-ai-chat-v1 backup round-trip", () => {
+  beforeEach(() => installStorage());
+
+  it("accepts a valid transcript and skips a malformed one", () => {
+    // Explicit ids keep the double-validation comparison below deterministic
+    // (the validator mints fresh ids for messages that lack one).
+    const good = JSON.stringify([
+      { id: "m-1", role: "user", text: "hi" },
+      { id: "m-2", role: "assistant", text: "hey", tools: [], cards: [], toolErrors: [], pending: false },
+    ]);
+    const okPrep = prepareImport(envelope({ "dm-ai-chat-v1": good }));
+    expect(okPrep.summary.accepted).toBe(1);
+    expect(okPrep.summary.skipped).not.toContain("dm-ai-chat-v1");
+    okPrep.commit();
+    // pending is normalized to false by the shared validator on import.
+    expect(JSON.parse(window.localStorage.getItem("dm-ai-chat-v1")!)).toEqual(
+      validateChatHistory(JSON.parse(good)),
+    );
+
+    const badPrep = prepareImport(envelope({ "dm-ai-chat-v1": JSON.stringify({ not: "an array" }) }));
+    expect(badPrep.summary.skipped).toContain("dm-ai-chat-v1");
   });
 });
 

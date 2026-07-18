@@ -21,6 +21,7 @@ export function AnchoredDropdown({
   role,
   id,
   onRequestClose,
+  autoWidth = false,
 }: {
   anchor: HTMLElement | null;
   open: boolean;
@@ -33,6 +34,12 @@ export function AnchoredDropdown({
    *  or an Escape keypress. Opt-in — anchors that already close on blur
    *  (e.g. the Combobox) don't need it; tag inputs that don't, do. */
   onRequestClose?: () => void;
+  /** Size to the content instead of matching the anchor's width, using the
+   *  anchor width only as a floor. For compact pickers whose options are wider
+   *  than the trigger (search inputs, which are wider than their options, leave
+   *  this off so the list matches the field). Capped to the viewport so a wide
+   *  menu next to the right edge stays on-screen. */
+  autoWidth?: boolean;
 }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -101,7 +108,12 @@ export function AnchoredDropdown({
   const style: CSSProperties = {
     position: "fixed",
     left: rect.left,
-    width: rect.width,
+    // Default: match the anchor's width. autoWidth: size to content with the
+    // anchor width as a floor, capped to the space up to the viewport's right
+    // edge so a menu wider than its trigger doesn't run off-screen.
+    ...(autoWidth
+      ? { width: "max-content", minWidth: rect.width, maxWidth: window.innerWidth - rect.left - MARGIN }
+      : { width: rect.width }),
     zIndex: 9999,
     maxHeight,
     ...(placeAbove

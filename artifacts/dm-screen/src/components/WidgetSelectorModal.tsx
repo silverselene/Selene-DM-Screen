@@ -1,9 +1,13 @@
-import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, Bot } from "lucide-react";
-import type { WidgetType } from "@/types";
+import { X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, Sparkles } from "lucide-react";
+import { SINGLETON_WIDGET_TYPES, type WidgetType } from "@/types";
 
 interface Props {
   onSelect: (widget: WidgetType) => void;
   onClose: () => void;
+  /** Widget types already on the dashboard — singleton widgets among them are
+   *  offered as disabled so a second AI Chat tile can't be placed (two mounted
+   *  copies would clobber the shared saved transcript). */
+  placedWidgets: ReadonlySet<WidgetType>;
 }
 
 const widgets: { type: WidgetType; label: string; description: string; icon: React.ReactNode; color: string }[] = [
@@ -63,9 +67,16 @@ const widgets: { type: WidgetType; label: string; description: string; icon: Rea
     icon: <MonitorPlay className="w-6 h-6" />,
     color: "from-fuchsia-900/60 to-fuchsia-800/40 border-fuchsia-600/50 hover:border-fuchsia-400",
   },
+  {
+    type: "ai-chat",
+    label: "AI Chat",
+    description: "Instant lookups from bundled data; ask Selene anything via the optional local AI bridge.",
+    icon: <Sparkles className="w-6 h-6" />,
+    color: "from-amber-900/60 to-amber-800/40 border-amber-600/50 hover:border-amber-400",
+  },
 ];
 
-export function WidgetSelectorModal({ onSelect, onClose }: Props) {
+export function WidgetSelectorModal({ onSelect, onClose, placedWidgets }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -78,37 +89,27 @@ export function WidgetSelectorModal({ onSelect, onClose }: Props) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {widgets.map((w) => (
-            <button
-              key={w.type}
-              onClick={() => onSelect(w.type)}
-              className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br ${w.color} border rounded-lg transition-all hover:scale-105 hover:shadow-[0_0_12px_rgba(139,43,226,0.3)] text-center`}
-            >
-              <div className="text-white/80">{w.icon}</div>
-              <div className="text-sm font-bold text-gray-100">{w.label}</div>
-              <div className="text-xs text-gray-400 leading-tight">{w.description}</div>
-            </button>
-          ))}
-
-          {/* Teaser only — not a real WidgetType yet, so it's not wired to
-              onSelect. The functionality lives on an unmerged branch (a chat
-              widget backed by a local AI bridge service); this just previews
-              it so DMs know it's coming before that branch lands. */}
-          <div
-            title="Coming soon"
-            className="relative flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-indigo-950/40 to-indigo-900/20 border border-indigo-800/30 rounded-lg text-center opacity-60 cursor-not-allowed select-none"
-          >
-            <span className="absolute top-1.5 right-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-indigo-700/40 text-indigo-200 border border-indigo-500/40">
-              Soon
-            </span>
-            <div className="text-white/50">
-              <Bot className="w-6 h-6" />
-            </div>
-            <div className="text-sm font-bold text-gray-400">AI Chat</div>
-            <div className="text-xs text-gray-600 leading-tight">
-              Ask rules questions and manage combatants by chatting with an AI assistant.
-            </div>
-          </div>
+          {widgets.map((w) => {
+            const alreadyPlaced = SINGLETON_WIDGET_TYPES.has(w.type) && placedWidgets.has(w.type);
+            return (
+              <button
+                key={w.type}
+                onClick={() => onSelect(w.type)}
+                disabled={alreadyPlaced}
+                className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br ${w.color} border rounded-lg transition-all text-center ${
+                  alreadyPlaced
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:scale-105 hover:shadow-[0_0_12px_rgba(139,43,226,0.3)]"
+                }`}
+              >
+                <div className="text-white/80">{w.icon}</div>
+                <div className="text-sm font-bold text-gray-100">{w.label}</div>
+                <div className="text-xs text-gray-400 leading-tight">
+                  {alreadyPlaced ? "Already on the dashboard — it can only be open once." : w.description}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

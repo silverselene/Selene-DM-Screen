@@ -1,4 +1,5 @@
-import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, MonitorPlay, Sparkles, ChevronLeft, ChevronRight, RotateCcw, Grid, Clock, Trash2, Download, Upload, Database } from "lucide-react";
 import type { WidgetType } from "@/types";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
@@ -7,6 +8,7 @@ import {
   prepareImport,
   promptForJsonFile,
 } from "@/lib/backup";
+import { hasPersistedChat, CHAT_CHANGED_EVENT, type ChatChangedDetail } from "@/lib/chatHistory";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -35,6 +37,7 @@ const KEY_LABELS: Record<string, string> = {
   "dm-bestiary-sort-v1": "Bestiary",
   "dm-bestiary-cr-v1": "Bestiary",
   "dm-portal-url-v1": "Portal",
+  "dm-ai-chat-v1": "AI Chat",
 };
 
 function friendlyKeyLabels(keys: string[]): string[] {
@@ -103,6 +106,7 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
   "wizard-tome": { label: "Wizard's Tome", icon: <BookMarked className="w-3.5 h-3.5" />, color: "text-cyan-400 bg-cyan-900/20 border-cyan-800/40" },
   party: { label: "Party", icon: <Users className="w-3.5 h-3.5" />, color: "text-emerald-400 bg-emerald-900/20 border-emerald-800/40" },
   portal: { label: "Portal", icon: <MonitorPlay className="w-3.5 h-3.5" />, color: "text-fuchsia-400 bg-fuchsia-900/20 border-fuchsia-800/40" },
+  "ai-chat": { label: "AI Chat", icon: <Sparkles className="w-3.5 h-3.5" />, color: "text-amber-400 bg-amber-900/20 border-amber-800/40" },
 };
 
 const GRID_SIZES = [2, 3, 4] as const;
@@ -124,6 +128,18 @@ export function Sidebar({
   recentWidgets, onRestoreRecent, onClearRecent,
 }: Props) {
   const { isDark } = useTheme();
+
+  // Reactive mirror of the persisted AI-chat transcript's emptiness, driving
+  // the BACKUP panel's D&D-Beyond-content warning. Seeded from localStorage
+  // (correct when the chat widget isn't mounted) and kept live by the widget's
+  // same-tab `dm-ai-chat-changed` event — a plain `hasPersistedChat()` call in
+  // render would be non-reactive and could lag the debounced persist.
+  const [hasChat, setHasChat] = useState(hasPersistedChat);
+  useEffect(() => {
+    const onChange = (e: Event) => setHasChat((e as CustomEvent<ChatChangedDetail>).detail.present);
+    window.addEventListener(CHAT_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(CHAT_CHANGED_EVENT, onChange);
+  }, []);
 
   const sidebarBg = isDark
     ? "linear-gradient(180deg, #0b0018 0%, #080012 100%)"
@@ -271,6 +287,12 @@ export function Sidebar({
             <p className="text-[10px] leading-relaxed mb-2" style={{ color: "var(--dm-t4)" }}>
               State is stored per-browser. Export a snapshot to move it to another browser or back up.
             </p>
+            {hasChat && (
+              <p className="text-[10px] leading-relaxed mb-2 text-amber-300/80">
+                ⚠ Includes AI-chat transcripts (may contain D&amp;D Beyond content). Use New
+                chat in the AI widget first to exclude them.
+              </p>
+            )}
             <div className="flex gap-1">
               <button
                 onClick={runFullExport}

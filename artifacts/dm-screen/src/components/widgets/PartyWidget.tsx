@@ -16,15 +16,13 @@ import {
 } from "@/lib/partyStore";
 import {
   downloadJsonFile,
-  MAX_COMBATANTS,
   mintCombatantId,
   promptForJsonFile,
-  validateCombatants,
 } from "@/lib/backup";
 import {
-  appendCombatant,
+  addCombatantToInitiative,
   clampInitiative,
-  INITIATIVE_STORAGE_KEY,
+  confirmDuplicateViaWindow,
   initiativeFullMessage,
 } from "@/lib/combatant";
 import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
@@ -572,60 +570,33 @@ export function PartyWidget() {
   };
 
   const addToInitiative = (c: PlayerCharacter) => {
-    // Read + validate the persisted list ONCE, serving both checks below:
-    // the cap pre-check (the Initiative widget's listener silently drops
-    // adds past MAX_COMBATANTS, so give the DM feedback instead of a
-    // click that looks successful but did nothing) and the not-consumed
-    // fallback write. `null` = unreadable storage — the Initiative
-    // widget's own validator heals that case, so let the dispatch
-    // proceed and only fail if the fallback path actually needs the list.
-    let stored: Combatant[] | null = null;
-    try {
-      const raw = window.localStorage.getItem(INITIATIVE_STORAGE_KEY);
-      stored = validateCombatants(raw ? JSON.parse(raw) : []) ?? [];
-    } catch {
-      stored = null;
-    }
-    if (stored !== null && stored.length >= MAX_COMBATANTS) {
+    const combatant: Combatant = {
+      id: mintCombatantId(),
+      name: c.name,
+      // Same clamp as the Initiative widget's own add forms — a raw parseInt
+      // here was the one entry point a typo'd "2000" could still sneak through.
+      initiative: clampInitiative(initiativeVal),
+      hp: c.hp || 0,
+      maxHp: c.hp || 0,
+      ac: c.ac ?? undefined,
+      isPlayer: true,
+    };
+    const result = addCombatantToInitiative(combatant, {
+      confirmDuplicate: confirmDuplicateViaWindow,
+    });
+    if (result === "full") {
       window.alert(initiativeFullMessage());
       return;
     }
-    const combatant: Combatant = {
-      id: mintCombatantId(), name: c.name,
-      // Same clamp as the Initiative widget's own add forms — a raw
-      // parseInt here was the one entry point a typo'd "2000" could
-      // still sneak through.
-      initiative: clampInitiative(initiativeVal),
-      hp: c.hp || 0, maxHp: c.hp || 0,
-      ac: c.ac ?? undefined, isPlayer: true,
-    };
-    // The event is cancelable so a mounted Initiative widget can signal
-    // consumption via preventDefault(). If nothing consumed it (no
-    // Initiative tile placed, or its lazy chunk hasn't mounted yet), fall
-    // back to writing storage directly — the combatant then appears when
-    // the widget mounts, instead of the click silently doing nothing.
-    // (The widget attaches its listener in a layout effect, so a mounted
-    // widget is always listening by the time a click can dispatch this.)
-    const consumed = !window.dispatchEvent(
-      new CustomEvent("dm-add-to-initiative", {
-        detail: { combatant },
-        cancelable: true,
-      }),
-    );
-    if (!consumed) {
-      try {
-        if (stored === null) throw new Error("unreadable initiative list");
-        window.localStorage.setItem(
-          INITIATIVE_STORAGE_KEY,
-          JSON.stringify(appendCombatant(stored, combatant)),
-        );
-      } catch {
-        window.alert(
-          "Couldn't add to initiative — place the Initiative tile and try again.",
-        );
-        return;
-      }
+    if (result === "error") {
+      window.alert(
+        "Couldn't add to initiative — place the Initiative tile and try again.",
+      );
+      return;
     }
+    // "cancelled": the DM declined the duplicate confirm. Leave the form open
+    // with their typed initiative intact — a mis-click shouldn't cost the roll.
+    if (result === "cancelled") return;
     setInitiativeFor(null); setInitiativeVal("");
   };
 

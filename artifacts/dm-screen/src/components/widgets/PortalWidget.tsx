@@ -1,60 +1,13 @@
 import { useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PORTAL_URL_MAX, validateNullableStringMax } from "@/lib/backup";
+import { toEmbedUrl } from "@/lib/portalEmbed";
+import { isImeComposing } from "@/lib/keyboard";
 import { Link2, ExternalLink, Pencil, X } from "lucide-react";
 
-// Providers curated to match the `frame-src` allowlist in
-// docker/security-headers.conf — keep the two in sync. Deliberately NOT a
-// generic `frame-src https:` + pass-through-any-URL: that would let the
-// Portal iframe an arbitrary origin (most sites also send
-// X-Frame-Options/frame-ancestors that refuse to be framed anyway, so a
-// generic allowlist would mostly just fail silently). Add a provider here
-// AND to the nginx CSP together.
-function toEmbedUrl(raw: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:") return null;
-  const host = url.hostname.replace(/^www\./, "");
-
-  if (host === "youtube.com" || host === "m.youtube.com") {
-    if (url.pathname === "/watch") {
-      const id = url.searchParams.get("v");
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-    if (url.pathname.startsWith("/embed/")) return url.toString();
-    if (url.pathname.startsWith("/live/")) {
-      const id = url.pathname.split("/")[2];
-      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-    }
-    return null;
-  }
-  if (host === "youtu.be") {
-    const id = url.pathname.slice(1);
-    return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
-  }
-  if (host === "youtube-nocookie.com") {
-    return url.pathname.startsWith("/embed/") ? url.toString() : null;
-  }
-  if (host === "open.spotify.com") {
-    return url.pathname.startsWith("/embed/")
-      ? url.toString()
-      : `https://open.spotify.com/embed${url.pathname}`;
-  }
-  if (host === "soundcloud.com") {
-    return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url.toString())}&auto_play=false`;
-  }
-  if (host === "vimeo.com") {
-    const id = url.pathname.slice(1).split("/")[0];
-    return /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
-  }
-  if (host === "player.vimeo.com") return url.toString();
-
-  return null;
-}
+// URL → iframe mapping lives in @/lib/portalEmbed (pure, unit-tested there —
+// including the invariant that every returned URL uses a host from the Docker
+// CSP's `frame-src` allowlist).
 
 export function PortalWidget() {
   const [savedUrl, setSavedUrl] = useLocalStorage<string | null>(
@@ -102,7 +55,7 @@ export function PortalWidget() {
                 setDraft(e.target.value);
                 setError(null);
               }}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
+              onKeyDown={(e) => e.key === "Enter" && !isImeComposing(e) && submit()}
               placeholder="Paste a YouTube, Spotify, SoundCloud, or Vimeo link…"
               maxLength={PORTAL_URL_MAX}
               className="flex-1 min-w-0 bg-gray-900/80 border border-purple-800/30 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60"
@@ -156,7 +109,12 @@ export function PortalWidget() {
                 <Pencil className="w-3 h-3" />
               </button>
               <button
-                onClick={() => setSavedUrl(null)}
+                onClick={() => {
+                  // Confirm-gated like "New chat": the saved share URL may be
+                  // long and unrecoverable, and this button sits 20 px from
+                  // Edit — a mis-click must not destroy it with no undo.
+                  if (window.confirm("Remove this link?")) setSavedUrl(null);
+                }}
                 title="Remove link"
                 className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors"
               >

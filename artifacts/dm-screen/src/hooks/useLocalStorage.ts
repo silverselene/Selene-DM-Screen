@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { registerPendingWrite } from "@/lib/pendingWrites";
 
 interface UseLocalStorageOptions {
@@ -12,6 +12,17 @@ interface UseLocalStorageOptions {
    *  neither a closed tab nor a mid-debounce backup can miss the newest
    *  keystrokes. */
   debounceWriteMs?: number;
+  /** Called when a `setItem` throws (quota exceeded / private mode), after the
+   *  failure is logged. Lets a widget surface "your data isn't being saved" in
+   *  its UI instead of the loss being console-only. Read through a ref on each
+   *  write, so an inline closure here doesn't destabilize the returned setter. */
+  onWriteError?: (err: unknown) => void;
+  /** Called after a `setItem` SUCCEEDS following a prior failure — the
+   *  error→success recovery edge only, not every write. Lets a widget clear the
+   *  "your data isn't being saved" warning once storage frees up (the DM deletes
+   *  a backup, closes the Notepad) instead of leaving it stuck. Read through a
+   *  ref, same as `onWriteError`. */
+  onWriteSuccess?: () => void;
 }
 
 /**
@@ -36,6 +47,13 @@ export function useLocalStorage<T>(
   options?: UseLocalStorageOptions,
 ) {
   const debounceMs = options?.debounceWriteMs ?? 0;
+  const onWriteErrorRef = useRef(options?.onWriteError);
+  onWriteErrorRef.current = options?.onWriteError;
+  const onWriteSuccessRef = useRef(options?.onWriteSuccess);
+  onWriteSuccessRef.current = options?.onWriteSuccess;
+  // Tracks the last write's outcome so onWriteSuccess fires only on the
+  // failure→success edge, not on every persisted keystroke.
+  const lastWriteFailedRef = useRef(false);
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -85,17 +103,26 @@ export function useLocalStorage<T>(
   const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const writePending = useRef(false);
 
-  const writeNow = (val: T) => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(val));
-    } catch (err) {
-      // quota / private mode. In-memory state still updates so the UI
-      // doesn't freeze, but log so the failure is visible — silently
-      // dropping writes was hiding "an hour of notes are gone on reload"
-      // scenarios.
-      console.error(`useLocalStorage("${key}"): failed to persist`, err);
-    }
-  };
+  const writeNow = useCallback(
+    (val: T) => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(val));
+        if (lastWriteFailedRef.current) {
+          lastWriteFailedRef.current = false;
+          onWriteSuccessRef.current?.();
+        }
+      } catch (err) {
+        // quota / private mode. In-memory state still updates so the UI
+        // doesn't freeze, but log so the failure is visible — silently
+        // dropping writes was hiding "an hour of notes are gone on reload"
+        // scenarios.
+        lastWriteFailedRef.current = true;
+        console.error(`useLocalStorage("${key}"): failed to persist`, err);
+        onWriteErrorRef.current?.(err);
+      }
+    },
+    [key],
+  );
 
   // Flush a pending debounced write before the value can be lost: tab
   // hidden / navigating away (`pagehide` covers close + refresh +
@@ -130,22 +157,43 @@ export function useLocalStorage<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setValue = (value: T | ((val: T) => T)) => {
-    const next = value instanceof Function ? value(valueRef.current) : value;
-    valueRef.current = next;
-    setStoredValue(next);
-    if (debounceMs <= 0) {
-      writeNow(next);
-      return;
-    }
-    writePending.current = true;
-    if (writeTimer.current) clearTimeout(writeTimer.current);
-    writeTimer.current = setTimeout(() => {
-      writeTimer.current = null;
-      writePending.current = false;
-      writeNow(valueRef.current);
-    }, debounceMs);
-  };
+  // Reference-stable across renders (like a `useState` setter), so call sites
+  // can safely capture it in `useCallback`/`useEffect` bodies with fixed deps.
+  // It only reads refs and the fixed `key`/`debounceMs`, so a stale closure is
+  // impossible.
+  const setValue = useCallback(
+    (value: T | ((val: T) => T)) => {
+      const next = value instanceof Function ? value(valueRef.current) : value;
+      valueRef.current = next;
+      setStoredValue(next);
+      if (debounceMs <= 0) {
+        writeNow(next);
+        return;
+      }
+      writePending.current = true;
+      if (writeTimer.current) clearTimeout(writeTimer.current);
+      writeTimer.current = setTimeout(() => {
+        writeTimer.current = null;
+        writePending.current = false;
+        writeNow(valueRef.current);
+      }, debounceMs);
+    },
+    [writeNow, debounceMs],
+  );
 
-  return [storedValue, setValue] as const;
+  // Read the freshest value, including `setValue` calls already applied in this
+  // tick that React hasn't re-rendered for yet. The returned `storedValue` is
+  // render state and lags those; `valueRef` does not (setValue re-points it
+  // eagerly, and the effect above re-syncs it after any render).
+  //
+  // For rendering, always use `storedValue` — this exists for the case where a
+  // non-render caller must DECIDE against the current value and the decision
+  // can't live inside a `setValue` updater because it isn't pure (it blocks on
+  // a confirm, or its result has to escape). Mirroring the value into a
+  // component-level ref instead is the trap this replaces: such a mirror syncs
+  // on render, so it silently goes stale for exactly the back-to-back-writes
+  // case it was added to handle. Reference-stable, like `setValue`.
+  const getLatest = useCallback(() => valueRef.current, []);
+
+  return [storedValue, setValue, getLatest] as const;
 }

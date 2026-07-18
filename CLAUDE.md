@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required.
+pnpm-workspace monorepo for **Selene's DM Screen**, a browser-based D&D 5.5e (2024) Dungeon Master dashboard. **One** deployable artifact (a static SPA) plus an offline data-generator package. No backend, no database, no environment variables required. An **optional** local AI-bridge service (`services/ai-bridge`) and a shared types-only wire-contract package (`packages/bridge-protocol`) power the AI Chat widget; **neither is part of the deployable** — the SPA builds and runs without them (the widget stays usable for bundled-data lookups and shows a "bridge not running" banner over the chat).
 
 History: this used to be a three-tier app (React + Express + PostgreSQL on Replit), migrated to a fully static, self-hostable SPA. Anything pre-migration (the API server, Drizzle, the OpenAPI/Orval codegen, the mockup sandbox, Replit infra) has been deleted; if you find references to them in old commits or comments, they're historical.
 
@@ -21,13 +21,18 @@ Always use `pnpm` — the root `preinstall` script rejects npm/yarn.
 pnpm install
 
 # Dev / build / preview (all from the repo root)
-pnpm dev          # Vite dev server on http://localhost:38080
+pnpm dev          # SPA (:38080) + optional AI bridge (:38900) in parallel
+pnpm dev:app      # SPA only (Vite dev server on http://localhost:38080)
+pnpm dev:ai       # AI bridge only (services/ai-bridge; see its README)
 pnpm build        # typecheck + vite build → artifacts/dm-screen/dist/public/
 pnpm preview      # vite preview of the built bundle
 
 # Typecheck only
-pnpm typecheck                                       # whole workspace, project-references-aware
+pnpm typecheck                                       # whole workspace (incl. services/ai-bridge)
 pnpm --filter @workspace/dm-screen run typecheck     # single package
+# `pnpm build` runs `typecheck:deployable` (artifacts + scripts only) — NOT the
+# bridge — because the Docker build image never installs the bridge's Agent-SDK
+# deps. Use `pnpm typecheck` to type-check the bridge locally.
 
 # Tests (Vitest — dm-screen pure logic; Node env, no jsdom)
 pnpm test                                            # all packages that define a test script
@@ -47,7 +52,18 @@ pnpm --filter @workspace/scripts run generate:compendium
 docker compose up --build                            # http://localhost:38080 (host) → 8080 (non-root nginx container)
 ```
 
-**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts), Node environment — no jsdom). Tier-1 coverage targets the **pure logic** in `src/lib` (validators, id minting, backup/restore import flow); tests live beside the code as `*.test.ts` (excluded from the build via `tsconfig.json`). Storage-dependent tests install a fake `window.localStorage` per-test rather than pulling in jsdom. **There are no component/DOM tests yet** — testing widgets, the anchored-dropdown flip, or the file-picker fallback would need `@testing-library/react` + a jsdom/happy-dom env (flip `test.environment` to `"jsdom"`); real browser behavior (localStorage quota, service-worker updates, file-picker dismissal) still needs manual verification or Playwright. Full verification is `pnpm test` + `pnpm typecheck` + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero). New deps are subject to the `minimumReleaseAge: 1440` gate.
+**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts)) and, since the AI-bridge work, for `services/ai-bridge` ([vitest.config.ts](services/ai-bridge/vitest.config.ts), Node-env / no-jsdom — covers the bridge's pure tool-result parsers in `toolResults.ts`). Tests live beside the code as `*.test.ts` / `*.test.tsx`, both excluded from the build via `tsconfig.json` — **add new test globs to that `exclude` list**, or the file leaks into `pnpm build`'s typecheck.
+
+Two tiers, and the default env is **`"node"`** — keep it that way:
+
+- **Tier 1 — pure logic (the bulk).** dm-screen's `src/lib` (validators, id minting, backup/restore, the initiative add rules in `combatant.ts`) and the bridge's parsers. Runs in the plain Node env; storage-dependent tests install a fake `window.localStorage` per-test rather than pulling in jsdom.
+- **Tier 2 — component tests, opt-in per file.** A `// @vitest-environment jsdom` docblock at the top of the file — **not** a global `test.environment` flip, which would tax every pure-logic file with a DOM setup it doesn't need. Currently one file: [InitiativeWidget.addPaths.test.tsx](artifacts/dm-screen/src/components/widgets/InitiativeWidget.addPaths.test.tsx), which guards that all four "add to initiative" paths converge on the shared rule — an invariant tier 1 structurally cannot see. Mock heavy data modules when you mount a widget (that file mocks `@/lib/monsterSearch`, since `src/data/monsters.ts` is 4.7 MB).
+
+**jsdom is not a browser.** Its `window.confirm`/`alert` throw "Not implemented" (stub them; assert on message + effect, not that a modal blocked), it has no layout (`getBoundingClientRect` returns zeros, so the anchored-dropdown flip is out of reach), and it enforces no storage quota. Those, plus service-worker updates and file-picker dismissal, still need manual verification (see [MANUAL-TESTS-post-rebase.md](MANUAL-TESTS-post-rebase.md)) or Playwright.
+
+Full verification is `pnpm test` + `pnpm typecheck` + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero). New deps are subject to the `minimumReleaseAge: 1440` gate. Note that `vitest` takes an optional peer on `jsdom`, so adding/removing it re-hashes vitest's `.pnpm` path for **every** workspace project — run a full `pnpm install` (not a filtered one) afterward or the other packages' `vitest` symlinks dangle.
+
+That same peer edge means `jsdom` is downloaded during the Docker build (which installs dm-screen's devDeps — it has to; `vite`/`typescript` live there). **Moving `jsdom` to the root `package.json` does not avoid this** and has been tried: dm-screen's vitest resolves to `vitest@4.1.9(…)(jsdom@29.1.1)(…)` regardless of which manifest declares jsdom, so the filtered install materializes the peer anyway. Test-only deps stay in the package whose tests import them; the build-image cost is accepted.
 
 ## Repository layout
 
@@ -56,21 +72,25 @@ artifacts/
   dm-screen/                  React 19 + Vite + Tailwind v4 — the only deployable
     src/data/                 Bundled reference data (spells, monsters, weapons, …)
     src/lib/                  localStorage stores, backup/restore, shared UI primitives
-    src/components/widgets/   The seven widgets
+    src/components/widgets/   The nine widgets (AI Chat requires the optional bridge)
     public/                   PWA icons + static assets
     docker/nginx.conf         SPA-aware nginx config used by the Docker image
+packages/
+  bridge-protocol/            Shared, types-only wire contract for the AI bridge ⇄ AI Chat widget (no runtime code, no deps)
 scripts/                      Standalone tsx data generators (offline, read from ../5etools-src)
+services/
+  ai-bridge/                  Optional local Claude Agent SDK + ddb-mcp bridge; NOT in the deployable (see its README)
 attached_assets/              Source CSV for the 2,158-row monster index
 Dockerfile, docker-compose.yml, .dockerignore
 ```
 
 ## TypeScript / project references
 
-Every package extends `tsconfig.base.json` (`composite: true`, `moduleResolution: "bundler"`, `customConditions: ["workspace"]`). The root `tsconfig.json` currently has an empty `references` array — all the old `lib/*` packages are gone.
+Every package extends `tsconfig.base.json` (`moduleResolution: "bundler"`, `customConditions: ["workspace"]`). The root `tsconfig.json`'s `references` array is empty — cross-package imports resolve through the **`workspace` export condition**, not TypeScript project references.
 
-- Typecheck from the root so workspace cross-references resolve. `pnpm --filter ... run typecheck` also works because each package declares its own references.
-- If you ever re-introduce a workspace library, add `{ "path": "..." }` to the importing package's `tsconfig.json` `references` array and to the root `tsconfig.json`.
-- `tsc` is only for type-checking and `.d.ts` emission. Bundling is handled by Vite.
+- **Shared workspace library:** `@workspace/bridge-protocol` (`packages/bridge-protocol`) is a types-only package holding the AI-bridge wire contract (`BridgeEvent`, `BridgeHealth`), imported by both `services/ai-bridge` and `artifacts/dm-screen` so a producer/consumer drift is a compile error. Its `package.json` `exports` maps the `workspace` condition straight to `src/index.ts` — no build step, no `.d.ts` emit. Both consumers `import type` from it, so it is **erased from every bundle** (verify: `grep -r bridge-protocol dist/public/assets` returns zero). Copy this pattern (expose the `workspace` export condition) rather than wiring `composite`/`references` if you add another shared package.
+- Typecheck from the root so workspace cross-references resolve. `pnpm --filter ... run typecheck` also works; `pnpm typecheck:deployable` (used by `pnpm build`) covers only `artifacts/**` + `scripts` but still resolves the shared package's source through dm-screen.
+- `tsc` is only for type-checking. Bundling is handled by Vite.
 
 ## Frontend architecture (dm-screen)
 
@@ -131,6 +151,7 @@ The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control:
 - Multi-stage `Dockerfile`: build on `node:24-bookworm-slim` (glibc — must match the `linux-{x64,arm64}-gnu` native binaries), runtime on `nginxinc/nginx-unprivileged:alpine` (nginx runs as the non-root `nginx` user, so it listens on **8080**, not the privileged port 80). **Don't switch the build stage to `node:24-alpine`** — `pnpm-workspace.yaml`'s `overrides:` block still excludes the `-musl` rollup/esbuild/lightningcss/oxide variants. If you change the container port, update `nginx.conf`'s `listen`, the Dockerfile `EXPOSE`/`HEALTHCHECK`, and the compose `ports`/healthcheck together.
 - `docker-compose.yml`: single service, no DB, publishes `38080:8080` (container listens on 8080). Host port matches the dev/preview port for muscle-memory consistency (and so localStorage is shared between dev and Docker on the same host). 38080 was chosen over Vite's default 5173 specifically because 5173 (and other common dev-tool defaults like 3000/8080) collide with other local projects' containers, causing the browser to serve a stale cached SPA from the wrong origin's service worker.
 - `.dockerignore` is a **denylist** (conventional exclude patterns, not a `*` + `!` allowlist): anything NOT matched by a pattern IS sent to the build daemon and lands in build-stage layers via `COPY . .`. It excludes `node_modules`, `dist`, `.git`, the intake docs, and secret-shaped files (`.env*`, `*.pem`, `*.key`, …) — extend those patterns when adding new local-only file types.
+- The build does a **filtered** install (`pnpm install --frozen-lockfile --filter @workspace/dm-screen --filter @workspace/scripts`) that deliberately excludes the bridge's Agent-SDK deps. The manifest set is `COPY`d before the install so `--frozen-lockfile` can resolve the graph — **if you add a workspace dependency to dm-screen (or scripts), add a matching `COPY <pkg>/package.json` line** or the frozen-lockfile install fails in the image. `packages/bridge-protocol` is copied for exactly this reason (it's a dm-screen dep); its types are erased at build time so nothing enters the runtime image.
 - Builds on ARM64 (Apple Silicon, Pi, Graviton) — the `linux-arm64-gnu` variants are explicitly **not** excluded.
 
 ## Security: npm minimum release age

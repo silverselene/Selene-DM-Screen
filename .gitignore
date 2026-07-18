@@ -3,20 +3,26 @@
 # compiled output
 dist
 tmp
-out-tsc
 *.tsbuildinfo
-.expo
-.expo-shared
 
 # dependencies
 node_modules
 
+# test output
+coverage
+
+# secrets — the ai-bridge reads ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN from
+# the environment; keep .dockerignore's secret patterns in sync with these.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
 # IDEs and editors
 /.idea
-.project
-.classpath
-.c9/
-*.launch
 .settings/
 *.sublime-workspace
 
@@ -28,22 +34,12 @@ node_modules
 !.vscode/extensions.json
 
 # misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
 npm-debug.log
 yarn-error.log
-testem.log
-/typings
 
 # System Files
 .DS_Store
 Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
-
-# Replit
-.cache/
-.local/
+# Local-only working docs (not part of the repo)
+/MANUAL-TESTS-post-rebase.md

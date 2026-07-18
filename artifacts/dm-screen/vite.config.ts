@@ -7,13 +7,35 @@ import path from "path";
 // PORT and BASE_PATH are both optional. Useful overrides for self-hosters
 // behind a reverse proxy or sub-path, but the defaults are sane for a clean
 // `pnpm install && pnpm dev` checkout with no environment set.
-const DEFAULT_PORT = 38080;
-const portEnv = process.env["PORT"];
-const port = portEnv ? Number(portEnv) : DEFAULT_PORT;
-if (!Number.isFinite(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${portEnv}"`);
+//
+// Kept in lockstep with the bridge's envPort (services/ai-bridge/src/config.ts):
+// both reject non-integer / out-of-range ports so a bad AI_BRIDGE_PORT fails
+// BOTH sides, not just one. If only the bridge validated, `AI_BRIDGE_PORT=70000`
+// would build the SPA pointing at :70000 while the bridge refused to start — a
+// permanent silent "bridge offline".
+function envPort(raw: string | undefined, fallback: number, name: string): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    throw new Error(`Invalid ${name} value: "${raw}" (expected an integer 1–65535)`);
+  }
+  return n;
 }
+
+const DEFAULT_PORT = 38080;
+const port = envPort(process.env["PORT"], DEFAULT_PORT, "PORT");
 const basePath = process.env["BASE_PATH"] ?? "/";
+
+// AI_BRIDGE_PORT is the SAME env var the optional AI bridge reads for its
+// listen port (services/ai-bridge/src/config.ts), so a single
+// `AI_BRIDGE_PORT=39000 pnpm dev` moves the bridge and the widget in lockstep
+// — the root `dev` script runs both processes from one environment. A static
+// SPA has no runtime env, so the resulting URL is baked into the bundle via
+// the `define` block below (dev, preview, and self-built bundles all honor
+// it). The Docker image's CSP additionally pins connect-src to :38900
+// (docker/security-headers.conf) — a custom port there needs that edited too.
+const DEFAULT_AI_BRIDGE_PORT = 38900;
+const aiBridgePort = envPort(process.env["AI_BRIDGE_PORT"], DEFAULT_AI_BRIDGE_PORT, "AI_BRIDGE_PORT");
 
 // Dev/preview servers bind to loopback by default. Running `pnpm dev` on an
 // untrusted network (a café, a shared office) shouldn't expose the app — and
@@ -28,6 +50,12 @@ const devAllowedHosts = publicHost ? true : undefined;
 
 export default defineConfig({
   base: basePath,
+  define: {
+    // Consumed by src/lib/aiBridge.ts (typed in src/vite-env.d.ts). Vitest
+    // uses its own config without this define, so that module keeps a
+    // fallback to the default URL.
+    "import.meta.env.AI_BRIDGE_URL": JSON.stringify(`http://127.0.0.1:${aiBridgePort}`),
+  },
   plugins: [
     react(),
     tailwindcss(),

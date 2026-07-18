@@ -217,6 +217,48 @@
 .light-mode [class~="text-purple-500"] { color: var(--dm-accent); }
 .light-mode [class~="text-purple-700"] { color: var(--dm-accent-strong); }
 
+/* Amber (AI Chat accents, warnings) and cyan (tool chips) — like the purple
+ * block above, these are hardcoded Tailwind text utilities tuned for the dark
+ * page; 200–500-level amber/cyan is ~1.3–1.5:1 on the near-white page (the
+ * Sidebar's "Includes AI-chat transcripts" warning disappears exactly when the
+ * DM is about to share a backup). Remap the base (non-hover) text utilities to
+ * AA-contrast dark shades (Tailwind amber-800 / cyan-800); hover variants are
+ * left to Tailwind so they only apply on :hover. */
+.light-mode [class~="text-amber-200"],
+.light-mode [class~="text-amber-200/90"],
+.light-mode [class~="text-amber-300"],
+.light-mode [class~="text-amber-300/70"],
+.light-mode [class~="text-amber-300/80"],
+.light-mode [class~="text-amber-300/90"],
+.light-mode [class~="text-amber-400"],
+.light-mode [class~="text-amber-400/60"],
+.light-mode [class~="text-amber-400/70"],
+.light-mode [class~="text-amber-400/80"],
+.light-mode [class~="text-amber-500"],
+.light-mode [class~="text-amber-500/80"] { color: #92400e; }
+.light-mode [class~="text-cyan-300"],
+.light-mode [class~="text-cyan-300/80"],
+.light-mode [class~="text-cyan-400"],
+.light-mode [class~="text-cyan-500"] { color: #155e75; }
+
+/* Red (error text: AI Chat error/tool-error bubbles, Portal errors, downed-HP
+ * markers) and emerald (success text: card-action "Added ✓" flashes, Party
+ * accents) — same story as the amber/cyan block above: 300–500-level red is
+ * ~3:1 and emerald-400/90 ~1.8:1 on the near-white page, so error and success
+ * feedback effectively disappears in light mode. Remap to AA-contrast dark
+ * shades (Tailwind red-700 / emerald-700). Deliberately NOT remapped: bare
+ * text-red-300 / text-emerald-300, which only appear on dark colored chip
+ * backgrounds (Initiative's remove button, the party-mode toggle) that the
+ * light theme keeps dark — darkening that text would break those. Hover
+ * variants are left to Tailwind so they only apply on :hover. */
+.light-mode [class~="text-red-300/90"],
+.light-mode [class~="text-red-400"],
+.light-mode [class~="text-red-400/90"],
+.light-mode [class~="text-red-500"] { color: #b91c1c; }
+.light-mode [class~="text-emerald-400"],
+.light-mode [class~="text-emerald-400/90"],
+.light-mode [class~="text-emerald-500"] { color: #047857; }
+
 /* Placeholder */
 .light-mode [class~="placeholder-gray-500"]::placeholder,
 .light-mode [class~="placeholder-gray-600"]::placeholder { color: var(--dm-placeholder); }

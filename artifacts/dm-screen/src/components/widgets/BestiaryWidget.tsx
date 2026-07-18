@@ -86,6 +86,12 @@ const BY_NAME = new Map<string, MonsterEntry>(
 // straight off the live dataset so it never drifts from the data.
 const MONSTER_COUNT = monsters.length;
 
+// Render caps — the result rows are not virtualized, so an uncapped broad
+// match (1,000–2,300 entries now that most of the dataset carries a full stat
+// block) would stall the main thread on every keystroke.
+const MAX_RESULTS = 200;
+const UNFILTERED_PREVIEW = 7;
+
 function lookupByName(name: string): UnifiedMonster | null {
   const m = BY_NAME.get(name.toLowerCase());
   return m ? toUnified(m) : null;
@@ -369,29 +375,47 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   }, [deferredQuery, sortMode, crFilter]);
 
   // ── Broader thin-entry results when searching ────────────────────────────
-  // Local filter over the ~2,120 thin entries; full-stat-block entries are
-  // excluded (they already appear via localFiltered). Capped to keep the
-  // list short.
-  const thinResults = useMemo(() => {
-    if (!deferredQuery.trim()) return [] as MonsterEntry[];
+  // Local filter over the thin entries — only 14 of the 2,160, since the
+  // rich-data backfill left nearly the whole dataset carrying a full stat
+  // block. Full-stat-block entries are excluded here (they already appear via
+  // localFiltered), so the bulk pressure both caps guard against lives in
+  // localFiltered, not this path. The MAX_RESULTS cap below is therefore
+  // inert at the current ratio and kept only in case it shifts back; `total`
+  // still counts every match so the footer's "of N" is a real total rather
+  // than a floor that stops at the cap.
+  const { thinResults, thinTotal } = useMemo(() => {
+    if (!deferredQuery.trim()) return { thinResults: [] as MonsterEntry[], thinTotal: 0 };
     const q = deferredQuery.toLowerCase();
     const hits: MonsterEntry[] = [];
+    let total = 0;
     for (const m of monsters) {
       if (hasFullStatBlock(m)) continue;
       if (m.name.toLowerCase().includes(q) || m.type.toLowerCase().includes(q)) {
-        hits.push(m);
-        if (hits.length >= 200) break;
+        total++;
+        if (hits.length < MAX_RESULTS) hits.push(m);
       }
     }
-    return hits;
+    return { thinResults: hits, thinTotal: total };
   }, [deferredQuery]);
 
-  // Merge rich + thin for display when searching.
-  const displayList: UnifiedMonster[] = useMemo(() => {
-    if (!deferredQuery.trim()) return localFiltered.map(toUnified);
-    return [...localFiltered.map(toUnified), ...thinResults.map(toUnified)]
-      .sort((a, b) => sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr));
-  }, [deferredQuery, localFiltered, thinResults, sortMode]);
+  // Merge rich + thin for display when searching, capped: a broad query (or a
+  // CR filter alone) can match 1,000–2,300 of the full-stat-block pool, and the
+  // rows are not virtualized — rendering them all stalls the main thread on
+  // every keystroke. Slice the raw entries BEFORE toUnified so the cap also
+  // bounds the object mapping, and keep the pre-cap total for the footer.
+  const isFiltered = deferredQuery.trim() !== "" || crFilter !== "All";
+  const { visibleList, totalResults } = useMemo((): { visibleList: UnifiedMonster[]; totalResults: number } => {
+    const cap = isFiltered ? MAX_RESULTS : UNFILTERED_PREVIEW;
+    const merged = deferredQuery.trim()
+      ? [...localFiltered, ...thinResults].sort((a, b) =>
+          sortMode === "alpha" ? a.name.localeCompare(b.name) : crCompare(a.cr, b.cr))
+      : localFiltered;
+    // thinResults is collection-capped; thinTotal carries the matches beyond
+    // the cap so the footer total is real (thinTotal === thinResults.length
+    // when nothing was cut).
+    const total = merged.length + (thinTotal - thinResults.length);
+    return { visibleList: merged.slice(0, cap).map(toUnified), totalResults: total };
+  }, [isFiltered, deferredQuery, localFiltered, thinResults, thinTotal, sortMode]);
 
   const handleBack = () => {
     setSelected(null);
@@ -417,9 +441,6 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
   }
 
   // ── List view ────────────────────────────────────────────────────────────
-  const isFiltered = deferredQuery.trim() !== "" || crFilter !== "All";
-  const visibleList = isFiltered ? displayList : displayList.slice(0, 7);
-
   return (
     <div className="h-full min-h-0 flex flex-col gap-1.5">
       <div className="flex gap-1.5 shrink-0">
@@ -451,7 +472,7 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
-        {displayList.length === 0 && (
+        {totalResults === 0 && (
           <div className="text-xs text-gray-600 text-center py-4">No monsters found</div>
         )}
         {visibleList.map((m) => (
@@ -470,9 +491,14 @@ export function BestiaryWidget({ target, onTargetClear }: Props) {
             </div>
           </button>
         ))}
-        {!isFiltered && displayList.length > 7 && (
+        {!isFiltered && totalResults > UNFILTERED_PREVIEW && (
           <div className="text-center py-2 text-[10px] text-gray-600">
-            Showing 7 of {displayList.length} — search to filter
+            Showing {UNFILTERED_PREVIEW} of {totalResults.toLocaleString()} — search to filter
+          </div>
+        )}
+        {isFiltered && totalResults > MAX_RESULTS && (
+          <div className="text-center py-2 text-[10px] text-gray-600">
+            Showing first {MAX_RESULTS} of {totalResults.toLocaleString()} — refine your search
           </div>
         )}
       </div>

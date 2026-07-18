@@ -18,7 +18,7 @@ widget. Open, close, resize (1×1 or 2×2), and rearrange widgets freely; recent
 widgets are saved in the sidebar for quick restore. Layout persists across
 sessions via `localStorage`.
 
-### Eight widgets
+### Nine widgets
 
 - **Compendium** — search and browse D&D 5.5e rules entries: hand-curated DM
   summaries plus a bulk set of feats, combat actions, skills, senses, and
@@ -44,13 +44,40 @@ sessions via `localStorage`.
 - **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
   player for table music or ambience. The link is remembered across
   sessions, and the embed resizes with the tile.
+- **AI Chat** — ask Selene rules questions and look up monsters, spells, or a
+  player's D&D Beyond character in-session. Requires the **optional** local AI
+  bridge (`services/ai-bridge`); without it the widget shows an "AI bridge not
+  running" state and the rest of the app is unaffected. See
+  [services/ai-bridge/README.md](services/ai-bridge/README.md).
 
-### Coming soon
+  <details>
+  <summary>What the chat can do</summary>
 
-- **AI Chat** — an assistant widget for asking rules questions and managing
-  combatants/party members by chatting, backed by an optional local AI
-  bridge service. In active development on an unmerged branch; not yet
-  available in this build.
+  - **Bundled-data-first lookups.** Common spell/monster/rule questions are
+    answered instantly from the app's own bundled datasets — no round-trip to
+    the bridge. Use the explicit slash commands `/spell`, `/monster`, `/rule`
+    (exact match → a card; partial → a "Did you mean" list), or just type a bare
+    entity name (`fireball`, `goblin`, `grappled`) and it auto-detects a unique
+    match. Every local answer shows a **"From your bundled data"** provenance
+    line and an **"Ask Selene instead →"** link that re-runs the query through
+    the AI for a fuller reply.
+  - **Live D&D Beyond lookups** (via the bridge) for anything not bundled — a
+    specific player's current character sheet, a homebrew monster, an owned
+    rulebook — returned as a **preview card**, never a silent write.
+  - **Data hand-off, click to commit.** Monster cards get an **Add to
+    Initiative** button; character cards get **Add to Party** + **Add to
+    Initiative**. A party name-collision opens an editable Replace / Add-as-new
+    review form (diffing level/class/race/AC/max-HP) so nothing is clobbered
+    without your say-so.
+  - **Per-turn model + effort pickers** on the composer — choose Opus 4.8 /
+    Sonnet 5 / Haiku 4.5 and Low / Medium / High reasoning effort. Change them
+    anytime; the new choice applies to your next turn (and always to the next
+    **New chat**).
+  - **Transcript persistence.** Your chat history is saved locally
+    (`dm-ai-chat-v1`) and restored on reload; **New chat** clears it. Because
+    replies can echo D&D Beyond content, a full backup that includes a
+    transcript shows a warning (see the persistence note below).
+  </details>
 
 ### Quality of life
 
@@ -75,7 +102,10 @@ sessions via `localStorage`.
 >   incognito loses everything** that wasn't exported first.
 > - **Use the Backup buttons** in the sidebar before clearing data or
 >   migrating to a new machine. The full backup round-trips every `dm-*` key
->   verbatim and reloads the tab on import.
+>   verbatim and reloads the tab on import. This includes the AI Chat
+>   transcript (`dm-ai-chat-v1`), which can echo D&D Beyond character/campaign
+>   content — the sidebar shows a warning when an export would carry one; use
+>   **New chat** to clear it first if you don't want it in the shared file.
 > - **Stay on one origin.** Running in dev (`http://localhost:38080`) and in
 >   Docker (`http://localhost:38080`) on the same port and host shares state.
 >   Switching ports starts a fresh, separate store. One side effect of the
@@ -174,19 +204,24 @@ Leaving `BASE_PATH` unset serves at `/` with no proxy prefix to strip.
 
 ## Architecture
 
-pnpm workspace with one deployable plus an offline tooling package:
+pnpm workspace with one deployable, an offline tooling package, and an optional
+local AI service (not part of the build or the Docker image):
 
 ```
 artifacts/dm-screen/         React 19 + Vite + Tailwind v4 — the SPA (only deployable)
   src/data/                  Bundled reference data: spells, monsters,
                              weapons, generators, compendium
   src/lib/                   localStorage stores, backup/restore, shared UI primitives
-  src/components/widgets/    The eight widgets
+  src/components/widgets/    The nine widgets (AI Chat needs the optional bridge)
   public/                    PWA icons + static assets
   docker/nginx.conf          SPA-aware nginx config (used by the Docker image)
   scripts/verify-precache.mjs  Post-build guard: fails the build if a dataset
                              chunk grows past the PWA precache size cap
+packages/bridge-protocol/    Shared, types-only wire contract for the AI bridge ⇄
+                             AI Chat widget (no runtime code — erased from bundles)
 scripts/                     Standalone tsx data-generators (run offline)
+services/ai-bridge/          Optional local Claude Agent SDK + ddb-mcp bridge —
+                             powers the AI Chat widget; NOT in the deployable
 attached_assets/             Source CSV for the thin monster index
 Dockerfile, docker-compose.yml, .dockerignore
 ```

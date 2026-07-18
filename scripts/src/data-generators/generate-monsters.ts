@@ -479,24 +479,76 @@ function indexBestiary(): Map<string, Array<FiveToolsMonster & { _file: string }
 // trailing "(+)" (a CSV reprint marker), the segment before a "/" (combined
 // entries like "Succubus/Incubus"), and a trailing parenthetical qualifier
 // (e.g. "Giant Rat (Diseased)"). Returns the matching index key, or null.
+// The "(+)" strip is faithful (pure reprint marker); the slash-split and
+// generic parenthetical strip are LOSSY — the qualifier can be what makes it
+// a different creature ("Vampire (Mist Form)") — so the result says which,
+// letting callers gate lossy matches instead of silently attaching a
+// different creature's stat block.
 function resolveFiveToolsKey(
   name: string,
   index: Map<string, unknown>,
-): string | null {
-  const tries = [name];
+): { key: string; lossy: boolean } | null {
+  const faithful = [name];
   const noPlus = name.replace(/\s*\(\+\)\s*$/, "").trim();
-  if (noPlus !== name) tries.push(noPlus);
+  if (noPlus !== name) faithful.push(noPlus);
+  const lossyTries: string[] = [];
   const beforeSlash = name.split("/")[0]!.trim();
-  if (beforeSlash !== name) tries.push(beforeSlash);
+  if (beforeSlash !== name) lossyTries.push(beforeSlash);
   const noParen = name.replace(/\s*\([^)]*\)\s*$/, "").trim();
-  if (noParen !== name && !tries.includes(noParen)) tries.push(noParen);
-  for (const t of tries) {
-    if (index.has(t.toLowerCase())) return t.toLowerCase();
+  if (noParen !== name && !faithful.includes(noParen)) lossyTries.push(noParen);
+  for (const t of faithful) {
+    if (index.has(t.toLowerCase())) return { key: t.toLowerCase(), lossy: false };
+  }
+  for (const t of lossyTries) {
+    if (index.has(t.toLowerCase())) return { key: t.toLowerCase(), lossy: true };
   }
   return null;
 }
 
-function loadRichByName(thinNames: string[]): Map<string, RichFields> {
+// Numeric CR for agreement checks ("1/2" → 0.5). Null when unparseable — the
+// empty/whitespace string included: Number("") is 0, which would otherwise
+// masquerade as a real CR 0 and let a blank-CR row "agree" with a CR-0 block.
+// Both paths route through the finiteness check so a malformed "n/0" resolves
+// to null rather than Infinity, which would compare equal to another Infinity
+// and read as agreement.
+function crValue(cr: string): number | null {
+  const s = cr.trim();
+  if (s === "") return null;
+  const frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
+  const n = frac ? Number(frac[1]) / Number(frac[2]) : Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Normalized base creature type for agreement checks: lowercase and drop any
+// parenthetical subtype ("Dragon (metallic)" → "dragon", "beast" → "beast") so
+// casing / subtype-formatting differences between the CSV and the rich source
+// don't read as a mismatch. Empty or "unknown" → null ("don't know", not held
+// against an otherwise-agreeing match).
+function baseType(type: string): string | null {
+  const s = type.toLowerCase().replace(/\s*\(.*$/, "").trim();
+  return s === "" || s === "unknown" ? null : s;
+}
+
+// Gate for lossy / cross-book matches: only attach the rich block when it's very
+// likely the *same* creature. CR alone is a weak discriminator — many distinct
+// creatures share a low CR — so require CR agreement AND, when both are known,
+// base-type agreement. A same-name-after-stripping entry whose CR or type
+// differs is almost certainly a different creature (or a different ruleset's
+// version); overwriting the curated CSV's ac/hp/cr is worse than staying thin.
+// Unparseable CRs count as disagreement (fail closed).
+function richMatchesCsv(
+  csv: { cr: string; type: string },
+  rich: { cr: string; type: string },
+): boolean {
+  const a = crValue(csv.cr);
+  const b = crValue(rich.cr);
+  if (a == null || b == null || a !== b) return false;
+  const csvType = baseType(csv.type);
+  const richType = baseType(rich.type);
+  return csvType == null || richType == null || csvType === richType;
+}
+
+function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
   console.log(`Indexing 5etools bestiary at ${FIVETOOLS_DATA_DIR}/bestiary/`);
   const index = indexBestiary();
   console.log(`  ${index.size} unique monster names across all sources`);
@@ -529,19 +581,47 @@ function loadRichByName(thinNames: string[]): Map<string, RichFields> {
   // block. A miss here is expected and silent — most of the CSV is
   // third-party content (Tome of Beasts, Creature Codex, A5e Monstrous
   // Menagerie) that 5etools-src, an official-WotC-content mirror, doesn't
-  // carry at all.
+  // carry at all. Two match shapes are gated on CR + base-type agreement with
+  // the CSV row (and logged for review), so a different creature's block can't
+  // silently overwrite curated stats:
+  //   - LOSSY name matches (slash-split / parenthetical-stripped);
+  //   - CROSS-SOURCE matches — the CSV row's source is one of the Open5e
+  //     third-party books, so even an EXACT name hit in 5etools is a name
+  //     collision with a *different* official creature, not this row's
+  //     creature (e.g. Tome of Beasts and the MM both have creatures of the
+  //     same name). A skipped row stays thin here and the Open5e pass below
+  //     fills it from its own source book instead.
   let bulkMatched = 0;
-  for (const name of thinNames) {
-    const key = name.toLowerCase();
+  let gatedSkipped = 0;
+  for (const entry of thin) {
+    const key = entry.name.toLowerCase();
     if (rich.has(key)) continue;
-    const resolvedKey = resolveFiveToolsKey(name, index);
-    if (!resolvedKey) continue;
-    const candidates = index.get(resolvedKey)!;
+    const resolved = resolveFiveToolsKey(entry.name, index);
+    if (!resolved) continue;
+    const candidates = index.get(resolved.key)!;
     const picked = pickMonster(candidates as Array<FiveToolsMonster & { _file: string }>);
-    rich.set(key, transformRich(picked));
+    const fields = transformRich(picked);
+    const crossSource = OPEN5E_SLUG_BY_CSV_SOURCE[entry.source] !== undefined;
+    if (resolved.lossy || crossSource) {
+      const how = [resolved.lossy ? "lossy name" : null, crossSource ? "cross-source" : null]
+        .filter(Boolean)
+        .join(" + ");
+      if (!richMatchesCsv(entry, fields)) {
+        console.warn(
+          `  ⚠ ${how} match skipped: "${entry.name}" (${entry.source}) → "${picked.name}" (${picked._file}) — CR ${entry.cr}/${entry.type} vs ${fields.cr}/${fields.type}; entry stays thin`,
+        );
+        gatedSkipped++;
+        continue;
+      }
+      console.log(
+        `  ~ ${how} match accepted (CR+type agree): "${entry.name}" (${entry.source}) → "${picked.name}" (${picked._file})`,
+      );
+    }
+    rich.set(key, fields);
     bulkMatched++;
   }
   console.log(`  bulk-matched ${bulkMatched} additional thin entries against official 5etools data`);
+  if (gatedSkipped > 0) console.log(`  ${gatedSkipped} lossy/cross-source matches skipped on CR disagreement (stay thin)`);
 
   return rich;
 }
@@ -742,8 +822,11 @@ function transformOpen5e(fields: Open5eFields): RichFields {
 // match against the CSV row's own source book first, then fall back across
 // the other four Open5e books. Mutates `rich` in place (shared with the
 // 5etools pass) so main()'s single merge loop sees both sources uniformly.
+// Lossy-name matches AND cross-book fallbacks (the CSV row's own book had no
+// candidate, so we'd take another book's — possibly another ruleset's —
+// version) are logged and gated on CR + base-type agreement with the CSV row.
 function loadOpen5eRichByName(
-  thin: Array<{ name: string; source: string }>,
+  thin: Array<{ name: string; source: string; cr: string; type: string }>,
   rich: Map<string, RichFields>,
 ): void {
   console.log(`Indexing Open5e third-party bestiary at ${OPEN5E_DATA_DIR}/`);
@@ -751,20 +834,53 @@ function loadOpen5eRichByName(
   console.log(`  ${index.size} unique monster names across all Open5e books`);
 
   let matched = 0;
+  let gatedSkipped = 0;
   for (const entry of thin) {
     const key = entry.name.toLowerCase();
     if (rich.has(key)) continue;
 
     const ownSlug = OPEN5E_SLUG_BY_CSV_SOURCE[entry.source];
-    const resolvedKey = resolveFiveToolsKey(entry.name, index);
-    if (!resolvedKey) continue;
-    const candidates = index.get(resolvedKey)!;
-    const picked =
-      (ownSlug && candidates.find((c) => c.slug === ownSlug)) ?? candidates[0]!;
-    rich.set(key, transformOpen5e(picked.fields));
+    const resolved = resolveFiveToolsKey(entry.name, index);
+    if (!resolved) continue;
+    const candidates = index.get(resolved.key)!;
+    const ownPick = ownSlug ? candidates.find((c) => c.slug === ownSlug) : undefined;
+    const crossBook = !ownPick;
+    // Resolve the candidate together with its transformed fields so the chosen
+    // candidate is transformed exactly once. For a cross-book fallback (the CSV
+    // row's own book had no candidate), pick the candidate that actually matches
+    // the curated creature — the first whose CR + base type agree — instead of
+    // blindly taking candidates[0] and gating only that one, which would discard
+    // a valid same-CR block later in the list.
+    const resolvePick = () => {
+      if (ownPick) return { picked: ownPick, fields: transformOpen5e(ownPick.fields) };
+      for (const c of candidates) {
+        const fields = transformOpen5e(c.fields);
+        if (richMatchesCsv(entry, fields)) return { picked: c, fields };
+      }
+      const picked = candidates[0]!;
+      return { picked, fields: transformOpen5e(picked.fields) };
+    };
+    const { picked, fields } = resolvePick();
+    if (resolved.lossy || crossBook) {
+      const how = [resolved.lossy ? "lossy name" : null, crossBook ? "cross-book" : null]
+        .filter(Boolean)
+        .join(" + ");
+      if (!richMatchesCsv(entry, fields)) {
+        console.warn(
+          `  ⚠ ${how} match skipped: "${entry.name}" (${entry.source}) → "${picked.fields.name}" (${picked.slug}) — CR ${entry.cr}/${entry.type} vs ${fields.cr}/${fields.type}; entry stays thin`,
+        );
+        gatedSkipped++;
+        continue;
+      }
+      console.log(
+        `  ~ ${how} match accepted (CR+type agree): "${entry.name}" (${entry.source}) → "${picked.fields.name}" (${picked.slug})`,
+      );
+    }
+    rich.set(key, fields);
     matched++;
   }
   console.log(`  matched ${matched} additional thin entries against Open5e third-party data`);
+  if (gatedSkipped > 0) console.log(`  ${gatedSkipped} lossy/cross-book matches skipped on CR disagreement (stay thin)`);
 }
 
 function parseCSV(content: string): string[][] {
@@ -897,7 +1013,7 @@ function loadThinEntries(): ThinFields[] {
 
 function main() {
   const thin = loadThinEntries();
-  const richByName = loadRichByName(thin.map((t) => t.name));
+  const richByName = loadRichByName(thin);
   loadOpen5eRichByName(thin, richByName);
 
   const merged: MonsterEntry[] = [];

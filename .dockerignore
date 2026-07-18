@@ -10,6 +10,10 @@
 **/dist
 **/build
 
+# Test output. `vitest run --coverage` writes a whole HTML report tree that the
+# image has no use for. Keep in sync with .gitignore's `coverage`.
+**/coverage
+
 # Git metadata.
 .git
 .gitignore
@@ -45,10 +49,15 @@ docker-compose.yml
 docker-compose.*.yml
 
 # Project intake docs — not needed inside the image. CLAUDE.md, README,
-# the handover doc, etc. stay in the repo but don't bloat the build
-# context.
-HANDOVER-self-hosting.md
+# the handover docs, etc. stay in the repo but don't bloat the build
+# context. Glob the HANDOVER-*.md set so new handover docs are excluded
+# without having to touch this file each time one is added.
+HANDOVER-*.md
 CLAUDE.md
+MANUAL-TESTS-*.md
+# Design specs and other written-for-humans material. Directory-wide so a new
+# spec doesn't have to be listed here one file at a time.
+docs/
 
 # Data-generation script outputs that aren't part of the source tree
 # (lib/ was deleted in Phase 3, but cover .pnpm-store just in case).

@@ -99,14 +99,17 @@ export function DragonHeader() {
           className="text-2xl font-black tracking-[0.25em] uppercase"
           style={{
             fontFamily: "'Cinzel', 'Georgia', serif",
-            // background-clip is baked into the shorthand (rather than set via
-            // the separate WebkitBackgroundClip longhand) because React skips
-            // rewriting a style longhand whose value is unchanged since the
-            // last render — toggling theme only changes `background`, and
-            // reassigning that shorthand alone resets background-clip back to
-            // its initial border-box, leaving the title invisible.
-            background: `${titleGradient} text`,
+            // The gradient goes on the `backgroundImage` longhand, never the
+            // `background` shorthand: `text` is not a valid <box> in the
+            // shorthand, so `background: <gradient> text` is dropped by
+            // spec-compliant parsers (Firefox), leaving the transparent-filled
+            // title invisible. Using `backgroundImage` also sidesteps the React
+            // quirk that prompted the old workaround — reassigning the shorthand
+            // resets background-clip to border-box, but reassigning
+            // `backgroundImage` on a theme toggle leaves background-clip intact.
+            backgroundImage: titleGradient,
             WebkitBackgroundClip: "text",
+            backgroundClip: "text",
             WebkitTextFillColor: titleColor,
             filter: isDark
               ? "drop-shadow(0 0 10px rgba(255,255,255,0.25))"
