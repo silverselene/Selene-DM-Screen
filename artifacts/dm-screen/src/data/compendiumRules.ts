@@ -5,7 +5,7 @@
  * Generator:  scripts/src/data-generators/generate-compendium.ts
  * Pinned to:  5etools-src @ v2.31.0
  * License:    5etools content is MIT-licensed by its respective authors.
- * Entries:    564
+ * Entries:    562
  *
  * Regenerate with: pnpm --filter @workspace/scripts run generate:<name>
  */
@@ -1467,17 +1467,6 @@ export const compendiumRulesData: CompendiumEntry[] = [
   },
   {
     id: "feat-fey-touched",
-    title: "Fey Touched",
-    category: "Feats",
-    content: "Your exposure to the Feywild's magic has changed you, granting you the following benefits:\nYou learn the misty step spell and one 1st-level spell of your choice. The 1st-level spell must be from the divination or enchantment school of magic. You can cast each of these spells without expending a spell slot. Once you cast either of these spells in this way, you can't cast that spell in this way again until you finish a long rest. You can also cast these spells using spell slots you have of the appropriate level. The spells' spellcasting ability is the ability increased by this feat.",
-    tags: [
-      "feat",
-      "official",
-      "tce",
-    ],
-  },
-  {
-    id: "feat-fey-touched",
     title: "Fey-Touched",
     category: "Feats",
     content: "Prerequisite: Level 4.\n\nYour exposure to the Feywild's magic grants you the following benefits.\nFey Magic:\nChoose one level 1 spell from the Divination or Enchantment school of magic. You always have that spell and the Misty Step spell prepared. You can cast each of these spells without expending a spell slot. Once you cast either spell in this way, you can't cast that spell in this way again until you finish a Long Rest. You can also cast these spells using spell slots you have of the appropriate level. The spells' spellcasting ability is the ability increased by this feat.",
@@ -2926,17 +2915,6 @@ export const compendiumRulesData: CompendiumEntry[] = [
       "feat",
       "official",
       "psk",
-    ],
-  },
-  {
-    id: "feat-shadow-touched",
-    title: "Shadow Touched",
-    category: "Feats",
-    content: "Your exposure to the Shadowfell's magic has changed you, granting you the following benefits:\nYou learn the invisibility spell and one 1st-level spell of your choice. The 1st-level spell must be from the illusion or necromancy school of magic. You can cast each of these spells without expending a spell slot. Once you cast either of these spells in this way, you can't cast that spell in this way again until you finish a long rest. You can also cast these spells using spell slots you have of the appropriate level. The spells' spellcasting ability is the ability increased by this feat.",
-    tags: [
-      "feat",
-      "official",
-      "tce",
     ],
   },
   {

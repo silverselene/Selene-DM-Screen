@@ -23,6 +23,7 @@ import {
   tsLiteral,
   writeOutput,
 } from "./lib.js";
+import { dedupeByName, slugify } from "./dedupe.js";
 
 interface CompendiumEntry {
   id: string;
@@ -30,43 +31,6 @@ interface CompendiumEntry {
   category: string;
   content: string;
   tags: string[];
-}
-
-// Prefer 2024 core books, then 2014 core, then major expansions; anything
-// else (adventure/setting-specific sourcebooks) falls back to first-found.
-const SOURCE_PRIORITY = ["XPHB", "XDMG", "PHB", "DMG", "TCE", "XGE", "MPMM"];
-
-function pickBestBySource<T extends { source?: string }>(items: T[]): T {
-  let best = items[0]!;
-  let bestRank = SOURCE_PRIORITY.indexOf(best.source ?? "");
-  if (bestRank === -1) bestRank = SOURCE_PRIORITY.length;
-  for (const it of items.slice(1)) {
-    let rank = SOURCE_PRIORITY.indexOf(it.source ?? "");
-    if (rank === -1) rank = SOURCE_PRIORITY.length;
-    if (rank < bestRank) {
-      best = it;
-      bestRank = rank;
-    }
-  }
-  return best;
-}
-
-function dedupeByName<T extends { name: string; source?: string }>(items: T[]): T[] {
-  const groups = new Map<string, T[]>();
-  for (const it of items) {
-    const key = it.name.toLowerCase();
-    const arr = groups.get(key) ?? [];
-    arr.push(it);
-    groups.set(key, arr);
-  }
-  return [...groups.values()].map(pickBestBySource);
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 // Normalize a title so bulk entries don't duplicate a hand-curated one under

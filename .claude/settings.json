@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk 'NR>=86200 && NR<=86380 && /^    name:/' monsters.ts)",
+      "Bash(awk -F: '$1 < 86375')"
+    ]
+  }
+}

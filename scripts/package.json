@@ -6,6 +6,8 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "generate:spells": "tsx ./src/data-generators/generate-spells.ts",
     "generate:monsters": "tsx ./src/data-generators/generate-monsters.ts",
     "generate:weapons": "tsx ./src/data-generators/generate-weapons.ts",
@@ -14,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "^4.1.9"
   }
 }

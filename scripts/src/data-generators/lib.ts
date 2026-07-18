@@ -52,7 +52,6 @@ const ZERO_ARG_TAGS: Record<string, string> = {
   actSaveSuccessOrFail: "Success or Failure: ",
   actTrigger: "Trigger: ",
   actResponse: "Response: ",
-  recharge: "(Recharge)",
 };
 
 // Single-letter codes used as the argument of {@atk …} / {@atkr …}.
@@ -92,6 +91,13 @@ export function stripTags(str: unknown): string {
   if (typeof str !== "string") return "";
   return (
     str
+      // {@recharge N} / {@recharge} → "(Recharge N–6)" / "(Recharge 6)",
+      // matching the 5etools renderer. Must run before the zero-arg and
+      // generic rules: the one-arg form would otherwise collapse to a bare
+      // number ("Fire Breath 5") and lose the recharge mechanic entirely.
+      .replace(/\{@recharge(?:\s+(\d))?\s*\}/g, (_, n: string | undefined) =>
+        n !== undefined && Number(n) < 6 ? `(Recharge ${n}–6)` : "(Recharge 6)",
+      )
       // Zero-argument tags → friendly labels (or empty).
       .replace(/\{@(\w+)\}/g, (m, tag: string) => {
         if (Object.prototype.hasOwnProperty.call(ZERO_ARG_TAGS, tag)) {
