@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { DragonHeader } from "@/components/DragonHeader";
 import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
@@ -97,6 +97,51 @@ function repackTiles(
   return { next, dropped };
 }
 
+// Which cells are claimed by some OTHER tile's footprint, for validating a
+// drag-to-resize target. `excludeIdx`'s own footprint (including any cells
+// it currently spans into) is left unmarked — the tile being resized is
+// always free to shrink or regrow over its own prior space. A plain 1×1
+// "empty" tile doesn't block — growing into open space is the point of the
+// gesture — but a *stretched* empty placeholder (colSpan/rowSpan > 1) does,
+// same as a real widget: it's cells a DM deliberately reserved, unlike the
+// old expand/contract buttons, which only ever checked a single neighboring
+// cell and could silently orphan a stretched empty tile's second cell.
+function computeOccupancyExcluding(
+  gridTiles: TileEntry[],
+  cols: number,
+  excludeIdx: number,
+): boolean[] {
+  const occ = new Array<boolean>(gridTiles.length).fill(false);
+  for (let idx = 0; idx < gridTiles.length; idx++) {
+    const t = gridTiles[idx];
+    if (t === null || idx === excludeIdx) continue;
+    const blocks = t.widget !== "empty" || t.colSpan > 1 || t.rowSpan > 1;
+    if (!blocks) continue;
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    for (let r = 0; r < t.rowSpan; r++)
+      for (let c = 0; c < t.colSpan; c++) {
+        const cell = (row + r) * cols + (col + c);
+        if (cell < occ.length) occ[cell] = true;
+      }
+  }
+  return occ;
+}
+
+// A tile is drag-reorderable only at 1×1 — swapping is a plain array-index
+// exchange, which isn't well-defined for a spanned tile that covers more
+// than one grid cell.
+function canDragTile(entry: TileEntry): boolean {
+  return entry !== null && entry.widget !== "empty" && entry.colSpan === 1 && entry.rowSpan === 1;
+}
+
+interface ResizePreview {
+  index: number;
+  colSpan: 1 | 2;
+  rowSpan: 1 | 2;
+  valid: boolean;
+}
+
 function AppContent() {
   const { isDark } = useTheme();
   const [cols, setCols] = useLocalStorage<number>("dm-grid-cols", 3, validateGridDim);
@@ -114,6 +159,13 @@ function AppContent() {
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [bestiaryTarget, setBestiaryTarget] = useState<string | null>(null);
+
+  // Drag-to-reorder + drag-to-resize UI state. Neither is persisted — both
+  // reset to nothing on reload, same as any other in-flight gesture.
+  const [dragSrc, setDragSrc] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [resizePreview, setResizePreview] = useState<ResizePreview | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // Cross-key consistency guard, mirroring the import path's grid-triple
   // eviction in backup.ts: cols/rows/tiles are three independent setItem
@@ -207,46 +259,109 @@ function AppContent() {
     });
   };
 
-  const handleExpandRight = (i: number) => {
+  // Replaces the old four expand/contract buttons: one corner drag commits
+  // whatever footprint the pointer settled on (see `startResize`), growing
+  // or shrinking in either dimension in a single gesture.
+  const handleResizeTile = (i: number, newColSpan: 1 | 2, newRowSpan: 1 | 2) => {
     update((t) => {
       const entry = t[i];
-      if (!entry || entry.colSpan === 2) return t;
-      t[i] = { ...entry, colSpan: 2 };
-      t[i + 1] = null;
-      if (entry.rowSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = null;
+      if (!entry) return t;
+      const { colSpan: oldColSpan, rowSpan: oldRowSpan } = entry;
+      // Free every cell the old footprint covered, then re-claim the new
+      // one fresh — simpler and more robust than diffing old vs. new spans.
+      for (let r = 0; r < oldRowSpan; r++)
+        for (let c = 0; c < oldColSpan; c++) {
+          const idx = i + r * cols + c;
+          if (idx !== i && idx < t.length) t[idx] = empty();
+        }
+      t[i] = { ...entry, colSpan: newColSpan, rowSpan: newRowSpan };
+      for (let r = 0; r < newRowSpan; r++)
+        for (let c = 0; c < newColSpan; c++) {
+          const idx = i + r * cols + c;
+          if (idx !== i && idx < t.length) t[idx] = null;
+        }
       return t;
     });
   };
 
-  const handleExpandDown = (i: number) => {
-    update((t) => {
-      const entry = t[i];
-      if (!entry || entry.rowSpan === 2) return t;
-      t[i] = { ...entry, rowSpan: 2 };
-      t[i + cols] = null;
-      if (entry.colSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = null;
-      return t;
-    });
+  // Pointer-driven corner resize. Reads the grid's live pixel geometry once
+  // at drag start, then on every move recomputes the snapped target span
+  // from scratch against the original pointer-down position (not the
+  // previous frame) so there's no drift, and validates it against every
+  // other tile's current footprint before letting `resizePreview` show gold
+  // (valid) or red (would overlap something).
+  const startResize = (e: React.PointerEvent, i: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const gridEl = gridRef.current;
+    const entry = gridTiles[i];
+    if (!gridEl || !entry) return;
+
+    const rect = gridEl.getBoundingClientRect();
+    const gap = 10;
+    const cellW = (rect.width - (cols - 1) * gap) / cols;
+    const cellH = (rect.height - (rows - 1) * gap) / rows;
+    const col0 = i % cols;
+    const row0 = Math.floor(i / cols);
+    const startColSpan = entry.colSpan;
+    const startRowSpan = entry.rowSpan;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const occ = computeOccupancyExcluding(gridTiles, cols, i);
+
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      let newColSpan: 1 | 2 = startColSpan;
+      let newRowSpan: 1 | 2 = startRowSpan;
+      if (dx > cellW * 0.4) newColSpan = 2;
+      else if (dx < -cellW * 0.4) newColSpan = 1;
+      if (dy > cellH * 0.4) newRowSpan = 2;
+      else if (dy < -cellH * 0.4) newRowSpan = 1;
+      if (col0 + newColSpan > cols) newColSpan = (cols - col0) as 1 | 2;
+      if (row0 + newRowSpan > rows) newRowSpan = (rows - row0) as 1 | 2;
+
+      let valid = true;
+      for (let r = 0; r < newRowSpan && valid; r++) {
+        for (let c = 0; c < newColSpan; c++) {
+          if (r === 0 && c === 0) continue;
+          if (occ[(row0 + r) * cols + (col0 + c)]) { valid = false; break; }
+        }
+      }
+      setResizePreview({ index: i, colSpan: newColSpan, rowSpan: newRowSpan, valid });
+    };
+
+    const onUp = () => {
+      setResizePreview((prev) => {
+        if (prev && prev.index === i && prev.valid) {
+          handleResizeTile(i, prev.colSpan, prev.rowSpan);
+        }
+        return null;
+      });
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   };
 
-  const handleContractRight = (i: number) => {
+  // Drag-to-reorder: swap two 1×1 tiles (dropping onto an empty 1×1 slot
+  // just moves the dragged tile there — swapping its content with "empty"
+  // is already exactly that). Spanned tiles opt out via `canDragTile`.
+  const handleTileDrop = (targetIdx: number) => {
+    const srcIdx = dragSrc;
+    setDragSrc(null);
+    setDragOverIdx(null);
+    if (srcIdx === null || srcIdx === targetIdx) return;
+    const src = gridTiles[srcIdx];
+    const dest = gridTiles[targetIdx];
+    if (!canDragTile(src)) return;
+    if (dest === null || dest.colSpan !== 1 || dest.rowSpan !== 1) return;
     update((t) => {
-      const entry = t[i];
-      if (!entry || entry.colSpan === 1) return t;
-      t[i] = { ...entry, colSpan: 1 };
-      if (i + 1 < t.length) t[i + 1] = empty();
-      if (entry.rowSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = empty();
-      return t;
-    });
-  };
-
-  const handleContractDown = (i: number) => {
-    update((t) => {
-      const entry = t[i];
-      if (!entry || entry.rowSpan === 1) return t;
-      t[i] = { ...entry, rowSpan: 1 };
-      if (i + cols < t.length) t[i + cols] = empty();
-      if (entry.colSpan === 2 && i + cols + 1 < t.length) t[i + cols + 1] = empty();
+      const tmp = t[targetIdx];
+      t[targetIdx] = t[srcIdx];
+      t[srcIdx] = tmp;
       return t;
     });
   };
@@ -296,7 +411,7 @@ function AppContent() {
       className="h-screen w-screen flex flex-col overflow-hidden transition-colors duration-300"
       style={{
         background: isDark
-          ? "linear-gradient(135deg, #090010 0%, #0d0018 50%, #080012 100%)"
+          ? "linear-gradient(135deg, #170e21 0%, #1e1329 50%, #140b1c 100%)"
           : "var(--dm-bg-page)",
       }}
     >
@@ -316,12 +431,14 @@ function AppContent() {
 
         <main className="flex-1 p-3 overflow-hidden">
           <div
+            ref={gridRef}
             className="h-full"
             style={{
               display: "grid",
               gridTemplateColumns: `repeat(${cols}, 1fr)`,
               gridTemplateRows: `repeat(${rows}, 1fr)`,
               gap: "10px",
+              position: "relative",
             }}
           >
             {gridTiles.map((entry, i) => {
@@ -330,16 +447,11 @@ function AppContent() {
               const tileCol = (i % cols) + 1;
               const colSpan = (entry as { colSpan: number }).colSpan ?? 1;
               const rowSpan = (entry as { rowSpan: number }).rowSpan ?? 1;
-
-              const canExpandRight =
-                colSpan === 1 &&
-                tileCol < cols &&
-                (gridTiles[i + 1] === null || gridTiles[i + 1]?.widget === "empty");
-              const canExpandDown =
-                rowSpan === 1 &&
-                tileRow < rows &&
-                i + cols < gridTiles.length &&
-                (gridTiles[i + cols] === null || gridTiles[i + cols]?.widget === "empty");
+              // A drop is only offered visually (preventDefault) when the
+              // hovered cell is actually a valid 1×1 target — otherwise the
+              // browser's native "not-allowed" drop cursor does the talking.
+              const isValidDropTarget =
+                colSpan === 1 && rowSpan === 1 && dragSrc !== null && canDragTile(gridTiles[dragSrc]);
 
               return (
                 <div
@@ -356,25 +468,47 @@ function AppContent() {
                     minWidth: 0,
                     overflow: "hidden",
                   }}
+                  className={dragOverIdx === i && isValidDropTarget ? "dm-drop-target" : undefined}
+                  onDragOver={(e) => {
+                    if (!isValidDropTarget || dragSrc === i) return;
+                    e.preventDefault();
+                    if (dragOverIdx !== i) setDragOverIdx(i);
+                  }}
+                  onDragLeave={() => setDragOverIdx((prev) => (prev === i ? null : prev))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleTileDrop(i);
+                  }}
                 >
                   <DMTile
-                    index={i}
                     entry={entry}
-                    cols={cols}
                     onAdd={() => setSelectingTile(i)}
                     onClear={() => handleClear(i)}
-                    canExpandRight={canExpandRight}
-                    canExpandDown={canExpandDown}
-                    onExpandRight={() => handleExpandRight(i)}
-                    onExpandDown={() => handleExpandDown(i)}
-                    onContractRight={() => handleContractRight(i)}
-                    onContractDown={() => handleContractDown(i)}
+                    canDrag={canDragTile(entry)}
+                    isDragging={dragSrc === i}
+                    onDragStart={() => setDragSrc(i)}
+                    onDragEnd={() => { setDragSrc(null); setDragOverIdx(null); }}
+                    onResizeStart={(e) => startResize(e, i)}
                     bestiaryTarget={entry.widget === "bestiary" ? bestiaryTarget : null}
                     onBestiaryTargetClear={() => setBestiaryTarget(null)}
                   />
                 </div>
               );
             })}
+
+            {resizePreview && (
+              <div
+                aria-hidden
+                className="pointer-events-none rounded-lg border-2 border-dashed"
+                style={{
+                  gridColumn: `${(resizePreview.index % cols) + 1} / span ${resizePreview.colSpan}`,
+                  gridRow: `${Math.floor(resizePreview.index / cols) + 1} / span ${resizePreview.rowSpan}`,
+                  borderColor: resizePreview.valid ? "#e0bd6e" : "#e0716f",
+                  background: resizePreview.valid ? "rgba(212,175,106,0.10)" : "rgba(224,113,111,0.10)",
+                  zIndex: 5,
+                }}
+              />
+            )}
           </div>
         </main>
       </div>

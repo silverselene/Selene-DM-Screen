@@ -69,30 +69,31 @@
 
 /* ── DM Screen theme tokens ─────────────────────────────── */
 :root {
-  --dm-bg-page:      #050009;
-  --dm-bg-tile:      rgba(3, 0, 8, 0.82);
-  --dm-bg-input:     #111827;
-  --dm-bg-item:      rgba(3, 7, 18, 0.60);
-  --dm-bg-item-h:    rgba(88, 28, 135, 0.28);
-  --dm-bg-card:      rgba(3, 7, 18, 0.82);
-  --dm-bg-tag:       #1f2937;
-  --dm-bg-btn:       rgba(55, 65, 81, 0.60);
-  --dm-t1:           #e5e7eb;
-  --dm-t2:           #9ca3af;
-  --dm-t3:           #6b7280;
-  --dm-t4:           #4b5563;
+  --dm-bg-page:      #180f22;
+  --dm-bg-tile:      rgba(36, 23, 51, 0.88);
+  --dm-bg-input:     #1f1329;
+  --dm-bg-item:      rgba(43, 28, 60, 0.55);
+  --dm-bg-item-h:    rgba(78, 52, 107, 0.35);
+  --dm-bg-card:      rgba(36, 23, 51, 0.92);
+  --dm-bg-tag:       #2b1c3c;
+  --dm-bg-btn:       rgba(67, 47, 92, 0.55);
+  --dm-t1:           #efe8f4;
+  --dm-t2:           #b3a0c4;
+  --dm-t3:           #7d6b8f;
+  --dm-t4:           #5c4d6e;
   --dm-thead:        #ffffff;
-  --dm-border:       rgba(31, 41, 55, 0.60);
-  --dm-border-input: rgba(126, 34, 206, 0.50);
-  --dm-border-card:  rgba(255, 255, 255, 0.15);
-  --dm-placeholder:  #6b7280;
-  --dm-scrollbar:    #4a1080;
-  --dm-scrollbar-h:  #6b1eba;
-  /* Amethyst accent. Dark mode keeps the Tailwind purple-300/400/500 look;
-     these tokens centralize it so light mode can swap in an AA-contrast
-     shade (see the .light-mode block + the purple utility overrides below). */
-  --dm-accent:        #c084fc;
-  --dm-accent-strong: #a855f7;
+  --dm-border:       rgba(186, 158, 212, 0.16);
+  --dm-border-input: rgba(201, 162, 77, 0.35);
+  --dm-border-card:  rgba(212, 175, 106, 0.18);
+  --dm-placeholder:  #7d6b8f;
+  --dm-scrollbar:    #3d2854;
+  --dm-scrollbar-h:  #c9a24d;
+  /* Muted-plum-and-gold accent. Dark mode carries the gold; light mode keeps
+     its own AA-contrast amethyst shade (see the .light-mode block + the
+     purple utility overrides below), which is intentionally a different hue
+     from dark mode's gold — this reskin is scoped to dark mode only. */
+  --dm-accent:        #c9a24d;
+  --dm-accent-strong: #e0bd6e;
 }
 
 .light-mode {
@@ -149,6 +150,25 @@
   background-color: var(--dm-bg-btn);
   color: var(--dm-t2);
 }
+
+/* Dark-mode tile chrome: replaces the old per-widget rainbow border (still
+   used in light mode, see DMTile.tsx) with one shared violet hairline that
+   brightens gold on hover — "gold means interactive," never decoration. */
+.dm-tile-border {
+  border-color: var(--dm-border);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.dm-tile-border:hover {
+  border-color: rgba(212, 175, 106, 0.45);
+  box-shadow: 0 0 16px rgba(201, 162, 77, 0.12);
+}
+
+/* Gold ring shown on a tile while it's a valid drag-reorder drop target, or
+   invalid-red while a resize ghost overlaps existing content. */
+.dm-drop-target {
+  box-shadow: 0 0 0 2px rgba(212, 175, 106, 0.7) inset;
+  border-radius: 0.5rem;
+}
 .dm-btn-plain:hover { color: var(--dm-t1); }
 
 /* ── Light-mode Tailwind class overrides ────────────────── *
@@ -191,12 +211,26 @@
 .light-mode [class~="bg-gray-900\/80"] { background-color: rgba(243,240,255,0.96); }
 .light-mode [class~="bg-gray-900/60"],
 .light-mode [class~="bg-gray-900\/60"] { background-color: rgba(232,226,255,0.72); }
+.light-mode [class~="bg-gray-900/50"],
+.light-mode [class~="bg-gray-900\/50"] { background-color: rgba(232,226,255,0.72); }
 .light-mode [class~="bg-gray-900/40"],
 .light-mode [class~="bg-gray-900\/40"] { background-color: rgba(232,226,255,0.50); }
 .light-mode [class~="bg-gray-900"]     { background-color: #ede8ff; }
 .light-mode [class~="bg-gray-800"]     { background-color: #ddd6f5; }
 .light-mode [class~="bg-gray-700/60"],
 .light-mode [class~="bg-gray-700\/60"] { background-color: rgba(210,200,240,0.70); }
+
+/* AI Chat's inline `<code>`/`<pre>` snippets and tool-card chips (ChatToolCard,
+ * ChatCardActions, miniMarkdown) use a plain black wash tuned for the dark
+ * page — on the near-white light page it reads as a near-black box, same
+ * failure mode as the bg-gray-9xx tiers above. bg-black/30 (chip-weight) maps
+ * to the same tag chip used elsewhere (bg-gray-800); bg-black/20 (the AI Chat
+ * compose box) maps to the same input surface as every other widget's search
+ * bar (bg-gray-900). */
+.light-mode [class~="bg-black/30"],
+.light-mode [class~="bg-black\/30"] { background-color: #ddd6f5; }
+.light-mode [class~="bg-black/20"],
+.light-mode [class~="bg-black\/20"] { background-color: #ede8ff; }
 
 /* Border */
 .light-mode [class~="border-gray-800/60"],

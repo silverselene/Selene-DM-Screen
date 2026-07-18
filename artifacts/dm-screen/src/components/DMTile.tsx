@@ -1,10 +1,11 @@
 import { lazy, Suspense } from "react";
 import {
   Plus, X, BookOpen, Swords, FileText, Wand2, Skull, BookMarked, Users, Sparkles,
-  ArrowRight, ArrowDown, Minimize2, MonitorPlay,
+  MonitorPlay, GripVertical, MoveDiagonal2,
 } from "lucide-react";
 import type { TileEntry, WidgetType } from "@/types";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
+import { useTheme } from "@/contexts/ThemeContext";
 
 // Lazy-load each widget so its code (and the big reference datasets it pulls
 // in) downloads on first mount, not at app boot. The widgets are named exports,
@@ -38,17 +39,19 @@ function WidgetLoading() {
 }
 
 interface Props {
-  index: number;
   entry: TileEntry;
-  cols: number;
   onAdd: () => void;
   onClear: () => void;
-  canExpandRight: boolean;
-  canExpandDown: boolean;
-  onExpandRight: () => void;
-  onExpandDown: () => void;
-  onContractRight: () => void;
-  onContractDown: () => void;
+  // Drag-to-reorder: only offered on 1×1 widget tiles (see `canDragTile` in
+  // App.tsx) — a spanned tile can't be swapped via a single index exchange.
+  canDrag: boolean;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  // Drag-to-resize: a single corner handle replaces the old four
+  // expand/contract buttons. App.tsx owns the pointer-move geometry (it has
+  // the grid's bounding rect and occupancy); this just forwards the gesture.
+  onResizeStart: (e: React.PointerEvent) => void;
   bestiaryTarget?: string | null;
   onBestiaryTargetClear?: () => void;
 }
@@ -133,24 +136,43 @@ function WidgetContent({
   );
 }
 
+// Bottom-right drag-to-resize handle. Shared between the empty and widget
+// tile branches so growing/shrinking works identically whether or not a
+// widget has been placed yet.
+function ResizeHandle({ onResizeStart }: { onResizeStart: (e: React.PointerEvent) => void }) {
+  return (
+    <div
+      onPointerDown={onResizeStart}
+      // Explicit override: this handle can sit inside a `draggable` tile
+      // (see the widget-tile branch below) and would otherwise inherit
+      // draggability, racing the browser's native HTML5 drag against the
+      // pointer-based resize gesture below.
+      draggable={false}
+      title="Drag to resize"
+      className="pointer-events-auto absolute right-0.5 bottom-0.5 w-5 h-5 flex items-center justify-center text-gray-600 opacity-0 group-hover:opacity-100 hover:!text-[#c9a24d] transition-all cursor-nwse-resize touch-none"
+    >
+      <MoveDiagonal2 className="w-3.5 h-3.5" />
+    </div>
+  );
+}
+
 export function DMTile({
   entry, onAdd, onClear,
-  canExpandRight, canExpandDown,
-  onExpandRight, onExpandDown,
-  onContractRight, onContractDown,
+  canDrag, isDragging, onDragStart, onDragEnd, onResizeStart,
   bestiaryTarget, onBestiaryTargetClear,
 }: Props) {
+  const { isDark } = useTheme();
   if (!entry) return null;
 
   const { widget } = entry;
-  const colSpan = (entry as { colSpan: number }).colSpan ?? 1;
-  const rowSpan = (entry as { rowSpan: number }).rowSpan ?? 1;
-  const isStretched = colSpan > 1 || rowSpan > 1;
 
   /* ── Empty tile ── */
   if (widget === "empty") {
     return (
-      <div className="relative h-full rounded-lg border-2 border-dashed border-purple-900/40 hover:border-purple-700/60 transition-all group flex items-center justify-center hover:bg-purple-950/10" style={{ background: "var(--dm-bg-tile)" }}>
+      <div
+        className="group relative h-full rounded-lg border-2 border-dashed border-purple-900/40 hover:border-purple-700/60 transition-all flex items-center justify-center hover:bg-purple-950/10"
+        style={{ background: "var(--dm-bg-tile)" }}
+      >
         {/* Center add button */}
         <button
           onClick={onAdd}
@@ -161,48 +183,7 @@ export function DMTile({
           </div>
         </button>
 
-        {/* Resize controls — visible on hover */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Expand right handle */}
-          {canExpandRight && (
-            <button
-              onClick={onExpandRight}
-              title="Stretch right"
-              className="pointer-events-auto absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-purple-800 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-800/40 hover:border-purple-500"
-            >
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
-          {/* Expand down handle */}
-          {canExpandDown && (
-            <button
-              onClick={onExpandDown}
-              title="Stretch down"
-              className="pointer-events-auto absolute bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 flex items-center justify-center text-purple-800 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-800/40 hover:border-purple-500"
-            >
-              <ArrowDown className="w-3 h-3" />
-            </button>
-          )}
-          {/* Contract handles */}
-          {colSpan > 1 && (
-            <button
-              onClick={onContractRight}
-              title="Contract width"
-              className="pointer-events-auto absolute right-1 top-1 w-5 h-5 flex items-center justify-center text-purple-500 hover:text-purple-300 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-700/40"
-            >
-              <Minimize2 className="w-3 h-3" />
-            </button>
-          )}
-          {rowSpan > 1 && colSpan === 1 && (
-            <button
-              onClick={onContractDown}
-              title="Contract height"
-              className="pointer-events-auto absolute right-1 top-1 w-5 h-5 flex items-center justify-center text-purple-500 hover:text-purple-300 opacity-0 group-hover:opacity-100 transition-all rounded bg-purple-950/60 border border-purple-700/40"
-            >
-              <Minimize2 className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+        <ResizeHandle onResizeStart={onResizeStart} />
       </div>
     );
   }
@@ -212,68 +193,49 @@ export function DMTile({
 
   return (
     <div
-      className={`relative h-full rounded-lg border ${meta.accent} hover:shadow-[0_0_16px_rgba(139,43,226,0.12)] transition-all flex flex-col overflow-hidden`}
+      className={`group relative h-full rounded-lg border transition-all flex flex-col overflow-hidden ${
+        isDark
+          ? "dm-tile-border"
+          : `${meta.accent} hover:shadow-[0_0_16px_rgba(139,43,226,0.12)]`
+      } ${isDragging ? "opacity-40" : ""}`}
       style={{ background: "var(--dm-bg-tile)" }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-2.5 py-1.5 border-b shrink-0" style={{ borderBottomColor: "var(--dm-border)" }}>
-        <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--dm-t2)" }}>
-          <span className="text-white/60">{meta.icon}</span>
-          {meta.label}
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b shrink-0" style={{ borderBottomColor: "var(--dm-border)" }}>
+        {canDrag && (
+          <span
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move";
+              onDragStart();
+            }}
+            onDragEnd={onDragEnd}
+            className="shrink-0 -ml-1 flex items-center justify-center text-gray-600 hover:text-[#c9a24d] cursor-grab active:cursor-grabbing transition-colors"
+            title="Drag to move"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </span>
+        )}
+        <div className="flex items-center gap-1.5 text-sm font-extrabold flex-1 min-w-0" style={{ color: "var(--dm-t1)" }}>
+          <span className="text-white/60 shrink-0">{meta.icon}</span>
+          <span className="truncate">{meta.label}</span>
         </div>
 
-        <div className="flex items-center gap-0.5">
-          {canExpandRight && (
-            <button
-              onClick={onExpandRight}
-              title="Stretch right"
-              className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-purple-400 transition-colors rounded hover:bg-purple-900/30"
-            >
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
-          {canExpandDown && (
-            <button
-              onClick={onExpandDown}
-              title="Stretch down"
-              className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-purple-400 transition-colors rounded hover:bg-purple-900/30"
-            >
-              <ArrowDown className="w-3 h-3" />
-            </button>
-          )}
-          {colSpan > 1 && (
-            <button
-              onClick={onContractRight}
-              title="Contract width"
-              className="w-5 h-5 flex items-center justify-center text-purple-600 hover:text-purple-300 transition-colors rounded hover:bg-purple-900/30"
-            >
-              <Minimize2 className="w-3 h-3" />
-            </button>
-          )}
-          {rowSpan > 1 && colSpan === 1 && (
-            <button
-              onClick={onContractDown}
-              title="Contract height"
-              className="w-5 h-5 flex items-center justify-center text-purple-600 hover:text-purple-300 transition-colors rounded hover:bg-purple-900/30"
-            >
-              <Minimize2 className="w-3 h-3" />
-            </button>
-          )}
-          {isStretched && <div className="w-px h-3 bg-gray-700 mx-0.5" />}
-          <button
-            onClick={onClear}
-            className="w-5 h-5 flex items-center justify-center text-gray-700 hover:text-red-400 transition-colors rounded hover:bg-red-900/20"
-            title="Remove widget"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
+        <button
+          onClick={onClear}
+          className="shrink-0 w-5 h-5 flex items-center justify-center text-gray-700 hover:text-red-400 transition-colors rounded hover:bg-red-900/20"
+          title="Remove widget"
+        >
+          <X className="w-3 h-3" />
+        </button>
       </div>
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden p-2.5">
         <WidgetContent widget={widget} bestiaryTarget={bestiaryTarget} onBestiaryTargetClear={onBestiaryTargetClear} />
       </div>
+
+      <ResizeHandle onResizeStart={onResizeStart} />
     </div>
   );
 }

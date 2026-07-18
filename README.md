@@ -14,9 +14,11 @@ offline PWA so it keeps working at the table even if the wifi drops.
 ### Configurable widget grid
 
 Arrange the screen as a 2–4 column × 2–4 row grid. Each cell can hold any
-widget. Open, close, resize (1×1 or 2×2), and rearrange widgets freely; recent
-widgets are saved in the sidebar for quick restore. Layout persists across
-sessions via `localStorage`.
+widget. Open and close widgets from any tile; drag a tile's grip handle onto
+another tile to swap their positions, or drag its corner handle to resize
+between 1×1 and 2×2 — direct manipulation, no buttons. Recent widgets are
+saved in the sidebar for quick restore. Layout persists across sessions via
+`localStorage`.
 
 ### Nine widgets
 
