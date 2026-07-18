@@ -141,12 +141,15 @@ export function Sidebar({
     return () => window.removeEventListener(CHAT_CHANGED_EVENT, onChange);
   }, []);
 
+  // Dark mode: deep plum chrome, matching the rest of the reskin. Light mode
+  // is untouched — this pass is scoped to dark mode only.
   const sidebarBg = isDark
-    ? "linear-gradient(180deg, #0b0018 0%, #080012 100%)"
+    ? "linear-gradient(180deg, #150c1e 0%, #100a17 100%)"
     : "#ffffff";
 
-  const toggleBg = isDark ? "#0f001e" : "#ffffff";
-  const toggleBorder = isDark ? "rgba(126,34,206,0.6)" : "rgba(138,43,226,0.4)";
+  const toggleBg = isDark ? "#1a1024" : "#ffffff";
+  const toggleBorder = isDark ? "rgba(201,162,77,0.5)" : "rgba(138,43,226,0.4)";
+  const sectionIconColor = isDark ? "text-[#7d6b8f]" : "text-purple-400";
 
   return (
     <aside
@@ -154,7 +157,7 @@ export function Sidebar({
       style={{
         width: open ? 200 : 36,
         background: sidebarBg,
-        borderRightColor: isDark ? "rgba(88,28,135,0.3)" : "rgba(138,43,226,0.2)",
+        borderRightColor: isDark ? "rgba(186,158,212,0.16)" : "rgba(138,43,226,0.2)",
       }}
     >
       {/* Toggle button */}
@@ -162,7 +165,11 @@ export function Sidebar({
         onClick={onToggle}
         aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
         aria-expanded={open}
-        className="absolute -right-3 top-3 z-20 w-6 h-6 rounded-full border flex items-center justify-center text-purple-500 hover:text-purple-300 hover:border-purple-600 transition-all shadow-lg"
+        className={`absolute -right-3 top-3 z-20 w-6 h-6 rounded-full border flex items-center justify-center transition-all shadow-lg ${
+          isDark
+            ? "text-[#c9a24d] hover:text-[#e0bd6e] hover:border-[#e0bd6e]"
+            : "text-purple-500 hover:text-purple-300 hover:border-purple-600"
+        }`}
         style={{ background: toggleBg, borderColor: toggleBorder }}
       >
         {open ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -171,9 +178,9 @@ export function Sidebar({
       {open ? (
         <div className="flex flex-col h-full overflow-hidden">
           {/* ── Grid Size ── */}
-          <div className="p-3 border-b" style={{ borderBottomColor: isDark ? "rgba(88,28,135,0.2)" : "rgba(138,43,226,0.15)" }}>
+          <div className="p-3 border-b" style={{ borderBottomColor: isDark ? "rgba(186,158,212,0.12)" : "rgba(138,43,226,0.15)" }}>
             <div className="flex items-center gap-1.5 mb-2.5">
-              <Grid className="w-3.5 h-3.5 text-purple-400" />
+              <Grid className={`w-3.5 h-3.5 ${sectionIconColor}`} />
               <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--dm-t2)" }}>Grid Size</span>
             </div>
 
@@ -186,9 +193,13 @@ export function Sidebar({
                       key={n}
                       onClick={() => onGridResize(n, rows)}
                       className={`flex-1 py-1 text-xs font-bold rounded border transition-all ${
-                        cols === n
-                          ? "bg-purple-700/50 border-purple-500 text-purple-200"
-                          : "border-gray-800 hover:border-purple-700"
+                        isDark
+                          ? cols === n
+                            ? "bg-[#c9a24d]/20 border-[#c9a24d]/60 text-[#f0d9a0]"
+                            : "border-white/10 hover:border-[#c9a24d]/40"
+                          : cols === n
+                            ? "bg-purple-700/50 border-purple-500 text-purple-200"
+                            : "border-gray-800 hover:border-purple-700"
                       }`}
                       style={cols !== n ? { background: "var(--dm-bg-input)", color: "var(--dm-t3)" } : {}}
                     >
@@ -206,9 +217,13 @@ export function Sidebar({
                       key={n}
                       onClick={() => onGridResize(cols, n)}
                       className={`flex-1 py-1 text-xs font-bold rounded border transition-all ${
-                        rows === n
-                          ? "bg-purple-700/50 border-purple-500 text-purple-200"
-                          : "border-gray-800 hover:border-purple-700"
+                        isDark
+                          ? rows === n
+                            ? "bg-[#c9a24d]/20 border-[#c9a24d]/60 text-[#f0d9a0]"
+                            : "border-white/10 hover:border-[#c9a24d]/40"
+                          : rows === n
+                            ? "bg-purple-700/50 border-purple-500 text-purple-200"
+                            : "border-gray-800 hover:border-purple-700"
                       }`}
                       style={rows !== n ? { background: "var(--dm-bg-input)", color: "var(--dm-t3)" } : {}}
                     >
@@ -224,7 +239,10 @@ export function Sidebar({
                 style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)`, gap: 2, width: 80, height: 80 }}
               >
                 {Array.from({ length: cols * rows }).map((_, i) => (
-                  <div key={i} className="rounded-sm bg-purple-900/30 border border-purple-800/20" />
+                  <div
+                    key={i}
+                    className={isDark ? "rounded-sm bg-[#c9a24d]/25 border border-[#c9a24d]/20" : "rounded-sm bg-purple-900/30 border border-purple-800/20"}
+                  />
                 ))}
               </div>
               <p className="text-center text-[10px]" style={{ color: "var(--dm-t3)" }}>{cols} × {rows} = {cols * rows} tiles</p>
@@ -235,7 +253,7 @@ export function Sidebar({
           <div className="flex-1 flex flex-col overflow-hidden p-3">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-purple-400" />
+                <Clock className={`w-3.5 h-3.5 ${sectionIconColor}`} />
                 <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--dm-t2)" }}>Recent</span>
               </div>
               {recentWidgets.length > 0 && (
@@ -265,7 +283,10 @@ export function Sidebar({
                     key={w}
                     onClick={() => onRestoreRecent(w)}
                     title="Restore to first empty tile"
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all hover:scale-[1.02] ${meta.color}`}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all hover:scale-[1.02] ${
+                      isDark ? "border-white/10 hover:border-[#c9a24d]/50 hover:text-[#efe8f4]" : meta.color
+                    }`}
+                    style={isDark ? { background: "var(--dm-bg-input)", color: "var(--dm-t2)" } : {}}
                   >
                     <span className="shrink-0">{meta.icon}</span>
                     <span className="text-xs font-medium truncate">{meta.label}</span>
@@ -280,7 +301,7 @@ export function Sidebar({
           <div className="shrink-0 border-t p-3" style={{ borderTopColor: "var(--dm-border)" }}>
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-purple-400" />
+                <Database className={`w-3.5 h-3.5 ${sectionIconColor}`} />
                 <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "var(--dm-t2)" }}>Backup</span>
               </div>
             </div>
@@ -297,14 +318,22 @@ export function Sidebar({
               <button
                 onClick={runFullExport}
                 title="Download a full backup of all widget state"
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40 transition-colors"
+                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] transition-colors ${
+                  isDark
+                    ? "text-[#e0bd6e] bg-[#c9a24d]/10 border-[#c9a24d]/30 hover:bg-[#c9a24d]/20"
+                    : "text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40"
+                }`}
               >
                 <Download className="w-3 h-3" /> Export
               </button>
               <button
                 onClick={runFullImport}
                 title="Restore from a backup (replaces ALL current state, then reloads)"
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40 transition-colors"
+                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded border text-[11px] transition-colors ${
+                  isDark
+                    ? "text-[#e0bd6e] bg-[#c9a24d]/10 border-[#c9a24d]/30 hover:bg-[#c9a24d]/20"
+                    : "text-purple-300 bg-purple-900/20 border-purple-800/40 hover:bg-purple-900/40"
+                }`}
               >
                 <Upload className="w-3 h-3" /> Import
               </button>
@@ -314,23 +343,27 @@ export function Sidebar({
       ) : (
         <div className="flex flex-col items-center gap-3 pt-10 pb-3">
           <span title="Grid size" className="flex">
-            <Grid className="w-4 h-4 text-purple-700" />
+            <Grid className={`w-4 h-4 ${isDark ? "text-[#7d6b8f]" : "text-purple-700"}`} />
           </span>
-          <div className="w-3 h-px bg-purple-900/50" />
+          <div className={`w-3 h-px ${isDark ? "bg-white/10" : "bg-purple-900/50"}`} />
           <span title="Recent widgets" className="flex">
-            <Clock className="w-4 h-4 text-purple-700" />
+            <Clock className={`w-4 h-4 ${isDark ? "text-[#7d6b8f]" : "text-purple-700"}`} />
           </span>
           {recentWidgets.length > 0 && (
-            <span className="text-[9px] bg-purple-700 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
+            <span
+              className={`text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold ${
+                isDark ? "bg-[#c9a24d] text-[#180f22]" : "bg-purple-700 text-white"
+              }`}
+            >
               {recentWidgets.length}
             </span>
           )}
-          <div className="w-3 h-px bg-purple-900/50" />
+          <div className={`w-3 h-px ${isDark ? "bg-white/10" : "bg-purple-900/50"}`} />
           <button
             onClick={runFullExport}
             title="Export a full backup of all widget state"
             aria-label="Export a full backup of all widget state"
-            className="text-purple-700 hover:text-purple-300 transition-colors"
+            className={`transition-colors ${isDark ? "text-[#7d6b8f] hover:text-[#c9a24d]" : "text-purple-700 hover:text-purple-300"}`}
           >
             <Download className="w-4 h-4" />
           </button>
@@ -338,7 +371,7 @@ export function Sidebar({
             onClick={runFullImport}
             title="Import a backup (replaces all current state)"
             aria-label="Import a backup (replaces all current state)"
-            className="text-purple-700 hover:text-purple-300 transition-colors"
+            className={`transition-colors ${isDark ? "text-[#7d6b8f] hover:text-[#c9a24d]" : "text-purple-700 hover:text-purple-300"}`}
           >
             <Upload className="w-4 h-4" />
           </button>
