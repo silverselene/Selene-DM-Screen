@@ -344,6 +344,26 @@ describe("tilesLayoutConsistent (defense-in-depth)", () => {
       expect(tilesLayoutConsistent(tiles, 3, 3)).toBe(false);
     },
   );
+
+  it("rejects two spans that overlap on a shared null cell", () => {
+    // 3×3 grid. A colSpan:1/rowSpan:2 tile at index 1 covers cells {1,4};
+    // a colSpan:2/rowSpan:1 tile at index 3 covers cells {3,4}. Cell 4 is a
+    // `null` placeholder that BOTH legitimately require, so the per-cell
+    // `tiles[idx] !== null` check passes for each — the overlap only shows
+    // up as cell 4 being claimed twice. These render on top of each other.
+    const tiles = [
+      emptyTile,
+      { widget: "notepad", colSpan: 1, rowSpan: 2 },
+      emptyTile,
+      { widget: "bestiary", colSpan: 2, rowSpan: 1 },
+      null, // cell 4 — claimed by both spans above
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+    ] as TileEntry[];
+    expect(tilesLayoutConsistent(tiles, 3, 3)).toBe(false);
+  });
 });
 
 describe("pre-flight quota guard (finding #3)", () => {

@@ -32,6 +32,24 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 
 ## Remediation log
 
+### 2026-07-21 — §1 `tilesLayoutConsistent` hardened: two spans overlapping on a shared `null` cell
+
+Follow-up review of the 2026-07-20 `tilesLayoutConsistent` fix found a residual overlap it couldn't see. The per-cell check `tiles[idx] !== null` rejects a span whose footprint lands on a *real* tile, but two spans can both legitimately require the *same* `null` placeholder — a `colSpan:2` tile and a `rowSpan:2` tile whose footprints cross on one empty cell. Each span's per-cell check passes (the cell genuinely is `null` for both), so the layout was accepted and rendered overlapping. The double-claim only shows up as a cell marked `covered` twice, so the guard now rejects on an already-`covered` cell (`backup.ts`, footprint loop). New regression test in `backup.test.ts` ("rejects two spans that overlap on a shared null cell") — a 3×3 grid with a `1×2` at index 1 and a `2×1` at index 3 both claiming cell 4; confirmed the test fails against the pre-fix source and passes after. Not a new finding — closes a gap in the already-"fixed" §1 tile-consistency P3.
+
+**Verified:** 320/320 dm-screen tests · `pnpm typecheck` clean.
+
+### 2026-07-21 — §1 `src/lib/` coverage gaps closed (tests only, no source changes)
+
+Three new test files, test-first against existing behavior, matching the tier-1/tier-2 convention (36 new tests):
+
+- **`src/hooks/useLocalStorage.test.tsx`** (tier-2 jsdom, 20 tests) — the headline remaining §1 gap. Covers heal-on-read write-back (cleaned-value persist, no-rewrite-when-clean, in-memory value preserved when the heal write throws), the full debounce timer/flush interplay (deferred write, coalescing, and flush on unmount / `pagehide` / tab-hidden / `pendingWrites` registry sweep — the exact path `backup.ts` takes), and the `onWriteError`→`onWriteSuccess` recovery edge (fires only on the failure→success transition, once).
+- **`src/lib/envelope.test.ts`** (tier-1 node, 10 tests) — schema/version gating and the cross-surface "wrong file, load it here" hints, pinned on the shared module directly rather than only through the two importers.
+- **`src/lib/pendingWrites.test.ts`** (tier-1 node, 6 tests) — register→flush→unregister registry contract in isolation.
+
+**Verified:** 319/319 dm-screen tests · `pnpm typecheck` clean. tsconfig `exclude` uses global `**/*.test.ts(x)` globs, so the new `src/hooks/` test location does not leak into `pnpm build`.
+
+**Still open (§1):** only the two jsdom-structurally-blocked items — `AnchoredDropdown` flip placement and `promptForJsonFile` dismissal — remain, and closing them is a Playwright decision, not a logic gap.
+
 ### 2026-07-20 — all 7 §1 (`src/lib/`) findings fixed
 
 Every finding under §1 — the 2 P2s and 5 P3s — is resolved, TDD (failing test first) for each. Details are inline at each finding heading above; summary:
@@ -98,6 +116,7 @@ The migration runs `validateCombatants` (which mints fresh random ids for missin
 
 ### ~~[P3]~~ **FIXED** — `validateTiles` doesn't check span/placeholder consistency; App's repack heal only fires on length mismatch
 > **Fixed 2026-07-20:** new exported pure fn `tilesLayoutConsistent(tiles, cols, rows)` in `backup.ts` verifies every non-null span stays in bounds and covers only `null` placeholders, and every `null` is covered by exactly one earlier span. The import path's grid-triple cross-field check now evicts the triple when the layout is inconsistent (not just on length mismatch), and App's `gridTiles` memo repacks whenever the layout is inconsistent (`repackTiles` already emits a consistent layout, so no re-render loop). Tests in `backup.test.ts` cover: valid spanned layout kept, missing-placeholder overlap evicted, out-of-bounds span evicted (and the old all-null "consistent" fixture updated to real empty tiles, which is what live data looks like).
+> **Hardened 2026-07-21:** the first cut accepted two spans that overlap on a shared `null` cell (`tiles[idx] !== null` passes for both) — now rejects on an already-`covered` cell. See the remediation-log entry above.
 `artifacts/dm-screen/src/lib/backup.ts:226-243`, `artifacts/dm-screen/src/App.tsx:178-185`
 A hand-crafted backup with `tiles.length === cols*rows` but a `colSpan: 2` tile lacking its `null` placeholder passes both the per-key validator and the grid-triple consistency check (which compares only lengths, `backup.ts:522`); App's `repackTiles` reconciliation is skipped because the length matches, so the grid renders overlapping/overflowing tiles until manually re-laid-out. Not a crash (no widget math depends on it), but the one tiles invariant CLAUDE.md calls "easy to break" is unvalidated on import.
 
@@ -113,11 +132,11 @@ A hand-crafted backup with `tiles.length === cols*rows` but a `colSpan: 2` tile 
 - `combatant.ts`'s id dedupe (retry loop), the dangling-activeId reconciliation in the widget, and the four-way add-path convergence (event contract with outcome out-param, first-consumer-wins, decide-after-dispatch authority ordering) are carefully reasoned and test-covered.
 
 **Coverage gaps:**
-- `monsterSearch.ts` has no test file at all — ranking (prefix > substring > rich > alpha), the empty-query path, and `findRichMonster` are unguarded.
-- `useLocalStorage` itself has no direct test: the heal-on-read write-back, debounce timer/flush interplay, and the `onWriteError`→`onWriteSuccess` recovery edge are exercised only indirectly.
-- No hostile-id tests for `normalizePartyBatch` (ids ≥ 2^53, negative, non-integer) — the P2 above would have been caught.
-- `migrateTurnIndexToActiveId` is tested only with well-formed string-id combatants; the id-less/duplicate-id legacy shape (the P3 above) is untested.
-- `AnchoredDropdown` flip placement and `promptForJsonFile` dismissal remain manual-only (known jsdom limits, documented in MANUAL-TESTS-post-rebase.md).
+- ~~`monsterSearch.ts` has no test file at all~~ **CLOSED 2026-07-20** — `monsterSearch.test.ts` added (ranking prefix > substring > rich > alpha, empty-query path, `findRichMonster`).
+- ~~`useLocalStorage` itself has no direct test~~ **CLOSED 2026-07-21** — `src/hooks/useLocalStorage.test.tsx` added (tier-2 jsdom, 20 tests): heal-on-read write-back (incl. no-rewrite-when-clean and heal-write-throws), debounce timer/flush interplay (unmount, `pagehide`, tab-hidden, and the `pendingWrites` registry sweep), and the `onWriteError`→`onWriteSuccess` failure→success recovery edge. Same pass also added `envelope.test.ts` (schema/version gating + cross-surface hints) and `pendingWrites.test.ts` (register→flush→unregister), which the review's gap list had not enumerated but were untested.
+- ~~No hostile-id tests for `normalizePartyBatch`~~ **CLOSED 2026-07-20** — hostile-id tests added (ids ≥ 2^53, negative, non-integer).
+- ~~`migrateTurnIndexToActiveId` is tested only with well-formed string-id combatants~~ **CLOSED 2026-07-20** — id-less/duplicate-id legacy-shape test added.
+- **STILL OPEN (jsdom-blocked, Playwright/manual only):** `AnchoredDropdown` flip placement (needs a real `getBoundingClientRect`) and `promptForJsonFile` dismissal (real file picker) remain manual-only — known jsdom limits, documented in MANUAL-TESTS-post-rebase.md. These are the only remaining §1 coverage gaps; closing them is a Playwright-infrastructure decision, not a logic gap.
 
 ---
 

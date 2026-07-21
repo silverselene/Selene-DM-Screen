@@ -326,6 +326,13 @@ export function tilesLayoutConsistent(
     for (const idx of footprintCells(i, cols, t.colSpan, t.rowSpan)) {
       if (idx === i) continue; // origin cell holds the tile itself
       if (tiles[idx] !== null) return false; // span cell must be a placeholder
+      // Two spans covering the same `null` cell is still an overlap even
+      // though the cell reads as a placeholder to both — e.g. a colSpan:2
+      // tile and a rowSpan:2 tile whose footprints cross on one empty cell.
+      // `tiles[idx] !== null` can't see it (both spans legitimately require
+      // a placeholder there); the double-claim only shows up as an
+      // already-`covered` cell, so reject it here.
+      if (covered[idx]) return false;
       covered[idx] = true;
     }
   }
