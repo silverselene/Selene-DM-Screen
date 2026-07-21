@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { dedupeByName, slugify } from "./dedupe";
+import { dedupeByName, dropSeenTitles, slugify } from "./dedupe";
 
 describe("dedupeByName", () => {
   // Regression: 5etools names these feats "Fey Touched" (TCE) but
@@ -58,6 +58,61 @@ describe("dedupeByName", () => {
       (c) => collisions.push(c),
     );
     expect(collisions).toHaveLength(0);
+  });
+});
+
+// The compendium is assembled section-by-section; each section skips only the
+// hand-curated titles, so a feat emitted by the 5etools pass (feat-survivor)
+// could ship again from the Open5e pass (feat-a5e-survivor) as a second
+// "Survivor". dropSeenTitles threads a running set across sections so the later
+// section drops an entry an earlier one already emitted. The caller supplies the
+// key, and the compendium keys on category+title so distinct entries that merely
+// share a title across categories are NOT dropped.
+describe("dropSeenTitles", () => {
+  const key = (e: { category: string; title: string }) =>
+    `${e.category} ${e.title.toLowerCase()}`;
+
+  test("drops entries whose key is already in the seen set", () => {
+    const seen = new Set<string>(["Feats survivor"]);
+    const out = dropSeenTitles(
+      [
+        { category: "Feats", title: "Survivor" },
+        { category: "Feats", title: "Tough" },
+      ],
+      seen,
+      key,
+    );
+    expect(out.map((e) => e.title)).toEqual(["Tough"]);
+  });
+
+  test("accumulates newly-emitted keys into the running set", () => {
+    const seen = new Set<string>();
+    dropSeenTitles([{ category: "Feats", title: "Alert" }], seen, key);
+    expect(seen.has("Feats alert")).toBe(true);
+  });
+
+  test("first occurrence wins across successive calls (cross-section dedup)", () => {
+    const seen = new Set<string>();
+    const a = dropSeenTitles(
+      [{ category: "Feats", title: "Survivor", pass: "5etools" }],
+      seen,
+      key,
+    );
+    const b = dropSeenTitles(
+      [{ category: "Feats", title: "Survivor", pass: "open5e" }],
+      seen,
+      key,
+    );
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(0);
+  });
+
+  test("same title in different categories is NOT dropped", () => {
+    const seen = new Set<string>();
+    const a = dropSeenTitles([{ category: "Actions in Combat", title: "Hide" }], seen, key);
+    const b = dropSeenTitles([{ category: "Skills", title: "Hide" }], seen, key);
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
   });
 });
 

@@ -38,6 +38,17 @@ import {
   tsLiteral,
   writeOutput,
 } from "./lib.js";
+import {
+  canonicalPrefersOpen5e,
+  cleanOpen5e,
+  OPEN5E_SLUG_BY_CSV_SOURCE,
+  OPEN5E_SLUGS,
+  parseCSV,
+  requireColumns,
+  resolveFiveToolsKey,
+  richMatchesCsv,
+  type Open5eSlug,
+} from "./monsters-lib.js";
 
 // The curated set of monsters that ship with full stat blocks. Editorial
 // choice, not derived data — extend by adding a name here (it must exist in
@@ -461,7 +472,14 @@ function transformRich(src: FiveToolsMonster): RichFields {
 
 function indexBestiary(): Map<string, Array<FiveToolsMonster & { _file: string }>> {
   const dir = path.join(FIVETOOLS_DATA_DIR, "bestiary");
-  const files = fs.readdirSync(dir).filter((f) => f.startsWith("bestiary-"));
+  // Sort the readdir output: for a name whose only candidates all fall outside
+  // SOURCE_PRIORITY (equal rank), pickMonster keeps the first-found, so an
+  // unsorted, filesystem-dependent readdir order would let a regen on a
+  // different machine silently flip which stat block wins.
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.startsWith("bestiary-"))
+    .sort();
   const index = new Map<string, Array<FiveToolsMonster & { _file: string }>>();
   for (const f of files) {
     const json = readJSON<{ monster?: FiveToolsMonster[] }>(path.join(dir, f));
@@ -475,79 +493,6 @@ function indexBestiary(): Map<string, Array<FiveToolsMonster & { _file: string }
   return index;
 }
 
-// Try a name as-is, then a few common CSV-vs-5etools naming variants:
-// trailing "(+)" (a CSV reprint marker), the segment before a "/" (combined
-// entries like "Succubus/Incubus"), and a trailing parenthetical qualifier
-// (e.g. "Giant Rat (Diseased)"). Returns the matching index key, or null.
-// The "(+)" strip is faithful (pure reprint marker); the slash-split and
-// generic parenthetical strip are LOSSY — the qualifier can be what makes it
-// a different creature ("Vampire (Mist Form)") — so the result says which,
-// letting callers gate lossy matches instead of silently attaching a
-// different creature's stat block.
-function resolveFiveToolsKey(
-  name: string,
-  index: Map<string, unknown>,
-): { key: string; lossy: boolean } | null {
-  const faithful = [name];
-  const noPlus = name.replace(/\s*\(\+\)\s*$/, "").trim();
-  if (noPlus !== name) faithful.push(noPlus);
-  const lossyTries: string[] = [];
-  const beforeSlash = name.split("/")[0]!.trim();
-  if (beforeSlash !== name) lossyTries.push(beforeSlash);
-  const noParen = name.replace(/\s*\([^)]*\)\s*$/, "").trim();
-  if (noParen !== name && !faithful.includes(noParen)) lossyTries.push(noParen);
-  for (const t of faithful) {
-    if (index.has(t.toLowerCase())) return { key: t.toLowerCase(), lossy: false };
-  }
-  for (const t of lossyTries) {
-    if (index.has(t.toLowerCase())) return { key: t.toLowerCase(), lossy: true };
-  }
-  return null;
-}
-
-// Numeric CR for agreement checks ("1/2" → 0.5). Null when unparseable — the
-// empty/whitespace string included: Number("") is 0, which would otherwise
-// masquerade as a real CR 0 and let a blank-CR row "agree" with a CR-0 block.
-// Both paths route through the finiteness check so a malformed "n/0" resolves
-// to null rather than Infinity, which would compare equal to another Infinity
-// and read as agreement.
-function crValue(cr: string): number | null {
-  const s = cr.trim();
-  if (s === "") return null;
-  const frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
-  const n = frac ? Number(frac[1]) / Number(frac[2]) : Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-// Normalized base creature type for agreement checks: lowercase and drop any
-// parenthetical subtype ("Dragon (metallic)" → "dragon", "beast" → "beast") so
-// casing / subtype-formatting differences between the CSV and the rich source
-// don't read as a mismatch. Empty or "unknown" → null ("don't know", not held
-// against an otherwise-agreeing match).
-function baseType(type: string): string | null {
-  const s = type.toLowerCase().replace(/\s*\(.*$/, "").trim();
-  return s === "" || s === "unknown" ? null : s;
-}
-
-// Gate for lossy / cross-book matches: only attach the rich block when it's very
-// likely the *same* creature. CR alone is a weak discriminator — many distinct
-// creatures share a low CR — so require CR agreement AND, when both are known,
-// base-type agreement. A same-name-after-stripping entry whose CR or type
-// differs is almost certainly a different creature (or a different ruleset's
-// version); overwriting the curated CSV's ac/hp/cr is worse than staying thin.
-// Unparseable CRs count as disagreement (fail closed).
-function richMatchesCsv(
-  csv: { cr: string; type: string },
-  rich: { cr: string; type: string },
-): boolean {
-  const a = crValue(csv.cr);
-  const b = crValue(rich.cr);
-  if (a == null || b == null || a !== b) return false;
-  const csvType = baseType(csv.type);
-  const richType = baseType(rich.type);
-  return csvType == null || richType == null || csvType === richType;
-}
-
 function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
   console.log(`Indexing 5etools bestiary at ${FIVETOOLS_DATA_DIR}/bestiary/`);
   const index = indexBestiary();
@@ -555,10 +500,38 @@ function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
 
   const rich = new Map<string, RichFields>();
 
+  // Canonical names (lowercased) that must defer to the Open5e own-book pass:
+  // their CSV row is sourced from a third-party (Open5e) book, so attaching the
+  // same-name WotC stat block here would mix a WotC block with that book's
+  // source/pageNumber metadata (e.g. Goblin Boss's A5e row shipping the XMM block
+  // "on" A5e page 250). Computed once, order-independently — defer if ANY row for
+  // the name is third-party — so a duplicate WotC+third-party name pair can't
+  // flip the decision on iteration order. Honored by BOTH passes below (the
+  // cross-source bulk match in pass 2 would otherwise re-attach the very WotC
+  // block whenever CR + type agree). The Open5e pass fills these from their own
+  // book, and main() asserts none stays thin, so a deferral neither source can
+  // satisfy still fails loud rather than silently shipping thin.
+  const canonicalNames = new Set(
+    CANONICAL_RICH_NAMES.map((n) => n.toLowerCase()),
+  );
+  const deferToOpen5e = new Set<string>();
+  for (const e of thin) {
+    const key = e.name.toLowerCase();
+    if (canonicalNames.has(key) && canonicalPrefersOpen5e(e.source)) {
+      deferToOpen5e.add(key);
+    }
+  }
+
   // 1) The curated flagship subset. Hand-picked, so a miss is a hard error —
   // it means the name changed upstream and CANONICAL_RICH_NAMES needs a fix.
   const missing: string[] = [];
   for (const name of CANONICAL_RICH_NAMES) {
+    if (deferToOpen5e.has(name.toLowerCase())) {
+      console.log(
+        `  ⊘ ${name}: CSV row sourced from a third-party (Open5e) book — deferring to the Open5e own-book block`,
+      );
+      continue;
+    }
     const candidates = index.get(name.toLowerCase());
     if (!candidates?.length) {
       missing.push(name);
@@ -596,6 +569,11 @@ function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
   for (const entry of thin) {
     const key = entry.name.toLowerCase();
     if (rich.has(key)) continue;
+    // Honor the canonical deferral: a canonical whose CSV row is third-party must
+    // get its Open5e own-book block, not the same-name WotC block this pass would
+    // attach whenever CR + base type happen to agree (which is exactly the common
+    // case for a genuine same-name reprint).
+    if (deferToOpen5e.has(key)) continue;
     const resolved = resolveFiveToolsKey(entry.name, index);
     if (!resolved) continue;
     const candidates = index.get(resolved.key)!;
@@ -630,18 +608,6 @@ function loadRichByName(thin: ThinFields[]): Map<string, RichFields> {
 // Open5e ships its monster data as Django fixtures: an array of
 // `{ model, pk, fields }` records, one per source book, with several fields
 // JSON-encoded as strings (suffixed `_json`) rather than nested natively.
-
-const OPEN5E_SLUGS = ["tob", "cc", "tob2", "tob3", "menagerie"] as const;
-type Open5eSlug = (typeof OPEN5E_SLUGS)[number];
-
-// CSV "Source" column value → Open5e document slug.
-const OPEN5E_SLUG_BY_CSV_SOURCE: Record<string, Open5eSlug> = {
-  "Tome of Beasts": "tob",
-  "Creature Codex": "cc",
-  "Tome of Beasts 2": "tob2",
-  "Tome of Beasts 3": "tob3",
-  "A5e Monstrous Menagerie": "menagerie",
-};
 
 interface Open5eFields {
   name: string;
@@ -754,21 +720,23 @@ function formatOpen5eSkills(raw: string | undefined): string | undefined {
   return parts.length > 0 ? parts.join(", ") : undefined;
 }
 
+// Open5e strings carry HTML entities / BBCode / markdown the 5etools blocks
+// don't; sanitize (and trim-to-undefined) so they read like the rest.
 function nonEmpty(s: string | undefined): string | undefined {
-  const trimmed = s?.trim();
-  return trimmed ? trimmed : undefined;
+  const cleaned = cleanOpen5e(s ?? "");
+  return cleaned ? cleaned : undefined;
 }
 
 function open5eTraits(raw: string | undefined): MonsterTrait[] {
   const arr = parseJsonField<Array<{ name?: string; desc?: string }>>(raw, []);
   return arr
     .filter((t) => t.name)
-    .map((t) => ({ name: t.name!, desc: t.desc ?? "" }));
+    .map((t) => ({ name: cleanOpen5e(t.name!), desc: cleanOpen5e(t.desc ?? "") }));
 }
 
 function transformOpen5e(fields: Open5eFields): RichFields {
-  const type = fields.type ?? "unknown";
-  const subtype = fields.subtype?.trim();
+  const type = cleanOpen5e(fields.type ?? "unknown") || "unknown";
+  const subtype = nonEmpty(fields.subtype);
   const actions = open5eTraits(fields.actions_json);
   // Open5e models bonus actions as their own list; our schema doesn't have a
   // separate bucket for them (no widget UI for a 5th tab), so fold them into
@@ -780,11 +748,11 @@ function transformOpen5e(fields: Open5eFields): RichFields {
 
   const out: RichFields = {
     ac: fields.armor_class ?? 10,
-    acType: fields.armor_desc ?? "",
+    acType: cleanOpen5e(fields.armor_desc ?? ""),
     hp: formatOpen5eHP(fields),
     size: fields.size ?? "Medium",
     type: subtype ? `${type} (${subtype})` : type,
-    alignment: fields.alignment ?? "unaligned",
+    alignment: cleanOpen5e(fields.alignment ?? "unaligned") || "unaligned",
     cr: fields.challenge_rating ?? "0",
     speed: formatOpen5eSpeed(fields.speed_json),
     str: fields.strength ?? 10,
@@ -883,51 +851,6 @@ function loadOpen5eRichByName(
   if (gatedSkipped > 0) console.log(`  ${gatedSkipped} lossy/cross-book matches skipped on CR disagreement (stay thin)`);
 }
 
-function parseCSV(content: string): string[][] {
-  // Minimal RFC4180-ish parser; tolerates quoted fields containing commas
-  // and escaped double quotes ("").
-  const rows: string[][] = [];
-  let cur = "";
-  let inQuotes = false;
-  let row: string[] = [];
-  for (let i = 0; i < content.length; i++) {
-    const ch = content[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (content[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        cur += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ",") {
-        row.push(cur);
-        cur = "";
-      } else if (ch === "\r") {
-        // ignore
-      } else if (ch === "\n") {
-        row.push(cur);
-        cur = "";
-        if (row.some((c) => c.length > 0)) rows.push(row);
-        row = [];
-      } else {
-        cur += ch;
-      }
-    }
-  }
-  if (cur.length || row.length) {
-    row.push(cur);
-    if (row.some((c) => c.length > 0)) rows.push(row);
-  }
-  return rows;
-}
-
 // Thin fields only, straight from a CSV row (or defaulted, for acType which
 // the CSV doesn't carry).
 type ThinFields = Pick<
@@ -958,21 +881,27 @@ function loadThinEntries(): ThinFields[] {
   const raw = fs.readFileSync(csvPath, "utf-8").replace(/^﻿/, "");
   const rows = parseCSV(raw);
   const header = rows[0]!;
-  const idx = (name: string) => header.indexOf(name);
+  // Fail loud if any required column is absent rather than letting idx() return
+  // -1 and every field's `|| 0` / `?? ""` default zero the whole dataset on a
+  // clean exit (e.g. a re-export that renames "AC" to "Armor Class").
+  const col = requireColumns(header, [
+    "Name", "AC", "Alignment", "CR", "Hit Points", "Size", "Source", "Type",
+    "Legendary", "Page Number", "Initiative", "Initiative Roll", "Environment",
+  ]);
 
-  const iName = idx("Name");
-  const iAC = idx("AC");
-  const iAlign = idx("Alignment");
-  const iCR = idx("CR");
-  const iHP = idx("Hit Points");
-  const iSize = idx("Size");
-  const iSource = idx("Source");
-  const iType = idx("Type");
-  const iLegendary = idx("Legendary");
-  const iPage = idx("Page Number");
-  const iInit = idx("Initiative");
-  const iInitRoll = idx("Initiative Roll");
-  const iEnv = idx("Environment");
+  const iName = col["Name"]!;
+  const iAC = col["AC"]!;
+  const iAlign = col["Alignment"]!;
+  const iCR = col["CR"]!;
+  const iHP = col["Hit Points"]!;
+  const iSize = col["Size"]!;
+  const iSource = col["Source"]!;
+  const iType = col["Type"]!;
+  const iLegendary = col["Legendary"]!;
+  const iPage = col["Page Number"]!;
+  const iInit = col["Initiative"]!;
+  const iInitRoll = col["Initiative Roll"]!;
+  const iEnv = col["Environment"]!;
 
   console.log(`  ${rows.length - 1} data rows`);
 
@@ -1015,6 +944,22 @@ function main() {
   const thin = loadThinEntries();
   const richByName = loadRichByName(thin);
   loadOpen5eRichByName(thin, richByName);
+
+  // Every canonical flagship must end up rich, from whichever source. A
+  // cross-source canonical deferred by loadRichByName (its CSV row is a
+  // third-party book) is expected to be filled by the Open5e pass from its own
+  // book; if neither pass supplied it, fail loud here instead of crashing in
+  // the append loop below or silently shipping a thin flagship.
+  const stillThin = CANONICAL_RICH_NAMES.filter(
+    (n) => !richByName.has(n.toLowerCase()),
+  );
+  if (stillThin.length > 0) {
+    console.error(
+      `\nERROR: ${stillThin.length} canonical monster(s) never got a rich stat block:`,
+    );
+    for (const n of stillThin) console.error(`  - ${n}`);
+    process.exit(1);
+  }
 
   const merged: MonsterEntry[] = [];
   const usedRich = new Set<string>();
@@ -1065,6 +1010,11 @@ function main() {
       "attached_assets/Monsters_&_Beasts_*.csv (curated by the project owner) + ../5etools-src/data/bestiary/bestiary-*.json + ../open5e-api/data/v1/{tob,cc,tob2,tob3,menagerie}/Monster.json (OGL — see OGL-NOTICE.md)",
     generator: "generate-monsters.ts",
     count: merged.length,
+    pins: ["open5e-api @ v1.12.0"],
+    licenses: [
+      "Open5e (Kobold Press / EN Publishing) content is Open Game Content",
+      "under the Open Gaming License v1.0a — see OGL-NOTICE.md.",
+    ],
   });
 
   const body = `

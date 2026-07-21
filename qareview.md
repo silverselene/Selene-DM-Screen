@@ -18,7 +18,7 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 
 **38 findings: 0 P0 · 2 P1 · 11 P2 · 25 P3** (the duplicate-tile clobber was found independently by agents 1 and 2 and is counted once). No data-loss or crash bugs in shipped code paths; overall the codebase's hardest surfaces (backup atomicity, the add-to-initiative event contract, the bridge's localhost security) reviewed as genuinely robust.
 
-**Progress: 17 fixed (2 P1s + all 7 §1 findings + all 8 §2 findings) · 21 open** — see the remediation log below.
+**Progress: 24 fixed (2 P1s + all 7 §1 + all 8 §2 + all 7 remaining §3 findings) · 14 open** — see the remediation log below. The 14 open are all §4 (AI bridge) and §5 (config/infra).
 
 **Fix-first shortlist:**
 1. ~~**[P1] `{@recharge N}` stripping**~~ **FIXED** — see §3; regen also caught up the committed data with d1d13e8's cross-source gate.
@@ -28,9 +28,31 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 5. **[P2] `.dockerignore` secret patterns are root-anchored** — a nested `services/ai-bridge/.env` would enter build layers; latent today (§5).
 6. **[P2] CI never runs `pnpm build`** — the 8 MiB precache cap, define assertions, and bundle scans don't gate merges (§5).
 
-**Recurring themes:** validators on the backup-import path are systematically weaker than the equivalent typed-input paths (§1 ×3, §2 Portal URL); the generators are entirely untested despite being the highest-regression-risk code (§3 — *partially addressed, see log*); dm-screen's config files and tests have zero typecheck coverage while the bridge's do (§5).
+**Recurring themes:** validators on the backup-import path are systematically weaker than the equivalent typed-input paths (§1 ×3, §2 Portal URL) — *closed*; the generators were entirely untested despite being the highest-regression-risk code (§3 — *closed: 31 tests, pure logic extracted to `monsters-lib.ts`*); dm-screen's config files and tests have zero typecheck coverage while the bridge's do (§5 — *still open*).
 
 ## Remediation log
+
+### 2026-07-21 — all 7 open §3 (`scripts/src/data-generators/`) findings fixed + coverage gaps closed
+
+Every remaining §3 finding — the 4 P2s and 3 P3s (both P1s were already fixed 2026-07-18) — is resolved, TDD (failing test first) for each. Details inline at each finding heading; summary:
+
+- **[P2] `stripTags` single-pass nested-tag leak** — the generic rule now matches only brace-free payloads (`[^{}]*`) and loops to a fixpoint, so a nested `{@note … {@damage 2d6} …}` resolves the inner tag first instead of stranding its `@damage 2d6` leader. Confirmed 0 `@damage`/`@item`/`@book`/`@link`/`@deck` residue across all four regenerated files (was 6 entries). Tests in `lib.test.ts`.
+- **[P2] Open5e text unsanitized** — new `cleanOpen5e()` (`monsters-lib.ts`) decodes HTML entities (`&amp;`→`&`), strips BBCode markers (`[++]`/`[/++]`) and markdown emphasis (`*At Will:*`), and trims stranded leading punctuation; applied to every Open5e string field + trait/action name+desc in `transformOpen5e`. Confirmed 0 `&amp;` / `[++]` in `monsters.ts`; the garbage Phoenixborn Sorcerer resistances string is now readable. Tests in `monsters-lib.test.ts`.
+- **[P2] Renamed CSV column silently zeroes dataset** — new `requireColumns()` (`monsters-lib.ts`) resolves all 13 required headers up front and throws (naming every missing one) instead of letting `idx()` return -1 and every field default zero the dataset on a clean exit. `loadThinEntries` uses it. Tests in `monsters-lib.test.ts`.
+- **[P2] Canonical pass bypasses the cross-source gate** — `canonicalPrefersOpen5e()` gate: a `CANONICAL_RICH_NAMES` monster whose CSV row is a third-party (Open5e) source is deferred by the 5etools pass so the Open5e pass fills it from its own book, keeping stat block and source/pageNumber consistent. Confirmed on Goblin Boss (A5e row): was shipping the XMM block on "A5e page 250"; now ships the A5e menagerie block. `main()` asserts every canonical name ends up rich (fail-loud) so a deferral Open5e can't satisfy can't silently ship thin. Test in `monsters-lib.test.ts`.
+- **[P3] Open5e feat pass doesn't dedupe against 5etools** — new `dropSeenTitles()` (`dedupe.ts`) threads a running normalized-title set across all compendium sections, so the Open5e feats pass drops a title the 5etools pass already emitted under a different slug. Confirmed the duplicate "Survivor" (`feat-survivor` vs `feat-a5e-survivor`) is now dropped (compendium 562 → 561). Tests in `dedupe.test.ts`.
+- **[P3] Tie-break depends on `readdirSync` order** — `indexBestiary` now `.sort()`s the readdir output so a name whose only candidates all fall outside `SOURCE_PRIORITY` (equal rank, first-found wins) resolves the same on any filesystem. (`OPEN5E_SLUGS` was already a fixed-order const.)
+- **[P3] Header understates provenance** — `generatedHeader` gained optional `pins`/`licenses` continuation lines; `monsters.ts` and `compendiumRules.ts` now emit `open5e-api @ v1.12.0` and the OGL/CC-BY note alongside the 5etools/MIT defaults. Test in `lib.test.ts`.
+
+**Refactor for testability.** Following the `dedupe.ts` precedent (generators run `main()` at import and read the sibling clones, so they can't be imported by a test), the pure helpers were extracted to a new **`monsters-lib.ts`**: `parseCSV`, `resolveFiveToolsKey`, `crValue`, `baseType`, `richMatchesCsv`, the Open5e slug map, plus the new `cleanOpen5e`/`requireColumns`/`canonicalPrefersOpen5e`. `generate-monsters.ts` imports them (no behavior change to the moved code).
+
+**Coverage gaps closed.** §3's "no tests for the generators" gap (the highest-regression-risk code) is now substantially addressed — **31 new tests** across `monsters-lib.test.ts` (parseCSV, requireColumns, cleanOpen5e, crValue, baseType, richMatchesCsv, resolveFiveToolsKey, canonicalPrefersOpen5e), `lib.test.ts` (nested-tag stripping, header provenance), and `dedupe.test.ts` (dropSeenTitles). `../open5e-api` is present again at v1.12.0, so all four datasets were **regenerated and verified reproducible** (a second `generate:all` produces a byte-identical diff), closing the "no regen-reproducibility check" gap for this pass. `STRICT_TAGS=1` unknown-tag logging remains opt-in by design (documented in `lib.ts`).
+
+**Datasets regenerated** (`monsters.ts` 2,160 entries / 2,144 rich / 16 thin unchanged; `compendiumRules.ts` 562 → 561; `weapons.ts` re-stripped nested tags; `spells.ts` byte-identical). CLAUDE.md compendium-rules count updated to 561.
+
+**Verified:** 46/46 scripts tests · 351/351 dm-screen tests · `pnpm typecheck` clean · `pnpm build` + verify-precache pass · bundle scans clean (`/api/` and `bridge-protocol` zero hits) · regen deterministic.
+
+**Still open (§3):** none. All findings and enumerated coverage gaps are closed; `STRICT_TAGS` opt-in is an accepted design choice, not a defect.
 
 ### 2026-07-21 — all 8 §2 (`src/components/widgets/`) findings fixed
 
@@ -236,31 +258,38 @@ The empty tile's "+" add button has neither `title` nor `aria-label` (compare th
 `scripts/src/data-generators/generate-compendium.ts:54-63` (`dedupeByName` keys on exact `name.toLowerCase()`), `:65-70` (`slugify`)
 5etools names these feats "Fey Touched" (TCE) but "Fey-Touched" (XPHB) — different keys, so both survive dedupe, violating the 2024-wins rule; `slugify` then collapses both to the same id. Confirmed in `artifacts/dm-screen/src/data/compendiumRules.ts:1469` + `:1480` (both `id: "feat-fey-touched"`) and `:2932` + `:2943` (`feat-shadow-touched`). Duplicate ids break React keys / anchor lookups in the Compendium widget and the documented 564 count includes two entries that shouldn't exist. Fix: dedupe on `slugify(name)` (or a `normalizeTitle` that strips hyphens), keeping `pickBestBySource`.
 
-### [P2] `stripTags` is single-pass — nested tags leak `@tag` residue into 6 entries
+### ~~[P2]~~ **FIXED** — `stripTags` is single-pass — nested tags leak `@tag` residue into 6 entries
+> **Fixed 2026-07-21:** the generic tag rule now matches only brace-free payloads (`[^{}]*`) and loops to a fixpoint, so a nested `{@note … {@damage 2d6} …}` resolves the inner tag first. 0 `@tag` residue across all four regenerated files. Tests in `lib.test.ts`.
 `scripts/src/data-generators/lib.ts:91-137`
 The generic rule's `[^}]*` payload matches across an inner tag's `{`, so `{@note ... {@damage 2d6} ...}` degrades to `@damage 2d6` in output instead of clean text. Confirmed leaks: `weapons.ts:1814` and `:3316` ("extra @damage 2d6 …"), `weapons.ts:3469`/`:3483` ("paired with @item True-Ice Shards"), `compendiumRules.ts:163` ("used to @book stabilize a creature"), `:4999` ("@link intended for NPCs"), `:5692` ("@deck Tarokka Deck"). Fix: replace innermost-first with `/\{@(\w+)\s([^{}]*)\}/` in a loop until fixpoint, then the existing brace-unwrap.
 
-### [P2] Open5e text passed through unsanitized — HTML entities, BBCode junk, markdown in stat blocks
+### ~~[P2]~~ **FIXED** — Open5e text passed through unsanitized — HTML entities, BBCode junk, markdown in stat blocks
+> **Fixed 2026-07-21:** new `cleanOpen5e()` (`monsters-lib.ts`) decodes HTML entities, strips BBCode (`[++]`/`[/++]`) and markdown emphasis, and trims stranded leading punctuation; applied to every Open5e string field + trait/action name+desc. 0 `&amp;`/`[++]` in the regenerated `monsters.ts`. Tests in `monsters-lib.test.ts`.
 `scripts/src/data-generators/generate-monsters.ts:757-767` (`nonEmpty`, `open5eTraits`), `:769-819` (`transformOpen5e`)
 Open5e strings go into output verbatim: `&amp;` appears 6× in `monsters.ts` (lines 33558, 71770, 77708, 78918, 81624, 86375 — all damageResistances/senses); `monsters.ts:86375` (Phoenixborn Sorcerer) is outright garbage: `damageResistances: "[++], Senses, &amp; [/++][++]Languages[/++] as Phoenixborn"`; markdown emphasis `*At Will:*` leaks at `:96820`/`:97073`. The DM sees raw markup mid-stat-block. Fix: run Open5e strings through an entity-decode + `[/**]`-style/markdown strip in `transformOpen5e` (a small `cleanOpen5e()` next to `nonEmpty`).
 
-### [P2] Renamed CSV column silently zeroes the whole dataset
+### ~~[P2]~~ **FIXED** — Renamed CSV column silently zeroes the whole dataset
+> **Fixed 2026-07-21:** new `requireColumns()` (`monsters-lib.ts`) resolves all 13 required headers up front and throws (naming every missing one) before any row is parsed. `loadThinEntries` uses it. Tests in `monsters-lib.test.ts`.
 `scripts/src/data-generators/generate-monsters.ts:961-975`, `:984-999`
 `idx()` returns -1 for a missing header; `row[-1]` is `undefined`, and every field parse has a silent default (`parseInt(...)||0`, `?? ""`). If the curated CSV is re-exported with "AC" renamed to "Armor Class", all 2,158 monsters get `ac: 0` with a clean exit and plausible-looking output. Fix: after the `idx()` block, throw if any required index is -1.
 
-### [P2] Canonical pass bypasses the cross-source gate — A5e "Goblin Boss" row carries WotC's stat block
+### ~~[P2]~~ **FIXED** — Canonical pass bypasses the cross-source gate — A5e "Goblin Boss" row carries WotC's stat block
+> **Fixed 2026-07-21:** `canonicalPrefersOpen5e()` defers a canonical monster whose CSV row is a third-party (Open5e) source to the Open5e pass, so its stat block and source/pageNumber come from the same book. Goblin Boss (A5e row) now ships the A5e menagerie block, not the XMM block "on" A5e page 250. `main()` asserts every canonical name ends up rich (fail-loud). Test in `monsters-lib.test.ts`.
 `scripts/src/data-generators/generate-monsters.ts:561-571` (ungated canonical attach), `:1022-1041` (merge by name only)
 The CR+type gate protects only step-2 bulk matches; CANONICAL_RICH_NAMES entries attach to any same-named CSV row regardless of the row's source. Confirmed: the CSV "Goblin Boss" row is sourced "A5e Monstrous Menagerie", yet the merged entry ships the 5etools (XMM/MM) block while retaining A5e source + pageNumber metadata — a stat/provenance mismatch (page number points at a book containing a different stat block) of exactly the collision class the gate exists for. Fix: when a canonical name's CSV row has a source in `OPEN5E_SLUG_BY_CSV_SOURCE`, either gate with `richMatchesCsv` or prefer the Open5e own-book block.
 
-### [P3] Open5e feat pass doesn't dedupe against the 5etools pass — duplicate "Survivor" title
+### ~~[P3]~~ **FIXED** — Open5e feat pass doesn't dedupe against the 5etools pass — duplicate "Survivor" title
+> **Fixed 2026-07-21:** new `dropSeenTitles()` (`dedupe.ts`) threads a running normalized-title set across all compendium sections, so a later section drops a title an earlier one already emitted under a different slug. The duplicate "Survivor" is gone (562 → 561). Tests in `dedupe.test.ts`.
 `scripts/src/data-generators/generate-compendium.ts:314-343` (checks only `existingTitles` = hand-curated)
 `compendiumRulesData` contains both `feat-survivor` (5etools) and `feat-a5e-survivor` — two "Survivor" entries in the widget. Fix: accumulate emitted titles across sections and check those too (or accept as intentional and tag-differentiate in the UI).
 
-### [P3] Tie-break among unranked sources depends on `readdirSync` order
+### ~~[P3]~~ **FIXED** — Tie-break among unranked sources depends on `readdirSync` order
+> **Fixed 2026-07-21:** `indexBestiary` now `.sort()`s the readdir output, so a name whose only candidates all fall outside `SOURCE_PRIORITY` (equal rank → first-found wins) resolves identically on any filesystem. (`OPEN5E_SLUGS` was already fixed-order.) Regen confirmed reproducible.
 `scripts/src/data-generators/generate-monsters.ts:462-476` (`indexBestiary`), `:367-383` (`pickMonster` keeps first-found for equal rank)
 For a name whose only candidates are outside `SOURCE_PRIORITY` (both rank = length), the winner is whichever file `fs.readdirSync` yielded first — unspecified order, so a regen on a different filesystem can flip stat blocks and produce a noisy diff. Fix: `files.sort()` after the readdir (same for the spells generator's ordering, which is already fixed by `SOURCE_FILES`).
 
-### [P3] Generated header understates provenance for mixed-license outputs
+### ~~[P3]~~ **FIXED** — Generated header understates provenance for mixed-license outputs
+> **Fixed 2026-07-21:** `generatedHeader` gained optional `pins`/`licenses` continuation lines; `monsters.ts` and `compendiumRules.ts` now emit `open5e-api @ v1.12.0` and the OGL/CC-BY note alongside the 5etools/MIT defaults. Test in `lib.test.ts`.
 `scripts/src/data-generators/lib.ts:172-190`
 Every header hardcodes `Pinned to: 5etools-src @ v2.31.0` and `License: 5etools content is MIT-licensed…`. For `monsters.ts`/`compendiumRules.ts` the OGL note only rides in the Source line, and the Open5e pin (v1.12.0) appears nowhere in the file. Fix: let `generatedHeader` take optional extra pin/license lines and emit `open5e-api @ v1.12.0` + OGL/CC-BY on the two mixed files.
 
@@ -270,11 +299,11 @@ Every header hardcodes `Pinned to: 5etools-src @ v2.31.0` and `License: 5etools 
 - The lossy/cross-source CR+base-type gate (`richMatchesCsv`, `crValue` failing closed on unparseable CRs) is careful, well-commented design; `compendium.ts` is genuinely never written by any generator, and `loadExistingTitles` matches all 78 hand-curated titles.
 - `tsLiteral` JSON-stringifies every string — no unescaped quote/backtick issues anywhere in ~10 MB of generated TS; deterministic sorts + sort-derived ids in weapons/spells/compendium.
 
-**Coverage gaps:**
-- No tests exist for the generators (`scripts/` has no `*.test.ts`): `stripTags`, `parseCSV`, `resolveFiveToolsKey`, and the gating logic are all untested despite being the highest-regression-risk code reviewed here.
-- `../open5e-api` is absent on this machine (only `../5etools-src` is present), so the monsters/compendium generators could not be re-run; Open5e-path behavior and run-to-run determinism were verified statically plus via committed output only.
-- Nothing verifies that a regen reproduces the committed files (no CI diff-check), so drift between generator changes and committed data would go unnoticed.
-- `STRICT_TAGS=1` unknown-tag logging is opt-in; a normal regen silently drops any new 5etools zero-arg label tag.
+**Coverage gaps:** *(closed 2026-07-21 — see the remediation-log entry; 31 tests added)*
+- ~~No tests exist for the generators~~ **CLOSED** — pure helpers extracted to `monsters-lib.ts` and tested (`parseCSV`, `resolveFiveToolsKey`, `crValue`, `baseType`, `richMatchesCsv`, `requireColumns`, `cleanOpen5e`, `canonicalPrefersOpen5e`), plus `stripTags` nesting/`generatedHeader` provenance (`lib.test.ts`) and `dropSeenTitles` (`dedupe.test.ts`).
+- ~~`../open5e-api` is absent~~ **CLOSED** — present again at v1.12.0; all four datasets regenerated.
+- ~~Nothing verifies that a regen reproduces the committed files~~ **CLOSED for this pass** — a second `generate:all` produces a byte-identical diff (verified); a *CI* diff-check remains a §5 infrastructure decision.
+- `STRICT_TAGS=1` unknown-tag logging is opt-in **by design** (documented in `lib.ts`) — a deliberate quiet-by-default trade-off, not a defect.
 
 ---
 

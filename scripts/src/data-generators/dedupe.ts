@@ -36,6 +36,29 @@ export interface SlugCollision {
   kept: string;
 }
 
+// Cross-section dedup: return the entries whose `keyOf` is not in the running
+// `seen` set yet, adding each survivor's key. Sections run through this in
+// order, so the first section to emit a key wins (e.g. the 5etools feats pass'
+// "Survivor" suppresses the Open5e pass' second "Survivor" — they have distinct
+// ids/slugs so dedupeByName can't catch it). The caller owns the key shape:
+// dedup is done on category+title, NOT title alone, so a genuinely distinct
+// entry that merely shares a title across categories (an Action vs a Skill both
+// named "Hide") is kept, not silently dropped. Mutates `seen`.
+export function dropSeenTitles<T>(
+  entries: T[],
+  seen: Set<string>,
+  keyOf: (entry: T) => string,
+): T[] {
+  const out: T[] = [];
+  for (const e of entries) {
+    const key = keyOf(e);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(e);
+  }
+  return out;
+}
+
 export function dedupeByName<T extends { name: string; source?: string }>(
   items: T[],
   // Called once per slug that collapsed two or more DISTINCT names — i.e. every

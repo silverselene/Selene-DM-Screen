@@ -23,7 +23,7 @@ import {
   tsLiteral,
   writeOutput,
 } from "./lib.js";
-import { dedupeByName, slugify, type SlugCollision } from "./dedupe.js";
+import { dedupeByName, dropSeenTitles, slugify, type SlugCollision } from "./dedupe.js";
 
 interface CompendiumEntry {
   id: string;
@@ -329,10 +329,26 @@ function main() {
     ["Feats (Open5e third-party)", loadOpen5eFeats(existingTitles)],
   ];
 
+  // Thread a running set of emitted (category, normalized-title) keys across
+  // sections so a later section can't re-emit an entry an earlier one already
+  // shipped under a different slug — e.g. the Open5e feats pass' "Survivor"
+  // (feat-a5e-survivor) after the 5etools pass' "Survivor" (feat-survivor). The
+  // key includes the CATEGORY: two genuinely distinct entries that merely share
+  // a title across categories (an Action vs a Skill both named "Hide") must both
+  // survive. No seeding from existingTitles is needed — every loader already
+  // skips the hand-curated titles up front — so this set only adds cross-section
+  // dedup within a category on top.
+  const dedupKey = (e: CompendiumEntry) =>
+    `${e.category} ${normalizeTitle(e.title)}`;
+  const seenKeys = new Set<string>();
   const entries: CompendiumEntry[] = [];
   for (const [label, section] of sections) {
-    console.log(`  ${label}: ${section.length} entries`);
-    entries.push(...section);
+    const deduped = dropSeenTitles(section, seenKeys, dedupKey);
+    const dropped = section.length - deduped.length;
+    console.log(
+      `  ${label}: ${deduped.length} entries${dropped > 0 ? ` (${dropped} cross-section duplicate(s) dropped)` : ""}`,
+    );
+    entries.push(...deduped);
   }
 
   entries.sort((a, b) => a.category.localeCompare(b.category) || a.title.localeCompare(b.title));
@@ -342,6 +358,11 @@ function main() {
       "../5etools-src/data/{feats,actions,skills,senses,variantrules}.json + ../open5e-api/data/v1/{a5e,toh,taldorei}/Feat.json (OGL/CC-BY — see OGL-NOTICE.md)",
     generator: "generate-compendium.ts",
     count: entries.length,
+    pins: ["open5e-api @ v1.12.0"],
+    licenses: [
+      "Open5e third-party feats (Level Up A5e — CC-BY 4.0; Tome of Heroes /",
+      "Critical Role Tal'Dorei — OGL v1.0a) — see OGL-NOTICE.md.",
+    ],
   });
 
   const body = `

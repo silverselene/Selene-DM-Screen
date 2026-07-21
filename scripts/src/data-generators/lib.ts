@@ -89,50 +89,62 @@ function noteUnknownZeroArgTag(tag: string): void {
 
 export function stripTags(str: unknown): string {
   if (typeof str !== "string") return "";
+  let out = str
+    // {@recharge N} / {@recharge} → "(Recharge N–6)" / "(Recharge 6)",
+    // matching the 5etools renderer. Must run before the zero-arg and
+    // generic rules: the one-arg form would otherwise collapse to a bare
+    // number ("Fire Breath 5") and lose the recharge mechanic entirely.
+    .replace(/\{@recharge(?:\s+(\d))?\s*\}/g, (_, n: string | undefined) =>
+      n !== undefined && Number(n) < 6 ? `(Recharge ${n}–6)` : "(Recharge 6)",
+    )
+    // Zero-argument tags → friendly labels (or empty).
+    .replace(/\{@(\w+)\}/g, (m, tag: string) => {
+      if (Object.prototype.hasOwnProperty.call(ZERO_ARG_TAGS, tag)) {
+        return ZERO_ARG_TAGS[tag]!;
+      }
+      noteUnknownZeroArgTag(tag);
+      return ""; // unknown zero-arg tag — drop noise
+    })
+    // {@atk …} / {@atkr …} → expand attack-type codes.
+    .replace(
+      /\{@atkr?\s([^}]+)\}/gi,
+      (_, arg: string) => `${expandAtkArg(arg)} Attack Roll: `,
+    )
+    // {@actSave int} → "Int Save: " (one-arg ability code).
+    .replace(/\{@actSave\s+(str|dex|con|int|wis|cha)\}/gi, (_, abil: string) => {
+      const cap = abil[0]!.toUpperCase() + abil.slice(1).toLowerCase();
+      return `${cap} Save: `;
+    })
+    // {@hit N} → "+N" (signed). Some sources use negative numbers.
+    .replace(/\{@hit\s([^}]+)\}/g, (_, n: string) => {
+      const v = n.trim();
+      return v.startsWith("-") || v.startsWith("+") ? v : `+${v}`;
+    })
+    // {@dc N} → "DC N".
+    .replace(/\{@dc\s([^}]+)\}/g, (_, n: string) => `DC ${n.trim()}`)
+    // {@scaledamage <base>|<levels>|<step>} and {@scaledice ...} encode
+    // per-slot upcasting; the prose wants the STEP (3rd segment), not the
+    // base. e.g. Fireball "8d6|3-9|1d6" → "1d6", Heal "70|6-9|10" → "10".
+    .replace(/\{@scaled(?:amage|ice)\s+([^}]*)\}/g, (_, payload: string) =>
+      (payload.split("|")[2] ?? "").trim(),
+    );
+
+  // Generic tag with payload → first pipe segment. Match only tags whose
+  // payload contains NO braces (`[^{}]*`), i.e. the innermost tags, and loop
+  // to a fixpoint so a nested `{@note ... {@damage 2d6} ...}` resolves the
+  // inner tag first — a single pass with `[^}]*` ran the payload across the
+  // inner tag's `{` and left its `@damage 2d6` leader as visible residue.
+  const genericTag = /\{@\w+\s([^{}]*)\}/g;
+  let prev: string;
+  do {
+    prev = out;
+    out = out.replace(genericTag, (_, text: string) =>
+      (text.split("|")[0] ?? "").trim(),
+    );
+  } while (out !== prev);
+
   return (
-    str
-      // {@recharge N} / {@recharge} → "(Recharge N–6)" / "(Recharge 6)",
-      // matching the 5etools renderer. Must run before the zero-arg and
-      // generic rules: the one-arg form would otherwise collapse to a bare
-      // number ("Fire Breath 5") and lose the recharge mechanic entirely.
-      .replace(/\{@recharge(?:\s+(\d))?\s*\}/g, (_, n: string | undefined) =>
-        n !== undefined && Number(n) < 6 ? `(Recharge ${n}–6)` : "(Recharge 6)",
-      )
-      // Zero-argument tags → friendly labels (or empty).
-      .replace(/\{@(\w+)\}/g, (m, tag: string) => {
-        if (Object.prototype.hasOwnProperty.call(ZERO_ARG_TAGS, tag)) {
-          return ZERO_ARG_TAGS[tag]!;
-        }
-        noteUnknownZeroArgTag(tag);
-        return ""; // unknown zero-arg tag — drop noise
-      })
-      // {@atk …} / {@atkr …} → expand attack-type codes.
-      .replace(
-        /\{@atkr?\s([^}]+)\}/gi,
-        (_, arg: string) => `${expandAtkArg(arg)} Attack Roll: `,
-      )
-      // {@actSave int} → "Int Save: " (one-arg ability code).
-      .replace(/\{@actSave\s+(str|dex|con|int|wis|cha)\}/gi, (_, abil: string) => {
-        const cap = abil[0]!.toUpperCase() + abil.slice(1).toLowerCase();
-        return `${cap} Save: `;
-      })
-      // {@hit N} → "+N" (signed). Some sources use negative numbers.
-      .replace(/\{@hit\s([^}]+)\}/g, (_, n: string) => {
-        const v = n.trim();
-        return v.startsWith("-") || v.startsWith("+") ? v : `+${v}`;
-      })
-      // {@dc N} → "DC N".
-      .replace(/\{@dc\s([^}]+)\}/g, (_, n: string) => `DC ${n.trim()}`)
-      // {@scaledamage <base>|<levels>|<step>} and {@scaledice ...} encode
-      // per-slot upcasting; the prose wants the STEP (3rd segment), not the
-      // base. e.g. Fireball "8d6|3-9|1d6" → "1d6", Heal "70|6-9|10" → "10".
-      .replace(/\{@scaled(?:amage|ice)\s+([^}]*)\}/g, (_, payload: string) =>
-        (payload.split("|")[2] ?? "").trim(),
-      )
-      // Generic tag with payload → first pipe segment.
-      .replace(/\{@\w+\s([^}]*)\}/g, (_, text: string) =>
-        (text.split("|")[0] ?? "").trim(),
-      )
+    out
       // Anything left in braces — unwrap.
       .replace(/\{([^}]+)\}/g, "$1")
       // Tidy double spaces introduced by replacements.
@@ -175,12 +187,25 @@ export function renderEntries(entries: unknown, depth = 0): string {
 }
 
 // ── File header for generated outputs ────────────────────────────────────
+// `pins` / `licenses` add continuation lines under the "Pinned to:" / "License:"
+// blocks — mixed-license outputs (monsters.ts, compendiumRules.ts also pull
+// from Open5e) pass the open5e-api pin and the OGL/CC-BY note so a reader of
+// the generated file sees the full provenance, not just the 5etools default.
 export function generatedHeader(args: {
   source: string;
   generator: string;
   count?: number;
+  pins?: string[];
+  licenses?: string[];
 }): string {
-  const { source, generator, count } = args;
+  const { source, generator, count, pins = [], licenses = [] } = args;
+  // Every label below ("Source:", "Pinned to:", "License:", …) is padded to a
+  // 12-char field, so a continuation line aligns under the VALUE column, not the
+  // label — `" ".repeat(label.length)` left it 2–4 columns short of the value.
+  const VALUE_COL = 12;
+  const contLine = (extra: string) => ` * ${" ".repeat(VALUE_COL)}${extra}\n`;
+  const pinLines = pins.map(contLine).join("");
+  const licenseLines = licenses.map(contLine).join("");
   const countLine = count != null ? ` * Entries:    ${count}\n` : "";
   return `/**
  * GENERATED FILE — do not edit by hand.
@@ -188,8 +213,8 @@ export function generatedHeader(args: {
  * Source:     ${source}
  * Generator:  scripts/src/data-generators/${generator}
  * Pinned to:  5etools-src @ v2.31.0
- * License:    5etools content is MIT-licensed by its respective authors.
-${countLine} *
+${pinLines} * License:    5etools content is MIT-licensed by its respective authors.
+${licenseLines}${countLine} *
  * Regenerate with: pnpm --filter @workspace/scripts run generate:<name>
  */
 `;
