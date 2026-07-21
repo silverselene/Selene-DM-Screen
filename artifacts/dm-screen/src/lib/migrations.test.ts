@@ -138,6 +138,33 @@ describe("migrateTurnIndexToActiveId (via runMigrationsOnce)", () => {
     expect(store.getItem("dm-initiative-turn-v1")).toBeNull();
   });
 
+  it("persists the validated list so a minted active id can't dangle", () => {
+    // Legacy/hand-edited combatants with no ids: validation mints fresh
+    // random ids, and the pointer is written from THOSE. If the raw list
+    // stays in storage unmodified, the widget's read path re-validates it
+    // and mints DIFFERENT ids — the pointer dangles and the widget's
+    // reconciliation effect resets it to null, silently undoing the
+    // migration's one job.
+    store.setItem(
+      "dm-initiative-v1",
+      JSON.stringify([
+        { name: "a", initiative: 20, hp: 10, maxHp: 10, isPlayer: false },
+        { name: "b", initiative: 10, hp: 10, maxHp: 10, isPlayer: false },
+      ]),
+    );
+    store.setItem("dm-initiative-turn-v1", JSON.stringify(1));
+
+    runMigrationsOnce();
+
+    const activeId = JSON.parse(store.getItem("dm-initiative-active-id-v1")!);
+    const persisted = JSON.parse(store.getItem("dm-initiative-v1")!) as {
+      id?: string;
+      name: string;
+    }[];
+    const target = persisted.find((c) => c.id === activeId);
+    expect(target?.name).toBe("b");
+  });
+
   it("drops a malformed turn index without minting an active id", () => {
     store.setItem("dm-initiative-turn-v1", JSON.stringify("not-a-number"));
 

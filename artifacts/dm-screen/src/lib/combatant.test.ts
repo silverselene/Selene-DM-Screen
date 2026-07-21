@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  AC_MAX,
+  HP_MAX,
+  INIT_MAX,
+  INIT_MIN,
   MAX_COMBATANTS,
   mintCombatantId,
   validateCombatants,
@@ -80,6 +84,39 @@ describe("validateCombatants", () => {
     expect(ids[0]).toBe("dup");
     expect(ids[1]).not.toBe("dup");
     expect(ids[2]).not.toBe("dup");
+  });
+
+  it("clamps out-of-range numerics to the same bounds the typed paths use", () => {
+    // A hand-edited/hostile backup can plant absurd finite numbers that every
+    // typed add path would have clamped (clampInitiative, the widget's
+    // HP_MAX/AC_MAX). The import path must not be weaker than the input paths.
+    const [c] = validateCombatants([
+      {
+        name: "Cheater",
+        initiative: 1e308,
+        hp: -5e12,
+        maxHp: 1e308,
+        ac: 1e308,
+      },
+    ])!;
+    expect(c.initiative).toBe(INIT_MAX);
+    expect(c.hp).toBe(0);
+    expect(c.maxHp).toBe(HP_MAX);
+    expect(c.ac).toBe(AC_MAX);
+  });
+
+  it("clamps a very negative initiative up to INIT_MIN", () => {
+    const [c] = validateCombatants([{ name: "Slow", initiative: -1e12 }])!;
+    expect(c.initiative).toBe(INIT_MIN);
+  });
+
+  it("floors ac at 0 and leaves an absent ac undefined", () => {
+    const [neg, absent] = validateCombatants([
+      { name: "NegAc", ac: -5 },
+      { name: "NoAc" },
+    ])!;
+    expect(neg.ac).toBe(0);
+    expect(absent.ac).toBeUndefined();
   });
 
   it("truncates a pathologically long list to MAX_COMBATANTS", () => {

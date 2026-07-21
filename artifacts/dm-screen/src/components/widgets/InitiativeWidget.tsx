@@ -24,11 +24,14 @@ import {
   handleAddToInitiativeEvent,
   initiativeFullMessage,
   rollD20,
+  AC_MAX,
+  HP_MAX,
   type AddOutcome,
   type ConfirmDuplicate,
 } from "@/lib/combatant";
 import { isV1Empty } from "@/lib/migrations";
 import { isImeComposing } from "@/lib/keyboard";
+import { createSingletonSlot, useSingletonSlot } from "@/lib/singletonWidget";
 
 // Parse a numeric input string and clamp it to a sane range. The `<input
 // type="number" min max>` attributes are only UI hints — a DM can still type
@@ -40,12 +43,11 @@ const clampInt = (raw: string, min: number, max: number, fallback = 0): number =
   return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
 };
 
-// Bounds. Initiative clamping is `clampInitiative` from `@/lib/combatant`
-// (imported above) so the Party widget's "Add to Initiative" path clamps
-// to the same range. HP/AC are non-negative; AC tops out at the same 99
-// the party store uses, HP at 9999.
-const HP_MAX = 9999;
-const AC_MAX = 99;
+// Bounds. Initiative clamping is `clampInitiative` from `@/lib/combatant`;
+// HP/AC caps (HP_MAX/AC_MAX) are imported from the same module so this
+// typed-input path and `validateCombatants`' read/import path clamp to one
+// shared source of truth (the Party widget's "Add to Initiative" path
+// likewise reuses clampInitiative).
 
 // Validators paired with each persistent key. Same shape checks the
 // backup-import path runs — so a malformed stored value (DevTools edit,
@@ -122,7 +124,40 @@ function legacyInitialValue<T>(
 
 type AddMode = (typeof INITIATIVE_MODES)[number];
 
+// One live Initiative tracker per dashboard. Every mounted copy holds an
+// independent useLocalStorage snapshot of dm-initiative-v1 (plus the round /
+// active-id keys) and writes the whole list back on any mutation, with no
+// same-tab change event to reconcile them — so a second copy silently
+// clobbers the first's mid-encounter HP/turn state last-writer-wins (only
+// the dm-add-to-initiative event path is first-consumer-guarded). The
+// selector and recent-widgets restore refuse a duplicate tile via
+// SINGLETON_WIDGET_TYPES; this mount guard is the layer that holds for
+// tiles arriving via a restored backup or hand-edited storage. The
+// duplicate renders a placeholder and takes over automatically when the
+// owning tile is removed.
+const INITIATIVE_MOUNT_SLOT = createSingletonSlot();
+
 export function InitiativeWidget() {
+  const mount = useSingletonSlot(INITIATIVE_MOUNT_SLOT);
+  // "pending" is the pre-layout-effect first render — render nothing, not
+  // the placeholder; the claim resolves before paint (see useSingletonSlot).
+  if (mount === "pending") return null;
+  if (mount === "duplicate") {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
+        <Swords className="w-6 h-6 text-amber-400/70" />
+        <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
+          Initiative is already open in another tile. It tracks one live
+          encounter, so it can only be open once — remove this tile, or close
+          the other one to use it here.
+        </p>
+      </div>
+    );
+  }
+  return <InitiativeSession />;
+}
+
+function InitiativeSession() {
   // Versioned per phase 2 ("Persist live combat state to a versioned key").
   // Migration from the older unversioned keys (dm-initiative /
   // dm-initiative-turn / dm-round) lives in `src/lib/migrations.ts` and

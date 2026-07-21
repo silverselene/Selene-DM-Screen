@@ -26,12 +26,18 @@ export const PLACEABLE_WIDGET_TYPES = WIDGET_TYPES.filter(
 );
 
 // Widgets that may appear on at most one tile. AI Chat persists a single
-// shared transcript (see chatHistory.ts): two mounted copies would clobber
-// each other's debounced writes last-writer-wins. Enforced at placement time
+// shared transcript (see chatHistory.ts); Initiative persists the single
+// live combat encounter (dm-initiative-v1 plus its round/turn keys): in both
+// cases every mounted copy holds an independent in-memory snapshot with
+// whole-value writes and no same-tab change event, so two live copies
+// clobber each other's state last-writer-wins. Enforced at placement time
 // (widget selector + recent-widgets restore, see App.tsx) and again at mount
-// time inside the widget itself, which also covers tiles arriving via a
+// time inside each widget itself, which also covers tiles arriving via a
 // restored backup or hand-edited storage.
-export const SINGLETON_WIDGET_TYPES: ReadonlySet<WidgetType> = new Set(["ai-chat"]);
+export const SINGLETON_WIDGET_TYPES: ReadonlySet<WidgetType> = new Set([
+  "ai-chat",
+  "initiative",
+]);
 
 export type TileEntry = {
   widget: WidgetType;

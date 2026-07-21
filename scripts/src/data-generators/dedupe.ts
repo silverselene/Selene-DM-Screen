@@ -28,7 +28,25 @@ export function slugify(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function dedupeByName<T extends { name: string; source?: string }>(items: T[]): T[] {
+export interface SlugCollision {
+  slug: string;
+  /** Distinct spellings that collapsed onto `slug`, in first-seen order. */
+  names: string[];
+  /** The `name` of the entry that won the source-priority tie-break. */
+  kept: string;
+}
+
+export function dedupeByName<T extends { name: string; source?: string }>(
+  items: T[],
+  // Called once per slug that collapsed two or more DISTINCT names — i.e. every
+  // case where a real entry's content was dropped (only the winner survives).
+  // Legitimate cross-book spelling variants land here too ("Fey Touched" /
+  // "Fey-Touched"), so it's a review signal, not an error: the generator wires
+  // this to a console.warn so a human regenerating can eyeball each merge and
+  // catch a genuinely-wrong collapse (two different rules, one lost) instead of
+  // it shipping silently.
+  onCollision?: (collision: SlugCollision) => void,
+): T[] {
   const groups = new Map<string, T[]>();
   for (const it of items) {
     // Key on slugify(name), not name.toLowerCase(): ids are minted from the
@@ -39,5 +57,14 @@ export function dedupeByName<T extends { name: string; source?: string }>(items:
     arr.push(it);
     groups.set(key, arr);
   }
-  return [...groups.values()].map(pickBestBySource);
+  const out: T[] = [];
+  for (const [slug, group] of groups) {
+    const best = pickBestBySource(group);
+    if (onCollision) {
+      const names = [...new Set(group.map((g) => g.name))];
+      if (names.length > 1) onCollision({ slug, names, kept: best.name });
+    }
+    out.push(best);
+  }
+  return out;
 }

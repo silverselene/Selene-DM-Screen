@@ -6,6 +6,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   MAX_TILES,
+  footprintCells,
+  tilesLayoutConsistent,
   validateArrayOfEnum,
   validateBoundedInt,
   validateTiles,
@@ -53,9 +55,8 @@ function repackTiles(
     const startCol = start % newCols;
     const startRow = Math.floor(start / newCols);
     if (startCol + cSpan > newCols || startRow + rSpan > newRows) return false;
-    for (let r = 0; r < rSpan; r++)
-      for (let c = 0; c < cSpan; c++)
-        if (occupied[start + r * newCols + c]) return false;
+    for (const idx of footprintCells(start, newCols, cSpan, rSpan))
+      if (occupied[idx]) return false;
     return true;
   };
 
@@ -86,12 +87,10 @@ function repackTiles(
       continue;
     }
     next[slot] = { widget: w.widget, colSpan: cSpan, rowSpan: rSpan };
-    for (let r = 0; r < rSpan; r++)
-      for (let c = 0; c < cSpan; c++) {
-        const idx = slot + r * newCols + c;
-        occupied[idx] = true;
-        if (idx !== slot) next[idx] = null;
-      }
+    for (const idx of footprintCells(slot, newCols, cSpan, rSpan)) {
+      occupied[idx] = true;
+      if (idx !== slot) next[idx] = null;
+    }
   }
 
   return { next, dropped };
@@ -117,13 +116,8 @@ function computeOccupancyExcluding(
     if (t === null || idx === excludeIdx) continue;
     const blocks = t.widget !== "empty" || t.colSpan > 1 || t.rowSpan > 1;
     if (!blocks) continue;
-    const col = idx % cols;
-    const row = Math.floor(idx / cols);
-    for (let r = 0; r < t.rowSpan; r++)
-      for (let c = 0; c < t.colSpan; c++) {
-        const cell = (row + r) * cols + (col + c);
-        if (cell < occ.length) occ[cell] = true;
-      }
+    for (const cell of footprintCells(idx, cols, t.colSpan, t.rowSpan))
+      if (cell < occ.length) occ[cell] = true;
   }
   return occ;
 }
@@ -171,13 +165,18 @@ function AppContent() {
   // eviction in backup.ts: cols/rows/tiles are three independent setItem
   // writes (and useLocalStorage swallows a quota throw per key), so a
   // failure between them — or a DevTools edit — can persist dimensions
-  // that disagree with tiles.length. Each key validates fine in isolation,
-  // then the span math (`i + cols`) nulls the wrong cells. Render from a
-  // reconciled array (re-packing the placed widgets into the cols×rows
-  // grid, same repair the resize handler applies) and heal storage below.
+  // that disagree with tiles.length OR a tiles array of the right length
+  // whose span placeholders don't line up (a colSpan:2 tile missing its
+  // trailing `null`). Each key validates fine in isolation, then the span
+  // math (`i + cols`) nulls the wrong cells or renders overlaps. Render
+  // from a reconciled array (re-packing the placed widgets into the
+  // cols×rows grid, same repair the resize handler applies — repackTiles
+  // always emits a footprint-consistent layout) and heal storage below.
   const gridTiles = useMemo(
     () =>
-      tiles.length === cols * rows ? tiles : repackTiles(tiles, cols, rows).next,
+      tilesLayoutConsistent(tiles, cols, rows)
+        ? tiles
+        : repackTiles(tiles, cols, rows).next,
     [tiles, cols, rows],
   );
   useEffect(() => {

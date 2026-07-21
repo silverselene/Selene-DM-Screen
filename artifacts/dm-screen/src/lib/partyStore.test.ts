@@ -148,6 +148,60 @@ describe("party import caps (finding #5)", () => {
   });
 });
 
+describe("hostile party ids", () => {
+  it("renumbers duplicate ids beyond 2^53 to distinct safe integers", () => {
+    // 1e300 + 1 === 1e300 in float arithmetic: an accepted id that large
+    // saturates the monotonic mint counter, so the renumber pass would
+    // hand the "fresh" id right back and the duplicates survive.
+    const { commit } = preparePartyImport(
+      partyEnvelope([
+        { ...pc("A"), id: 1e300 },
+        { ...pc("B"), id: 1e300 },
+      ]),
+    );
+    commit();
+
+    const roster = loadParty();
+    expect(roster).toHaveLength(2);
+    expect(roster[0].id).not.toBe(roster[1].id);
+    for (const c of roster) {
+      expect(Number.isSafeInteger(c.id)).toBe(true);
+      expect(c.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps minting distinct ids on live adds after a saturating import", () => {
+    const { commit } = preparePartyImport(
+      partyEnvelope([{ ...pc("A"), id: 1e300 }]),
+    );
+    commit();
+
+    const b = addCharacter(pc("B"));
+    const c = addCharacter(pc("C"));
+    expect(b.id).not.toBe(c.id);
+    const ids = loadParty().map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("re-mints negative and non-integer ids", () => {
+    const { commit } = preparePartyImport(
+      partyEnvelope([
+        { ...pc("A"), id: -5 },
+        { ...pc("B"), id: 1.5 },
+      ]),
+    );
+    commit();
+
+    const roster = loadParty();
+    expect(roster).toHaveLength(2);
+    for (const c of roster) {
+      expect(Number.isSafeInteger(c.id)).toBe(true);
+      expect(c.id).toBeGreaterThan(0);
+    }
+    expect(new Set(roster.map((r) => r.id)).size).toBe(2);
+  });
+});
+
 describe("party envelope validation", () => {
   it("rejects a file with the wrong schema", () => {
     const wrong = JSON.stringify({ schema: "selene-dm-full", version: 1, keys: {} });

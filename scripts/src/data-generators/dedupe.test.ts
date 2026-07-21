@@ -33,6 +33,32 @@ describe("dedupeByName", () => {
     ]);
     expect(out).toHaveLength(2);
   });
+
+  test("reports a collision when distinct names collapse to one slug", () => {
+    const collisions: unknown[] = [];
+    dedupeByName(
+      [
+        { name: "Fey Touched", source: "TCE" },
+        { name: "Fey-Touched", source: "XPHB" },
+      ],
+      (c) => collisions.push(c),
+    );
+    expect(collisions).toEqual([
+      { slug: "fey-touched", names: ["Fey Touched", "Fey-Touched"], kept: "Fey-Touched" },
+    ]);
+  });
+
+  test("an exact-duplicate name is not reported as a collision", () => {
+    const collisions: unknown[] = [];
+    dedupeByName(
+      [
+        { name: "Alert", source: "XPHB" },
+        { name: "Alert", source: "PHB" },
+      ],
+      (c) => collisions.push(c),
+    );
+    expect(collisions).toHaveLength(0);
+  });
 });
 
 describe("slugify", () => {

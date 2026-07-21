@@ -54,6 +54,15 @@ const MAX_RAW_VALUE_BYTES = MAX_PER_VALUE_BYTES * 2;
 const MAX_TOTAL_BYTES = 4_000_000;     // 4 MB
 const MAX_KEYS = 200;                  // current key count is ~33
 const MAX_KEY_LENGTH = 200;
+// Raw-file cap, checked BEFORE JSON.parse (mirrors the party importer's
+// MAX_IMPORT_FILE_CHARS): a mistakenly-picked multi-hundred-MB file would
+// otherwise hang or OOM the tab during parse, long before any of the
+// post-parse caps above run. Sized at 8× MAX_TOTAL_BYTES — the accepted
+// payload ceiling, doubled for worst-case JSON string escaping, doubled
+// again for envelope + pretty-print overhead — so no legitimate backup
+// (bounded by the ~5 MB localStorage quota it was swept from) can get
+// anywhere near it.
+const MAX_IMPORT_FILE_CHARS = MAX_TOTAL_BYTES * 8;
 
 interface FullBackupEnvelope {
   schema: "selene-dm-full";
@@ -240,6 +249,87 @@ export function validateTiles(parsed: unknown): TileEntry[] | undefined {
     const rowSpan: 1 | 2 = e.rowSpan === 2 ? 2 : 1;
     return { widget, colSpan, rowSpan };
   });
+}
+
+/** A valid tile span: the grid only supports 1× or 2× in each axis. */
+export function isValidSpan(n: unknown): n is 1 | 2 {
+  return n === 1 || n === 2;
+}
+
+/**
+ * The cell indices a tile at `index` occupies in a `cols`-wide grid, origin
+ * cell first. The single home for the `(row + r) * cols + (col + c)` footprint
+ * math — CLAUDE.md flags the grid's null-placeholder invariant as "easy to
+ * break", and this was previously reimplemented three times
+ * (`tilesLayoutConsistent`, `repackTiles`, `computeOccupancyExcluding`).
+ * Callers do their own bounds check (`col + colSpan <= cols`, etc.) before
+ * trusting the indices; for an in-bounds tile every returned index is a real
+ * cell of the grid.
+ */
+export function footprintCells(
+  index: number,
+  cols: number,
+  colSpan: number,
+  rowSpan: number,
+): number[] {
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  const cells: number[] = [];
+  for (let r = 0; r < rowSpan; r++) {
+    for (let c = 0; c < colSpan; c++) {
+      cells.push((row + r) * cols + (col + c));
+    }
+  }
+  return cells;
+}
+
+/**
+ * Whether a tiles array is a footprint-consistent layout for a cols×rows
+ * grid: every non-null tile's span stays in bounds and covers only `null`
+ * placeholder cells, and every `null` is covered by exactly one earlier
+ * span. `validateTiles` shape-checks each entry independently and has no
+ * cols/rows context, so it can't catch this — a hand-edited/hostile backup
+ * with `tiles.length === cols*rows` but a `colSpan: 2` tile whose second
+ * cell holds a real tile (rather than the required `null`) passes every
+ * per-key check yet renders overlapping/overflowing tiles. The grid is the
+ * one invariant CLAUDE.md calls "easy to break"; this is the cross-field
+ * guard for it, shared by the import path and App's read-path repack.
+ *
+ * Spans only ever extend to higher indices (rightward/downward), so a
+ * legitimately-covered `null` is always claimed by an earlier tile in the
+ * walk — a `null` still uncovered when we reach it is an orphan.
+ */
+export function tilesLayoutConsistent(
+  tiles: TileEntry[],
+  cols: number,
+  rows: number,
+): boolean {
+  if (cols <= 0 || rows <= 0 || tiles.length !== cols * rows) return false;
+  const covered = new Array<boolean>(tiles.length).fill(false);
+  for (let i = 0; i < tiles.length; i++) {
+    const t = tiles[i];
+    if (t === null) {
+      if (!covered[i]) return false; // orphan placeholder
+      continue;
+    }
+    if (covered[i]) return false; // a real tile sitting on another's span
+    // Reject non-{1,2} spans explicitly. The import path casts unvalidated
+    // JSON to `TileEntry[]`, so a hostile `colSpan: 0` / `NaN` / `"2"` must
+    // fail here — otherwise `col + t.colSpan > cols` compares against NaN
+    // (always false) and the footprint loop below covers no cells, letting
+    // the tile slip through as a phantom 1×1 and silently disabling this
+    // guard for that whole class of input.
+    if (!isValidSpan(t.colSpan) || !isValidSpan(t.rowSpan)) return false;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    if (col + t.colSpan > cols || row + t.rowSpan > rows) return false;
+    for (const idx of footprintCells(i, cols, t.colSpan, t.rowSpan)) {
+      if (idx === i) continue; // origin cell holds the tile itself
+      if (tiles[idx] !== null) return false; // span cell must be a placeholder
+      covered[idx] = true;
+    }
+  }
+  return true;
 }
 
 export function validateParty(parsed: unknown): PlayerCharacter[] | undefined {
@@ -506,10 +596,12 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
 
   // Cross-field consistency for the grid triple: each member can be
   // individually valid yet mutually inconsistent (a hand-edited backup with
-  // `cols: 4, rows: 4` but a 9-element `tiles` array). App's `dm-tiles-v3`
-  // default is a fixed 3×3, so dropping only `tiles` would leave it mismatched
-  // against the imported cols/rows — evict the whole triple so all three fall
-  // back to their consistent defaults instead of rendering blank/overrun cells.
+  // `cols: 4, rows: 4` but a 9-element `tiles` array, or a `tiles` array of
+  // the right length whose span placeholders don't line up). App's
+  // `dm-tiles-v3` default is a fixed 3×3, so dropping only `tiles` would
+  // leave it mismatched against the imported cols/rows — evict the whole
+  // triple so all three fall back to their consistent defaults instead of
+  // rendering blank/overrun/overlapping cells.
   const gridPair = (key: string) => pairs.find((p) => p.key === key)?.value;
   const colsRaw = gridPair("dm-grid-cols");
   const rowsRaw = gridPair("dm-grid-rows");
@@ -518,8 +610,8 @@ function validateEnvelope(env: FullBackupEnvelope): ValidationResult {
     try {
       const cols = JSON.parse(colsRaw) as number;
       const rows = JSON.parse(rowsRaw) as number;
-      const tiles = JSON.parse(tilesRaw) as unknown[];
-      if (Array.isArray(tiles) && tiles.length !== cols * rows) {
+      const tiles = JSON.parse(tilesRaw) as TileEntry[];
+      if (!Array.isArray(tiles) || !tilesLayoutConsistent(tiles, cols, rows)) {
         evictGroup(["dm-grid-cols", "dm-grid-rows", "dm-tiles-v3"]);
       }
     } catch {
@@ -608,6 +700,12 @@ export interface PreparedImport {
  *  prepare-time snapshot). DMs are assumed to run a single tab; cross-
  *  tab last-write-wins is already documented in the per-key model. */
 export function prepareImport(text: string): PreparedImport {
+  if (text.length > MAX_IMPORT_FILE_CHARS) {
+    throw new Error(
+      `This file is too large to be a backup ` +
+        `(${(text.length / 1_000_000).toFixed(1)} MB; max ${MAX_IMPORT_FILE_CHARS / 1_000_000} MB).`,
+    );
+  }
   const env = parseEnvelope(text);
   const { pairs, skipped, bytes } = validateEnvelope(env);
 

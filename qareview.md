@@ -18,12 +18,12 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 
 **38 findings: 0 P0 · 2 P1 · 11 P2 · 25 P3** (the duplicate-tile clobber was found independently by agents 1 and 2 and is counted once). No data-loss or crash bugs in shipped code paths; overall the codebase's hardest surfaces (backup atomicity, the add-to-initiative event contract, the bridge's localhost security) reviewed as genuinely robust.
 
-**Progress: 2 fixed (both P1s) · 36 open** — see the remediation log below.
+**Progress: 9 fixed (2 P1s + all 7 §1 findings) · 29 open** — see the remediation log below.
 
 **Fix-first shortlist:**
 1. ~~**[P1] `{@recharge N}` stripping**~~ **FIXED** — see §3; regen also caught up the committed data with d1d13e8's cross-source gate.
 2. ~~**[P1] Duplicate feat ids**~~ **FIXED** — see §3; dedupe now keyed on the slug the ids are minted from.
-3. **[P2] Duplicate stateful tiles clobber localStorage** — two Notepads or two Initiative tiles silently lose each other's writes; found twice independently (§1, §2).
+3. ~~**[P2] Duplicate stateful tiles clobber localStorage**~~ **PARTIALLY FIXED** — the §1 Initiative-tile case is fixed (Initiative is now a singleton widget, see §1); the broader §2 case (two Notepads, two Bestiaries, …) is still open.
 4. **[P2] claude-code-review.yml has no author gate** — drive-by PRs on a public repo burn subscription spend and open a prompt-injection surface (§5).
 5. **[P2] `.dockerignore` secret patterns are root-anchored** — a nested `services/ai-bridge/.env` would enter build layers; latent today (§5).
 6. **[P2] CI never runs `pnpm build`** — the 8 MiB precache cap, define assertions, and bundle scans don't gate merges (§5).
@@ -31,6 +31,22 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 **Recurring themes:** validators on the backup-import path are systematically weaker than the equivalent typed-input paths (§1 ×3, §2 Portal URL); the generators are entirely untested despite being the highest-regression-risk code (§3 — *partially addressed, see log*); dm-screen's config files and tests have zero typecheck coverage while the bridge's do (§5).
 
 ## Remediation log
+
+### 2026-07-20 — all 7 §1 (`src/lib/`) findings fixed
+
+Every finding under §1 — the 2 P2s and 5 P3s — is resolved, TDD (failing test first) for each. Details are inline at each finding heading above; summary:
+
+- **[P2] Party id saturation** — `isAcceptableId` gate (positive safe int ≤ 2^50) in `normalize()` + renumber retry loop in `normalizePartyBatch`.
+- **[P2] Two Initiative tiles clobber** — `"initiative"` is now a `SINGLETON_WIDGET_TYPES` member with a `useSingletonSlot` mount guard (`InitiativeWidget` → thin wrapper + `InitiativeSession`), mirroring AI Chat.
+- **[P3] `migrateTurnIndexToActiveId`** — persists the validated list before writing the active-id pointer.
+- **[P3] Backup pre-parse size gate** — `prepareImport` throws on an oversized file before `JSON.parse`.
+- **[P3] Empty-query monster browse** — sort before slice; module's first test file added.
+- **[P3] Tile footprint consistency** — new `tilesLayoutConsistent(tiles, cols, rows)`, wired into both the import-path grid-triple eviction and App's read-path repack.
+- **[P3] `validateCombatants` clamping** — `HP_MAX`/`AC_MAX` centralized in `combatant.ts`; initiative/hp/maxHp/ac clamped to the same bounds the typed paths use.
+
+**Coverage gaps from §1 closed:** `monsterSearch.ts` now has a test file (ranking, empty-query, `findRichMonster`); `normalizePartyBatch` has hostile-id tests (≥ 2^53, negative, non-integer); `migrateTurnIndexToActiveId` has an id-less-legacy-shape test.
+
+**Verified:** 276/276 dm-screen tests · `pnpm typecheck` clean · `pnpm build` + verify-precache pass · bundle scans clean (`/api/` and `bridge-protocol` zero hits).
 
 ### 2026-07-18 — both P1s fixed (single commit)
 
@@ -55,31 +71,38 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 
 ## 1. `src/lib/` — stores, backup/restore, migrations
 
-### [P2] Party id minting saturates above 2^53 — permanent duplicate-id corruption from one crafted import
+### ~~[P2]~~ **FIXED** — Party id minting saturates above 2^53 — permanent duplicate-id corruption from one crafted import
+> **Fixed 2026-07-20:** `normalize()` now gates existing ids through `isAcceptableId` (positive safe integer `≤ 2^50`); anything outside the range is re-minted like a missing id, so the mint counter can never be bumped near float-saturation. `normalizePartyBatch`'s renumber pass gained the `while (seen.has(fresh))` retry loop (mirrors `validateCombatants`). Tests in `partyStore.test.ts` ("hostile party ids"): `1e300` duplicates renumber to distinct safe ints, live adds after a saturating import stay distinct, and negative/non-integer ids are re-minted.
 `artifacts/dm-screen/src/lib/partyStore.ts:41-45, 111-114, 157-165`
 `normalize()` accepts any finite number as an id (line 111) and `bumpIdCounter` (line 37) raises the module counter to it; beyond `Number.MAX_SAFE_INTEGER`, `++idCounter` in `mintId()` (line 44) is a no-op, so every subsequent mint returns the same value. Reproduced: a party file with two PCs both `id: 1e300` passes the "renumber duplicates" pass with the ids **still duplicated** (the renumber loop, unlike `combatant.ts:339-341`, has no `while (seen.has(fresh))` retry), and every later live `addCharacter` mints `1e300` again — colliding with the existing row, after which `updateCharacter`/`deleteCharacter` (`c.id !== id`, lines 217/230) silently hit multiple PCs, forever. Reachable via `preparePartyImport` and the full-backup `validateParty` path. Fix: reject/re-mint ids that aren't safe positive integers in `normalize()`, and add the uniqueness-retry loop to `normalizePartyBatch`.
 
-### [P2] Two Initiative tiles silently clobber each other's combat state
+### ~~[P2]~~ **FIXED** — Two Initiative tiles silently clobber each other's combat state
+> **Fixed 2026-07-20:** `"initiative"` added to `SINGLETON_WIDGET_TYPES` (`src/types.ts`), and `InitiativeWidget` split into a thin export that runs `useSingletonSlot(INITIATIVE_MOUNT_SLOT)` — rendering the real `InitiativeSession` only for the slot owner, a placeholder for any duplicate — exactly mirroring `AIChatWidget`. The selector/recent-widgets guards in `App.tsx` and `WidgetSelectorModal` are already generic over the set, so no changes there. New component test `InitiativeWidget.singleton.test.tsx` mounts the real widget twice and asserts one live tracker + one placeholder, plus slot handoff on unmount. (Scoped to the §1 Initiative finding; the broader "any duplicated stateful widget" case in §2 stays open for Notepad/Bestiary/etc.)
 `artifacts/dm-screen/src/hooks/useLocalStorage.ts:43-198` (no same-tab sync), `artifacts/dm-screen/src/lib/combatant.ts:179-186`, `artifacts/dm-screen/src/App.tsx:236` (only `SINGLETON_WIDGET_TYPES = {"ai-chat"}` is refused, `src/types.ts:34`)
 The selector allows a second Initiative tile (only `ai-chat` is singleton), and `combatant.ts`'s own doc admits this. Each mounted copy holds an independent `useLocalStorage` snapshot of `dm-initiative-v1` and writes the whole list; there is no same-tab change event for this key (unlike `dm-party-changed`). Scenario: DM places Initiative twice, adjusts HP in tile A (full-list write), then clicks anything list-mutating in tile B — B writes its stale list and A's mid-encounter HP/turn changes are silently lost. Only the `dm-add-to-initiative` event path is guarded (first-consumer-wins). Fix: add Initiative to `SINGLETON_WIDGET_TYPES` + the `useSingletonSlot` guard, or broadcast a `dm-initiative-changed` event.
 
-### [P3] `migrateTurnIndexToActiveId` mints the active-id from a validated list it never persists
+### ~~[P3]~~ **FIXED** — `migrateTurnIndexToActiveId` mints the active-id from a validated list it never persists
+> **Fixed 2026-07-20:** the migration now `setItem("dm-initiative-v1", JSON.stringify(validated))` **before** writing the active-id pointer, so the ids the pointer references are the ones the widget's read path will see (validation no longer mints a fresh, divergent set on next load). New test in `migrations.test.ts` seeds an id-less legacy list and asserts the persisted combatant the pointer resolves to is the correct one.
 `artifacts/dm-screen/src/lib/migrations.ts:85-94`
 The migration runs `validateCombatants` (which mints fresh random ids for missing/non-string/duplicate ids) and writes `sorted[idx].id` to `dm-initiative-active-id-v1` — but leaves `dm-initiative-v1` unmodified. The widget's read path later re-validates the raw value and mints *different* ids (`useLocalStorage` heal, `InitiativeWidget.tsx:131-135`), so for any legacy/hand-edited list with id-less or duplicate-id combatants the pointer dangles and the reconciliation effect (`InitiativeWidget.tsx:203`) resets it to null — the migration silently fails at its one job. Normal v1 data (valid `c-…` string ids) is unaffected. Fix: `setItem("dm-initiative-v1", JSON.stringify(validated))` before writing the pointer.
 
-### [P3] Full-backup import has no pre-parse file-size gate
+### ~~[P3]~~ **FIXED** — Full-backup import has no pre-parse file-size gate
+> **Fixed 2026-07-20:** `prepareImport` now checks `text.length > MAX_IMPORT_FILE_CHARS` (8× `MAX_TOTAL_BYTES`) and throws **before** `parseEnvelope`/`JSON.parse`, mirroring the party importer's `MAX_IMPORT_FILE_CHARS` gate. Test in `backup.test.ts` feeds a syntactically-valid but oversized envelope and asserts it throws `/too large/i`.
 `artifacts/dm-screen/src/lib/backup.ts:610-612, 135-143`
 `prepareImport(text)` feeds the entire file to `JSON.parse` before any cap; all hard caps (`MAX_KEYS`, `MAX_RAW_VALUE_BYTES`, `MAX_TOTAL_BYTES`) run post-parse. The party importer explicitly gates at 2 MB *before* parse for exactly this reason (`partyStore.ts:280-286`, "would otherwise hang or OOM the tab") — a mistakenly-picked multi-hundred-MB file hangs the tab here. Fix: mirror the `MAX_IMPORT_FILE_CHARS`-style check at the top of `prepareImport`.
 
-### [P3] Empty-query monster browse slices before sorting — correct only by generator accident
+### ~~[P3]~~ **FIXED** — Empty-query monster browse slices before sorting — correct only by generator accident
+> **Fixed 2026-07-20:** the empty-query path now `.map(toHit).sort(localeCompare).slice(0, limit)` (sort **before** slice) so the alphabetically-first `limit` rich monsters win regardless of dataset emit order. New file `monsterSearch.test.ts` (the module's first tests, closing the §1 coverage gap) mocks a deliberately non-alphabetical dataset and asserts the browse returns the alphabetically-first rows; it also pins the prefix>substring>rich>alpha ranking and `findRichMonster`.
 `artifacts/dm-screen/src/lib/monsterSearch.ts:68-72`
 `monsters.filter(rich).slice(0, limit)` takes the first 60 in *dataset order*, then sorts them. This currently returns the right rows only because `generate-monsters.ts:1061` emits the array pre-sorted by `localeCompare`; any future regen that changes emit order (e.g. source-grouped) silently turns the Bestiary's default list into an arbitrary subset presented as alphabetical. Sort (or trust dataset order and drop the sort) before slicing.
 
-### [P3] `validateTiles` doesn't check span/placeholder consistency; App's repack heal only fires on length mismatch
+### ~~[P3]~~ **FIXED** — `validateTiles` doesn't check span/placeholder consistency; App's repack heal only fires on length mismatch
+> **Fixed 2026-07-20:** new exported pure fn `tilesLayoutConsistent(tiles, cols, rows)` in `backup.ts` verifies every non-null span stays in bounds and covers only `null` placeholders, and every `null` is covered by exactly one earlier span. The import path's grid-triple cross-field check now evicts the triple when the layout is inconsistent (not just on length mismatch), and App's `gridTiles` memo repacks whenever the layout is inconsistent (`repackTiles` already emits a consistent layout, so no re-render loop). Tests in `backup.test.ts` cover: valid spanned layout kept, missing-placeholder overlap evicted, out-of-bounds span evicted (and the old all-null "consistent" fixture updated to real empty tiles, which is what live data looks like).
 `artifacts/dm-screen/src/lib/backup.ts:226-243`, `artifacts/dm-screen/src/App.tsx:178-185`
 A hand-crafted backup with `tiles.length === cols*rows` but a `colSpan: 2` tile lacking its `null` placeholder passes both the per-key validator and the grid-triple consistency check (which compares only lengths, `backup.ts:522`); App's `repackTiles` reconciliation is skipped because the length matches, so the grid renders overlapping/overflowing tiles until manually re-laid-out. Not a crash (no widget math depends on it), but the one tiles invariant CLAUDE.md calls "easy to break" is unvalidated on import.
 
-### [P3] `validateCombatants` leaves numeric fields unclamped
+### ~~[P3]~~ **FIXED** — `validateCombatants` leaves numeric fields unclamped
+> **Fixed 2026-07-20:** `HP_MAX`/`AC_MAX` moved into `combatant.ts` (next to `INIT_MIN`/`INIT_MAX`) as the one source of truth — `InitiativeWidget` now imports them instead of redefining. `validateCombatants` clamps `initiative`→`[INIT_MIN, INIT_MAX]`, `hp`/`maxHp`→`[0, HP_MAX]`, and defined `ac`→`[0, AC_MAX]`, so the import path is no longer weaker than the typed add paths. Tests in `combatant.test.ts` assert `1e308`/`-5e12` fields clamp to the bounds and an absent `ac` stays `undefined`.
 `artifacts/dm-screen/src/lib/combatant.ts:312-331`
 `initiative`, `hp`, `maxHp`, `ac` accept any finite number — a hand-edited backup with `initiative: 1e308` or `hp: -5e12` round-trips validation, while every *typed* path clamps via `clampInitiative` (`INIT_MIN/INIT_MAX`) and the party validator clamps its numerics (`partyStore.ts:90-100`). No crash (sort and `Math.max(0, …)` still behave), but the import path is strictly weaker than the input paths it's documented to mirror.
 

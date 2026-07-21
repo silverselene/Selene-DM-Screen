@@ -213,6 +213,16 @@ export function handleAddToInitiativeEvent(
 export const INIT_MIN = -99;
 export const INIT_MAX = 999;
 
+// HP / AC bounds, shared by the typed add forms (InitiativeWidget imports
+// these) AND the read/import path (`validateCombatants` below) so a
+// hand-edited or hostile stored value can't round-trip a number the typed
+// paths would have rejected. HP is non-negative (the live tracker's
+// updateHp already floors damage at 0); AC tops out where the party store's
+// AC cap does. Kept here, next to INIT_MIN/INIT_MAX, as the one source of
+// truth for combatant numeric bounds.
+export const HP_MAX = 9999;
+export const AC_MAX = 99;
+
 /** A single d20 (1–20). Shared by every "roll initiative for me" entry point —
  *  the Initiative widget's add forms and the AI-chat cards — so the roll lives
  *  in one place rather than being re-implemented per widget. */
@@ -309,8 +319,14 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
       `validateCombatants: dropping ${parsed.length - MAX_COMBATANTS} combatants beyond the ${MAX_COMBATANTS} cap`,
     );
   }
-  const finiteNum = (v: unknown, def: number) =>
-    typeof v === "number" && Number.isFinite(v) ? v : def;
+  // Coerce a non-finite value to `def`, then clamp into [min, max] — so a
+  // hand-edited/hostile `initiative: 1e308` or `hp: -5e12` lands in the same
+  // range the typed add paths enforce (clampInitiative, the widget's
+  // HP/AC caps) instead of round-tripping unbounded through import.
+  const clampNum = (v: unknown, min: number, max: number, def: number) => {
+    const n = typeof v === "number" && Number.isFinite(v) ? v : def;
+    return Math.max(min, Math.min(max, n));
+  };
   const normalized = parsed
     .slice(0, MAX_COMBATANTS)
     .filter(isPlainObject)
@@ -322,11 +338,13 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
             ? o.id
             : mintCombatantId(),
         name: typeof o.name === "string" ? o.name.slice(0, 200) : "",
-        initiative: finiteNum(o.initiative, 0),
-        hp: finiteNum(o.hp, 0),
-        maxHp: finiteNum(o.maxHp, 0),
+        initiative: clampNum(o.initiative, INIT_MIN, INIT_MAX, 0),
+        hp: clampNum(o.hp, 0, HP_MAX, 0),
+        maxHp: clampNum(o.maxHp, 0, HP_MAX, 0),
         ac:
-          typeof o.ac === "number" && Number.isFinite(o.ac) ? o.ac : undefined,
+          typeof o.ac === "number" && Number.isFinite(o.ac)
+            ? Math.max(0, Math.min(AC_MAX, o.ac))
+            : undefined,
         isPlayer: typeof o.isPlayer === "boolean" ? o.isPlayer : false,
       };
     });

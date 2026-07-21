@@ -44,6 +44,27 @@ function mintId(): number {
   return ++idCounter;
 }
 
+// Accepted range for an existing (stored / imported) PC id. Legitimate ids
+// are minted from the Date.now()-seeded counter above, so they're always
+// positive safe integers; the explicit ceiling keeps a hostile import from
+// bumping the counter anywhere near 2^53, where `++idCounter` becomes a
+// float no-op and every subsequent mint would return the same id forever
+// (permanent duplicate-id corruption — updateCharacter/deleteCharacter
+// match on `c.id`, so they'd hit multiple PCs). 2^50 leaves the mint
+// counter ~9e15 − 1.1e15 of increment headroom, and Date.now() doesn't
+// cross it until the year ~37,600. Anything outside the range is re-minted,
+// same as a missing id.
+const PC_ID_MAX = 2 ** 50;
+
+function isAcceptableId(v: unknown): v is number {
+  return (
+    typeof v === "number" &&
+    Number.isSafeInteger(v) &&
+    v > 0 &&
+    v <= PC_ID_MAX
+  );
+}
+
 // String + numeric caps for PC fields. Defends a one-click party import
 // from a malformed file that would otherwise plant NaN into HP / AC math
 // or 5MB strings into a name. The values are deliberately generous (a
@@ -108,7 +129,7 @@ function filterStrings(arr: unknown[]): string[] {
 
 function normalize(c: unknown): PlayerCharacter {
   const obj = c as Partial<PlayerCharacter>;
-  const hasValidId = typeof obj.id === "number" && Number.isFinite(obj.id);
+  const hasValidId = isAcceptableId(obj.id);
   if (hasValidId) bumpIdCounter(obj.id as number);
   return {
     id: hasValidId ? (obj.id as number) : mintId(),
@@ -151,12 +172,17 @@ export function normalizePartyBatch(arr: unknown[]): PlayerCharacter[] {
   }
   if (!hasDups) return normalized;
   // Renumber duplicates. The counter has already been bumped past every
-  // observed id (by `normalize`/`bumpIdCounter`), so freshly minted ids
-  // are guaranteed greater than anything in the batch.
+  // observed acceptable id (by `normalize`/`bumpIdCounter`), so freshly
+  // minted ids are expected to clear anything in the batch — but retry on
+  // a collision anyway (mirrors `validateCombatants`' dedupe pass) so the
+  // uniqueness guarantee never rests on that reasoning alone. The loop
+  // terminates because `isAcceptableId` bounds the counter at PC_ID_MAX,
+  // far below float saturation, so every mint is a genuine increment.
   seen.clear();
   return normalized.map((pc) => {
     if (seen.has(pc.id)) {
-      const fresh = mintId();
+      let fresh = mintId();
+      while (seen.has(fresh)) fresh = mintId();
       seen.add(fresh);
       return { ...pc, id: fresh };
     }

@@ -23,7 +23,7 @@ import {
   tsLiteral,
   writeOutput,
 } from "./lib.js";
-import { dedupeByName, slugify } from "./dedupe.js";
+import { dedupeByName, slugify, type SlugCollision } from "./dedupe.js";
 
 interface CompendiumEntry {
   id: string;
@@ -31,6 +31,16 @@ interface CompendiumEntry {
   category: string;
   content: string;
   tags: string[];
+}
+
+// Surface every slug that collapsed two or more distinct names so a genuinely
+// wrong merge (two different rules sharing a slug, one dropped) is visible in
+// the generator output instead of shipping silently. See dedupeByName.
+function warnCollision(kind: string) {
+  return (c: SlugCollision) =>
+    console.warn(
+      `  ⚠ ${kind}: slug "${c.slug}" merged [${c.names.join(", ")}] → kept "${c.kept}"`,
+    );
 }
 
 // Normalize a title so bulk entries don't duplicate a hand-curated one under
@@ -140,7 +150,7 @@ interface FiveToolsFeat {
 
 function loadFeats(existingTitles: Set<string>): CompendiumEntry[] {
   const data = readJSON<{ feat: FiveToolsFeat[] }>(path.join(FIVETOOLS_DATA_DIR, "feats.json"));
-  const deduped = dedupeByName(data.feat);
+  const deduped = dedupeByName(data.feat, warnCollision("feat"));
   const out: CompendiumEntry[] = [];
   for (const f of deduped) {
     if (existingTitles.has(normalizeTitle(f.name))) continue;
@@ -166,7 +176,7 @@ interface FiveToolsAction {
 
 function loadActions(existingTitles: Set<string>): CompendiumEntry[] {
   const data = readJSON<{ action: FiveToolsAction[] }>(path.join(FIVETOOLS_DATA_DIR, "actions.json"));
-  const deduped = dedupeByName(data.action);
+  const deduped = dedupeByName(data.action, warnCollision("action"));
   const out: CompendiumEntry[] = [];
   for (const a of deduped) {
     if (existingTitles.has(normalizeTitle(a.name))) continue;
@@ -191,7 +201,7 @@ interface FiveToolsSkill {
 
 function loadSkills(existingTitles: Set<string>): CompendiumEntry[] {
   const data = readJSON<{ skill: FiveToolsSkill[] }>(path.join(FIVETOOLS_DATA_DIR, "skills.json"));
-  const deduped = dedupeByName(data.skill);
+  const deduped = dedupeByName(data.skill, warnCollision("skill"));
   const out: CompendiumEntry[] = [];
   for (const s of deduped) {
     if (existingTitles.has(normalizeTitle(s.name))) continue;
@@ -217,7 +227,7 @@ interface FiveToolsSense {
 
 function loadSenses(existingTitles: Set<string>): CompendiumEntry[] {
   const data = readJSON<{ sense: FiveToolsSense[] }>(path.join(FIVETOOLS_DATA_DIR, "senses.json"));
-  const deduped = dedupeByName(data.sense);
+  const deduped = dedupeByName(data.sense, warnCollision("sense"));
   const out: CompendiumEntry[] = [];
   for (const s of deduped) {
     if (existingTitles.has(normalizeTitle(s.name))) continue;
@@ -243,7 +253,7 @@ function loadVariantRules(existingTitles: Set<string>): CompendiumEntry[] {
   const data = readJSON<{ variantrule: FiveToolsVariantRule[] }>(
     path.join(FIVETOOLS_DATA_DIR, "variantrules.json"),
   );
-  const deduped = dedupeByName(data.variantrule);
+  const deduped = dedupeByName(data.variantrule, warnCollision("variant"));
   const out: CompendiumEntry[] = [];
   for (const v of deduped) {
     if (existingTitles.has(normalizeTitle(v.name))) continue;

@@ -91,6 +91,17 @@ function migrateTurnIndexToActiveId(): void {
             0,
             Math.min(Math.trunc(oldIdx), sorted.length - 1),
           );
+          // Persist the validated list BEFORE the pointer: validation may
+          // have minted fresh ids (missing / duplicate ids in legacy or
+          // hand-edited data), and the pointer below references THOSE. If
+          // the raw list stayed in storage, the widget's read path would
+          // re-validate it and mint different ids — the pointer would
+          // dangle and the widget's reconciliation effect would reset it
+          // to null, silently undoing this migration's one job.
+          window.localStorage.setItem(
+            "dm-initiative-v1",
+            JSON.stringify(validated),
+          );
           window.localStorage.setItem(NEW_KEY, JSON.stringify(sorted[idx].id));
         }
       } catch {

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
-import { PLACEABLE_WIDGET_TYPES } from "@/types";
+import { PLACEABLE_WIDGET_TYPES, type TileEntry } from "@/types";
 import {
   MAX_TILES,
   NOTEPAD_MAX_CHARS,
   exportFullBackupAsJson,
   prepareImport,
+  tilesLayoutConsistent,
   validateArrayOfEnum,
   validateBoundedInt,
   validateEnum,
@@ -188,6 +189,19 @@ describe("dm-ai-chat-v1 backup round-trip", () => {
   });
 });
 
+describe("pre-parse file-size gate", () => {
+  beforeEach(() => installStorage());
+
+  it("rejects an oversized file before parsing it", () => {
+    // A syntactically VALID envelope over the cap: without a pre-parse
+    // gate, the whole file reaches JSON.parse (the hang/OOM the party
+    // importer's identical gate exists to prevent) and then sails through
+    // — per-value caps only skip the oversized value, they don't throw.
+    const huge = envelope({ "dm-huge": "x".repeat(33_000_000) });
+    expect(() => prepareImport(huge)).toThrow(/too large/i);
+  });
+});
+
 describe("grid triple consistency (finding #9)", () => {
   beforeEach(() => installStorage());
 
@@ -206,16 +220,130 @@ describe("grid triple consistency (finding #9)", () => {
   });
 
   it("keeps a consistent grid triple (tiles.length == cols*rows)", () => {
+    const emptyTile = { widget: "empty", colSpan: 1, rowSpan: 1 };
     const { summary } = prepareImport(
       envelope({
         "dm-grid-cols": JSON.stringify(3),
         "dm-grid-rows": JSON.stringify(3),
-        "dm-tiles-v3": JSON.stringify(Array(9).fill(null)), // 9 == 9
+        "dm-tiles-v3": JSON.stringify(Array(9).fill(emptyTile)), // 9 == 9
       }),
     );
     expect(summary.accepted).toBe(3);
     expect(summary.skipped).toHaveLength(0);
   });
+
+  it("keeps a valid spanned layout (span cells are null placeholders)", () => {
+    const emptyTile = { widget: "empty", colSpan: 1, rowSpan: 1 };
+    // A 2×1 notepad at index 0 with its placeholder null at index 1.
+    const tiles = [
+      { widget: "notepad", colSpan: 2, rowSpan: 1 },
+      null,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+    ];
+    const { summary } = prepareImport(
+      envelope({
+        "dm-grid-cols": JSON.stringify(3),
+        "dm-grid-rows": JSON.stringify(3),
+        "dm-tiles-v3": JSON.stringify(tiles),
+      }),
+    );
+    expect(summary.accepted).toBe(3);
+    expect(summary.skipped).toHaveLength(0);
+  });
+
+  it("evicts the triple when a spanned tile lacks its null placeholder", () => {
+    const emptyTile = { widget: "empty", colSpan: 1, rowSpan: 1 };
+    // A 2×1 tile at index 0 whose second cell (index 1) is a REAL tile, not
+    // the required null placeholder — the two would render overlapping.
+    const tiles = [
+      { widget: "notepad", colSpan: 2, rowSpan: 1 },
+      { widget: "party", colSpan: 1, rowSpan: 1 }, // should be null
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+    ];
+    const { summary } = prepareImport(
+      envelope({
+        "dm-grid-cols": JSON.stringify(3),
+        "dm-grid-rows": JSON.stringify(3),
+        "dm-tiles-v3": JSON.stringify(tiles),
+      }),
+    );
+    expect(summary.accepted).toBe(0);
+    expect(summary.skipped).toEqual(
+      expect.arrayContaining(["dm-grid-cols", "dm-grid-rows", "dm-tiles-v3"]),
+    );
+  });
+
+  it("evicts the triple when a span exceeds the grid bounds", () => {
+    const emptyTile = { widget: "empty", colSpan: 1, rowSpan: 1 };
+    // A 2-wide tile in the last column (index 2) overflows a 3-wide grid.
+    const tiles = [
+      emptyTile,
+      emptyTile,
+      { widget: "notepad", colSpan: 2, rowSpan: 1 },
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+      emptyTile,
+    ];
+    const { summary } = prepareImport(
+      envelope({
+        "dm-grid-cols": JSON.stringify(3),
+        "dm-grid-rows": JSON.stringify(3),
+        "dm-tiles-v3": JSON.stringify(tiles),
+      }),
+    );
+    expect(summary.accepted).toBe(0);
+    expect(summary.skipped).toEqual(
+      expect.arrayContaining(["dm-grid-cols", "dm-grid-rows", "dm-tiles-v3"]),
+    );
+  });
+
+});
+
+// tilesLayoutConsistent is exported and used with an `as TileEntry[]` cast on
+// both paths (App's read-path repack, the import triple check). Those callers
+// happen to pre-coerce spans to 1|2 (via validateTiles) before calling, so the
+// import path never reaches it with a bad span — but the predicate defends its
+// own contract rather than trusting every caller, so exercise that directly.
+describe("tilesLayoutConsistent (defense-in-depth)", () => {
+  const emptyTile = { widget: "empty", colSpan: 1, rowSpan: 1 } as const;
+  const grid = (first: unknown) =>
+    [first, ...Array(8).fill(emptyTile)] as TileEntry[];
+
+  it("accepts a valid 1×1 layout", () => {
+    expect(tilesLayoutConsistent(grid(emptyTile), 3, 3)).toBe(true);
+  });
+
+  it("accepts a valid 2×1 span with its null placeholder", () => {
+    const tiles = [
+      { widget: "notepad", colSpan: 2, rowSpan: 1 },
+      null,
+      ...Array(7).fill(emptyTile),
+    ] as TileEntry[];
+    expect(tilesLayoutConsistent(tiles, 3, 3)).toBe(true);
+  });
+
+  it.each([0, 3, NaN, undefined, "2"])(
+    "rejects a non-{1,2} colSpan (%s) instead of treating it as a phantom 1×1",
+    (colSpan) => {
+      const tiles = grid({ widget: "notepad", colSpan, rowSpan: 1 });
+      expect(tilesLayoutConsistent(tiles, 3, 3)).toBe(false);
+    },
+  );
 });
 
 describe("pre-flight quota guard (finding #3)", () => {

@@ -54,6 +54,20 @@ export function findRichMonster(name: string): MonsterEntry | null {
 
 const RESULT_LIMIT = 60;
 
+// The empty-query "browse" list — full-stat-block monsters, alphabetized —
+// depends on nothing but the bundled dataset, so compute it once at module
+// load instead of re-filtering/mapping/sorting ~2,144 entries on every call
+// (the Initiative search re-invokes searchMonsters('') each time the DM
+// clears the box). Sorted BEFORE any slice so the caller's `limit` takes the
+// alphabetically-first N, not the first N in dataset order re-sorted — the
+// latter is correct only while generate-monsters.ts happens to emit
+// pre-sorted, and would silently degrade to an arbitrary window if a regen
+// changed emit order.
+const browseHits: readonly MonsterSearchHit[] = monsters
+  .filter((m) => m.actions !== undefined)
+  .map(toHit)
+  .sort((a, b) => a.name.localeCompare(b.name));
+
 /**
  * Search {query} across the unified dataset. Returns up to {limit} hits
  * ordered by relevance (prefix > substring), with full-stat-block monsters
@@ -65,11 +79,7 @@ export function searchMonsters(
 ): MonsterSearchHit[] {
   const q = query.trim().toLowerCase();
   if (!q) {
-    return monsters
-      .filter((m) => m.actions !== undefined)
-      .slice(0, limit)
-      .map(toHit)
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return browseHits.slice(0, limit);
   }
 
   // Score: 2 = prefix match, 1 = substring match, 0 = no match.
