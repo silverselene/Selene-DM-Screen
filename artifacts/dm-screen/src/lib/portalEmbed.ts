@@ -26,6 +26,15 @@ export const EMBED_HOSTS = [
   "player.vimeo.com",
 ] as const;
 
+/** The saved Portal URL is only safe to expose as an external anchor href when
+ *  it's an http(s) URL. The read/backup validator for dm-portal-url-v1 is
+ *  length-only, so a restored or hand-edited backup could plant a
+ *  `javascript:`/`data:` value; this gate keeps a hostile scheme out of the
+ *  "Open in new tab" href. Returns the url when safe, else undefined. */
+export function toExternalHref(url: string | null | undefined): string | undefined {
+  return url && /^https?:\/\//i.test(url) ? url : undefined;
+}
+
 export function toEmbedUrl(raw: string): string | null {
   let url: URL;
   try {

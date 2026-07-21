@@ -230,6 +230,17 @@ export function rollD20(): number {
   return Math.floor(Math.random() * 20) + 1;
 }
 
+/** Apply an HP delta from the Initiative tracker's damage/heal buttons.
+ *  Damage (delta < 0) floors at 0. A heal (delta > 0) is capped at maxHp — but
+ *  never *below* the current hp, in case a stored/imported combatant already
+ *  has hp > maxHp — so repeated heal clicks can't show "27/20" or climb past
+ *  the HP_MAX every add/import path enforces (maxHp is itself clamped to
+ *  HP_MAX, so the cap also bounds the result). */
+export function applyHpDelta(hp: number, maxHp: number, delta: number): number {
+  const next = hp + delta;
+  return delta > 0 ? Math.min(next, Math.max(maxHp, hp)) : Math.max(0, next);
+}
+
 /** Parse a typed initiative string and clamp it to [INIT_MIN, INIT_MAX].
  *  `<input type="number" min max>` attributes are only UI hints — typed
  *  or pasted text flows through unchecked. Unparseable input → 0. */

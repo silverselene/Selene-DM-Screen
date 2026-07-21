@@ -1,5 +1,7 @@
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { NOTEPAD_MAX_CHARS, type ShapeValidator } from "@/lib/backup";
+import { createSingletonSlot } from "@/lib/singletonWidget";
+import { SingletonGate } from "@/lib/SingletonGate";
 import { FileText, Trash2 } from "lucide-react";
 
 // Defend the read path with the same cap the backup-import path enforces —
@@ -23,7 +25,23 @@ const validateNotes: ShapeValidator<string> = (parsed) => {
   return parsed;
 };
 
+const NOTEPAD_MOUNT_SLOT = createSingletonSlot();
+
+// Notepad persists typed prose on the single `dm-notepad` key, so a second live
+// tile would clobber it last-writer-wins — the singleton guard prevents that.
 export function NotepadWidget() {
+  return (
+    <SingletonGate
+      slot={NOTEPAD_MOUNT_SLOT}
+      name="Notepad"
+      icon={<FileText className="w-6 h-6 text-amber-400/70" />}
+    >
+      <NotepadBody />
+    </SingletonGate>
+  );
+}
+
+function NotepadBody() {
   // Debounce the storage write: the note is re-serialized in full on every
   // keystroke and can legitimately reach ~1 MB, so a synchronous setItem in
   // the keydown path degrades linearly (and silently) as the note grows.

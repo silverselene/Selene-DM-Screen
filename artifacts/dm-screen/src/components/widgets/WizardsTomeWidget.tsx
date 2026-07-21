@@ -4,12 +4,19 @@ import { spellData, spellSchools, spellClasses, type Spell } from "@/data/spells
 import { SpellCardBody, spellSchoolColors, spellLevelLabels } from "@/components/SpellCardBody";
 import { Combobox } from "@/lib/Combobox";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { createSingletonSlot } from "@/lib/singletonWidget";
+import { SingletonGate } from "@/lib/SingletonGate";
 import {
   validateBoundedInt,
   validateNullableStringMax,
   validateStringMax,
   WIDGET_QUERY_MAX,
 } from "@/lib/backup";
+
+// Render caps — result rows aren't virtualized, so a broad filter (e.g. a
+// class with 200+ spells) would stall the main thread (mirrors the Bestiary).
+const MAX_RESULTS = 200;
+const UNFILTERED_PREVIEW = 7;
 
 // Precomputed lowercased name+description per spell, built once at module load.
 // The free-text filter runs on every keystroke; lowercasing all 557 spell
@@ -34,7 +41,23 @@ function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
   );
 }
 
+const TOME_MOUNT_SLOT = createSingletonSlot();
+
+// Wizard's Tome persists its query/filters/selected-spell on shared keys, so a
+// second live tile would clobber them — guard it as a singleton.
 export function WizardsTomeWidget() {
+  return (
+    <SingletonGate
+      slot={TOME_MOUNT_SLOT}
+      name="The Wizard's Tome"
+      icon={<BookMarked className="w-6 h-6 text-amber-400/70" />}
+    >
+      <WizardsTomeBody />
+    </SingletonGate>
+  );
+}
+
+function WizardsTomeBody() {
   // Persisted state. The selected spell is stored by name and re-resolved
   // against the live dataset on mount, so regenerating spells.ts later
   // doesn't strand a stale entry.
@@ -94,8 +117,11 @@ export function WizardsTomeWidget() {
 
   if (selected) return <SpellDetail spell={selected} onBack={() => setSelected(null)} />;
 
-  const isFiltered = query.trim() !== "" || filterLevel !== -1 || filterClass !== "" || filterSchool !== "";
-  const visibleSpells = isFiltered ? filtered : filtered.slice(0, 7);
+  // `deferredQuery` (not instant `query`) keeps the cap/footer in lockstep with
+  // `filtered`, so the first keystroke can't flash the uncapped set — see
+  // CompendiumWidget for the full rationale.
+  const isFiltered = deferredQuery.trim() !== "" || filterLevel !== -1 || filterClass !== "" || filterSchool !== "";
+  const visibleSpells = filtered.slice(0, isFiltered ? MAX_RESULTS : UNFILTERED_PREVIEW);
 
   return (
     <div className="h-full min-h-0 flex flex-col gap-1.5">
@@ -182,9 +208,14 @@ export function WizardsTomeWidget() {
             </button>
           );
         })}
-        {!isFiltered && filtered.length > 7 && (
+        {!isFiltered && filtered.length > UNFILTERED_PREVIEW && (
           <div className="text-center py-2 text-[10px] text-gray-600">
-            Showing 7 of {filtered.length} — search to filter
+            Showing {UNFILTERED_PREVIEW} of {filtered.length} — search to filter
+          </div>
+        )}
+        {isFiltered && filtered.length > MAX_RESULTS && (
+          <div className="text-center py-2 text-[10px] text-gray-600">
+            Showing first {MAX_RESULTS} of {filtered.length.toLocaleString()} — refine your search
           </div>
         )}
       </div>

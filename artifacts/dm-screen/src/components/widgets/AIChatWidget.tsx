@@ -288,9 +288,16 @@ function BridgeDownBanner({
 const MessageRow = memo(function MessageRow({
   message: m,
   onEscalate,
+  sending,
 }: {
   message: ChatMessage;
   onEscalate: (id: string, query: string) => void;
+  // Whether a turn is currently streaming. A primitive, so it stays
+  // memo-friendly: it flips only twice per turn (start/end), re-rendering every
+  // row those two times — negligible next to the per-chunk streaming re-render
+  // this memo exists to bound. Used to disable the escalate link (escalate()
+  // bails on an in-flight turn, so an enabled link would be a silent no-op).
+  sending: boolean;
 }) {
   if (m.role === "user") {
     return (
@@ -336,6 +343,7 @@ const MessageRow = memo(function MessageRow({
         <ChatLocalAnswer
           answer={m.local}
           escalated={!!m.escalated}
+          busy={sending}
           onEscalate={(query) => {
             const q = query || m.sourceQuery;
             if (q) onEscalate(m.id, q);
@@ -913,7 +921,7 @@ function AIChatSession() {
             cap every send shifts indexes, which would reattach per-card
             component state (an open collision form) to the wrong message. */}
         {messages.map((m) => (
-          <MessageRow key={m.id} message={m} onEscalate={escalate} />
+          <MessageRow key={m.id} message={m} onEscalate={escalate} sending={sending} />
         ))}
       </div>
 

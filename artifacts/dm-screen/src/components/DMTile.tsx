@@ -176,6 +176,8 @@ export function DMTile({
         {/* Center add button */}
         <button
           onClick={onAdd}
+          title="Add widget"
+          aria-label="Add widget"
           className="flex items-center justify-center text-purple-700 hover:text-purple-400 transition-colors"
         >
           <div className="w-[65px] h-[65px] rounded-full border border-current flex items-center justify-center group-hover:shadow-[0_0_10px_rgba(139,43,226,0.3)] transition-all">
@@ -207,6 +209,10 @@ export function DMTile({
             draggable
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = "move";
+              // Firefox refuses to start an HTML5 drag unless dragstart sets
+              // some drag data; the payload itself is unused (reorder is driven
+              // by React state), so an empty string is enough.
+              e.dataTransfer.setData("text/plain", "");
               onDragStart();
             }}
             onDragEnd={onDragEnd}

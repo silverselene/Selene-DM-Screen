@@ -4,6 +4,8 @@ import {
   namesByRace, lootByCR, settlementTypes,
 } from "@/data/generators";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { createSingletonSlot } from "@/lib/singletonWidget";
+import { SingletonGate } from "@/lib/SingletonGate";
 import {
   ORACLE_TABS,
   type OracleTab,
@@ -17,7 +19,23 @@ const EMPTY_HISTORY: Record<OracleTab, string[]> = {
   names: [], loot: [], items: [], places: [],
 };
 
+const ORACLE_MOUNT_SLOT = createSingletonSlot();
+
+// Oracle persists its tab, selections, and generated-result history on shared
+// keys, so a second live tile would clobber them — guard it as a singleton.
 export function OracleWidget() {
+  return (
+    <SingletonGate
+      slot={ORACLE_MOUNT_SLOT}
+      name="The Oracle"
+      icon={<Wand2 className="w-6 h-6 text-amber-400/70" />}
+    >
+      <OracleBody />
+    </SingletonGate>
+  );
+}
+
+function OracleBody() {
   const [tab, setTab] = useLocalStorage<OracleTab>(
     "dm-oracle-tab-v1",
     "names",

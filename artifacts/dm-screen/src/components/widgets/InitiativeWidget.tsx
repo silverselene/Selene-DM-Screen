@@ -18,6 +18,7 @@ import {
 } from "@/lib/backup";
 import {
   appendCombatant,
+  applyHpDelta,
   clampInitiative,
   confirmDuplicateViaWindow,
   decideInitiativeAdd,
@@ -435,7 +436,7 @@ function InitiativeSession() {
 
   const updateHp = (id: string, delta: number) => {
     setCombatants((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, hp: Math.max(0, c.hp + delta) } : c)),
+      prev.map((c) => (c.id === id ? { ...c, hp: applyHpDelta(c.hp, c.maxHp, delta) } : c)),
     );
   };
 

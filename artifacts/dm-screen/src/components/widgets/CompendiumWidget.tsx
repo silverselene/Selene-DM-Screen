@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import { Search, BookOpen } from "lucide-react";
 import { compendiumData } from "@/data/compendium";
 import { compendiumRulesData } from "@/data/compendiumRules";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { createSingletonSlot } from "@/lib/singletonWidget";
+import { SingletonGate } from "@/lib/SingletonGate";
 import {
   validateNullableStringMax,
   validateStringMax,
@@ -15,7 +17,36 @@ import {
 const allEntries = [...compendiumData, ...compendiumRulesData];
 const categories = [...new Set(allEntries.map((e) => e.category))].sort();
 
+// Precomputed lowercased title+content+tags per entry, built once at module
+// load. A one-character query matches nearly all ~640 entries, and lowercasing
+// every entry's full content on each keystroke was the whole per-key cost;
+// mirrors the Wizard's Tome SPELL_SEARCH_INDEX.
+const SEARCH_INDEX = new Map<(typeof allEntries)[number], string>(
+  allEntries.map((e) => [e, `${e.title}\n${e.content}\n${e.tags.join(" ")}`.toLowerCase()]),
+);
+
+// Render caps — the result rows are not virtualized, so an uncapped broad match
+// would stall the main thread (mirrors the Bestiary's MAX_RESULTS/preview).
+const MAX_RESULTS = 200;
+const UNFILTERED_PREVIEW = 7;
+
+const COMPENDIUM_MOUNT_SLOT = createSingletonSlot();
+
+// Compendium persists its query/category/selected-entry on shared keys, so a
+// second live tile would clobber them — guard it as a singleton.
 export function CompendiumWidget() {
+  return (
+    <SingletonGate
+      slot={COMPENDIUM_MOUNT_SLOT}
+      name="The Compendium"
+      icon={<BookOpen className="w-6 h-6 text-amber-400/70" />}
+    >
+      <CompendiumBody />
+    </SingletonGate>
+  );
+}
+
+function CompendiumBody() {
   const [query, setQuery] = useLocalStorage<string>(
     "dm-compendium-query-v1",
     "",
@@ -32,22 +63,27 @@ export function CompendiumWidget() {
     validateNullableStringMax(WIDGET_QUERY_MAX),
   );
 
+  // The input stays driven by `query` (instant echo); the scan runs off the
+  // deferred value so a broad match doesn't jank keystrokes (as in the Tome).
+  const deferredQuery = useDeferredValue(query);
   const filtered = useMemo(() => {
-    const q = query.toLowerCase();
+    const q = deferredQuery.toLowerCase();
     return allEntries.filter((e) => {
-      const matchesQuery =
-        !q ||
-        e.title.toLowerCase().includes(q) ||
-        e.content.toLowerCase().includes(q) ||
-        e.tags.some((t) => t.includes(q));
+      const matchesQuery = !q || (SEARCH_INDEX.get(e)?.includes(q) ?? false);
       const matchesCat = selectedCategory === "All" || e.category === selectedCategory;
       return matchesQuery && matchesCat;
     });
-  }, [query, selectedCategory]);
+  }, [deferredQuery, selectedCategory]);
 
   const entry = selectedEntry ? allEntries.find((e) => e.id === selectedEntry) : null;
-  const isFiltered = query.trim() !== "" || selectedCategory !== "All";
-  const visibleList = isFiltered ? filtered : filtered.slice(0, 7);
+  // Derive `isFiltered` from `deferredQuery` (not the instant `query`) so the
+  // cap and footer move in lockstep with `filtered` — otherwise the first
+  // keystroke commits an urgent frame where isFiltered has flipped true but
+  // `filtered` is still the empty-query set, flashing 200 unfiltered rows under
+  // a "refine your search" footer until the deferred render catches up.
+  const isFiltered = deferredQuery.trim() !== "" || selectedCategory !== "All";
+  const cap = isFiltered ? MAX_RESULTS : UNFILTERED_PREVIEW;
+  const visibleList = filtered.slice(0, cap);
 
   return (
     <div className="h-full min-h-0 flex flex-col">
@@ -121,9 +157,14 @@ export function CompendiumWidget() {
               </div>
             </button>
           ))}
-          {!isFiltered && filtered.length > 7 && (
+          {!isFiltered && filtered.length > UNFILTERED_PREVIEW && (
             <div className="text-center py-2 text-[10px] text-gray-600">
-              Showing 7 of {filtered.length} — search to filter
+              Showing {UNFILTERED_PREVIEW} of {filtered.length} — search to filter
+            </div>
+          )}
+          {isFiltered && filtered.length > MAX_RESULTS && (
+            <div className="text-center py-2 text-[10px] text-gray-600">
+              Showing first {MAX_RESULTS} of {filtered.length.toLocaleString()} — refine your search
             </div>
           )}
         </div>

@@ -25,18 +25,27 @@ export const PLACEABLE_WIDGET_TYPES = WIDGET_TYPES.filter(
   (w): w is Exclude<WidgetType, "empty"> => w !== "empty",
 );
 
-// Widgets that may appear on at most one tile. AI Chat persists a single
-// shared transcript (see chatHistory.ts); Initiative persists the single
-// live combat encounter (dm-initiative-v1 plus its round/turn keys): in both
-// cases every mounted copy holds an independent in-memory snapshot with
-// whole-value writes and no same-tab change event, so two live copies
-// clobber each other's state last-writer-wins. Enforced at placement time
+// Widgets that may appear on at most one tile. Every one of these persists all
+// its state on shared storage key(s) — AI Chat a single transcript, Initiative
+// the live encounter, the rest their query/filter/selection/notes — and every
+// mounted copy holds an independent in-memory snapshot with whole-value writes
+// and no same-tab change event, so two live copies clobber each other's state
+// last-writer-wins (Notepad loses typed prose; the others reset their view
+// state). Because they share the key, a second tile never showed independent
+// state anyway. Party is exempt: partyStore broadcasts `dm-party-changed`, so
+// its two tiles stay in sync instead of clobbering. Enforced at placement time
 // (widget selector + recent-widgets restore, see App.tsx) and again at mount
-// time inside each widget itself, which also covers tiles arriving via a
-// restored backup or hand-edited storage.
+// time inside each widget via SingletonGate, which also covers tiles arriving
+// via a restored backup or hand-edited storage.
 export const SINGLETON_WIDGET_TYPES: ReadonlySet<WidgetType> = new Set([
   "ai-chat",
   "initiative",
+  "notepad",
+  "oracle",
+  "bestiary",
+  "compendium",
+  "wizard-tome",
+  "portal",
 ]);
 
 export type TileEntry = {

@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { EMBED_HOSTS, toEmbedUrl } from "./portalEmbed";
+import { EMBED_HOSTS, toEmbedUrl, toExternalHref } from "./portalEmbed";
+
+describe("toExternalHref", () => {
+  it("returns http(s) URLs unchanged", () => {
+    expect(toExternalHref("https://youtu.be/abc")).toBe("https://youtu.be/abc");
+    expect(toExternalHref("http://example.com")).toBe("http://example.com");
+    expect(toExternalHref("HTTPS://EXAMPLE.COM")).toBe("HTTPS://EXAMPLE.COM");
+  });
+
+  it("rejects hostile / non-http schemes so they never reach an href", () => {
+    expect(toExternalHref("javascript:alert(1)")).toBeUndefined();
+    // eslint-disable-next-line no-script-url
+    expect(toExternalHref("data:text/html,<script>alert(1)</script>")).toBeUndefined();
+    expect(toExternalHref("vbscript:msgbox(1)")).toBeUndefined();
+    expect(toExternalHref("//evil.example.com")).toBeUndefined();
+    expect(toExternalHref("ftp://example.com")).toBeUndefined();
+  });
+
+  it("returns undefined for null/empty (no saved link)", () => {
+    expect(toExternalHref(null)).toBeUndefined();
+    expect(toExternalHref(undefined)).toBeUndefined();
+    expect(toExternalHref("")).toBeUndefined();
+  });
+});
 
 describe("toEmbedUrl", () => {
   it("rejects non-https and unparseable input", () => {

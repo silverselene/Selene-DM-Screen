@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
-  Heart, Star, BookOpen, Sword, Search, Download, Upload,
+  Heart, Star, BookOpen, Sword, Download, Upload,
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
 import { weaponsData, type Weapon } from "@/data/weapons";
@@ -46,7 +46,6 @@ function WeaponTagInput({
 }) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<WeaponInfo[]>([]);
-  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +56,6 @@ function WeaponTagInput({
     // Tiny debounce so each keystroke doesn't churn React; the actual filter
     // is cheap (251 weapons) and runs synchronously.
     timer.current = setTimeout(() => {
-      setLoading(true);
       const q = query.trim().toLowerCase();
       const selectedLower = new Set(selected.map(s => s.toLowerCase()));
       const matches = weaponsData
@@ -71,7 +69,6 @@ function WeaponTagInput({
         .slice(0, 10);
       setSuggestions(matches);
       setOpen(true);
-      setLoading(false);
     }, 80);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [query, selected]);
@@ -118,11 +115,14 @@ function WeaponTagInput({
             if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
             if (e.key === "Escape") { setOpen(false); setQuery(""); }
           }}
-          onFocus={() => query && setSuggestions(s => s)}
+          // Reopen the dropdown when refocusing a field that still has a query
+          // and cached matches (an outside-click dismiss sets open=false but
+          // leaves suggestions intact) — otherwise the list is unreachable
+          // without changing the query.
+          onFocus={() => { if (query.trim() && suggestions.length) setOpen(true); }}
           placeholder={selected.length === 0 ? "Search or type a weapon…" : "Add more…"}
           className={inputCls}
         />
-        {loading && <Search className="w-3 h-3 text-gray-600 self-center animate-pulse" />}
       </div>
 
       <AnchoredDropdown
@@ -303,6 +303,9 @@ function SpellTagInput({
             if (e.key === "Backspace" && !query && selected.length) remove(selected[selected.length - 1]);
             if (e.key === "Escape") { setOpen(false); setQuery(""); }
           }}
+          // Reopen cached matches on refocus after an outside-click dismiss —
+          // see WeaponTagInput for the rationale.
+          onFocus={() => { if (query.trim() && suggestions.length) setOpen(true); }}
           placeholder={selected.length === 0 ? "Search or type a spell…" : "Add more…"}
           className={inputCls}
         />
@@ -726,6 +729,8 @@ export function PartyWidget() {
                       <Swords className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => startEdit(c)}
+                      title="Edit character"
+                      aria-label="Edit character"
                       className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 hover:bg-gray-700/40 rounded transition-colors">
                       <Pencil className="w-3 h-3" />
                     </button>

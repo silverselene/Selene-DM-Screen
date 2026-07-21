@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   AC_MAX,
+  applyHpDelta,
   HP_MAX,
   INIT_MAX,
   INIT_MIN,
@@ -9,6 +10,38 @@ import {
   validateCombatants,
   validateInitiativeActiveId,
 } from "./combatant";
+
+describe("applyHpDelta", () => {
+  it("floors damage at 0", () => {
+    expect(applyHpDelta(3, 20, -10)).toBe(0);
+    expect(applyHpDelta(0, 20, -5)).toBe(0);
+  });
+
+  it("applies damage within range unchanged", () => {
+    expect(applyHpDelta(20, 20, -1)).toBe(19);
+  });
+
+  it("caps a heal at maxHp — repeated heals can't exceed the bar", () => {
+    expect(applyHpDelta(19, 20, 1)).toBe(20);
+    expect(applyHpDelta(20, 20, 1)).toBe(20);
+    expect(applyHpDelta(20, 20, 999)).toBe(20);
+  });
+
+  it("heals up to but not past maxHp", () => {
+    expect(applyHpDelta(5, 20, 3)).toBe(8);
+    expect(applyHpDelta(18, 20, 5)).toBe(20);
+  });
+
+  it("never reduces hp on a heal when stored hp already exceeds maxHp", () => {
+    // A hand-edited/legacy combatant at 27/20: a heal click must not knock it
+    // down to 20, only hold it (delta is clamped to the current hp ceiling).
+    expect(applyHpDelta(27, 20, 1)).toBe(27);
+  });
+
+  it("cannot climb past HP_MAX via heal (maxHp is itself capped at HP_MAX)", () => {
+    expect(applyHpDelta(HP_MAX - 1, HP_MAX, 50)).toBe(HP_MAX);
+  });
+});
 
 describe("mintCombatantId", () => {
   it("produces the c-<suffix> shape", () => {

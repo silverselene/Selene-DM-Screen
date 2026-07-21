@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useDeferredValue } from "react";
-import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink, Skull } from "lucide-react";
 import { monsters, mod, crToNumber, type MonsterEntry } from "@/data/monsters";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { createSingletonSlot } from "@/lib/singletonWidget";
+import { SingletonGate } from "@/lib/SingletonGate";
 import {
   BESTIARY_CR_FILTERS,
   BESTIARY_SORT_MODES,
@@ -289,7 +291,24 @@ interface Props {
 
 type SortMode = "alpha" | "cr";
 
-export function BestiaryWidget({ target, onTargetClear }: Props) {
+const BESTIARY_MOUNT_SLOT = createSingletonSlot();
+
+// Bestiary persists its query/selected-monster/view-prefs on shared keys, so a
+// second live tile would clobber them — guard it as a singleton. Props (the
+// `dm-open-bestiary` target hand-off) forward to the owning instance.
+export function BestiaryWidget(props: Props) {
+  return (
+    <SingletonGate
+      slot={BESTIARY_MOUNT_SLOT}
+      name="The Bestiary"
+      icon={<Skull className="w-6 h-6 text-amber-400/70" />}
+    >
+      <BestiaryBody {...props} />
+    </SingletonGate>
+  );
+}
+
+function BestiaryBody({ target, onTargetClear }: Props) {
   // Persist the open monster (by name) + view preferences so a tab reload
   // / server bounce drops the DM back exactly where they were. The selected
   // monster is stored as a name and resolved against the live datasets on

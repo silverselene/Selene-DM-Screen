@@ -23,10 +23,15 @@ export type { LocalAnswer };
 export function ChatLocalAnswer({
   answer,
   escalated,
+  busy = false,
   onEscalate,
 }: {
   answer: LocalAnswer;
   escalated: boolean;
+  // A turn is already streaming. The parent's escalate() bails on an in-flight
+  // turn, so leaving the link live would make it a silent no-op — disable it
+  // (and say why) until the current answer finishes.
+  busy?: boolean;
   onEscalate: (query?: string) => void;
 }) {
   // A picked candidate is rendered in place of the list (session-local to this
@@ -72,7 +77,9 @@ export function ChatLocalAnswer({
       {!escalated && !answer.hint && (
         <button
           onClick={() => onEscalate(picked?.name)}
-          className="self-start inline-flex items-center gap-1 text-[10px] text-amber-300/70 hover:text-amber-200/90 transition-colors"
+          disabled={busy}
+          title={busy ? "Wait for the current answer to finish" : undefined}
+          className="self-start inline-flex items-center gap-1 text-[10px] text-amber-300/70 hover:text-amber-200/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-amber-300/70"
         >
           <Sparkles className="w-2.5 h-2.5" /> Ask Selene instead →
         </button>

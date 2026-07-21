@@ -1,15 +1,33 @@
 import { useMemo, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { PORTAL_URL_MAX, validateNullableStringMax } from "@/lib/backup";
-import { toEmbedUrl } from "@/lib/portalEmbed";
+import { toEmbedUrl, toExternalHref } from "@/lib/portalEmbed";
 import { isImeComposing } from "@/lib/keyboard";
+import { createSingletonSlot } from "@/lib/singletonWidget";
+import { SingletonGate } from "@/lib/SingletonGate";
 import { Link2, ExternalLink, Pencil, X } from "lucide-react";
 
 // URL → iframe mapping lives in @/lib/portalEmbed (pure, unit-tested there —
 // including the invariant that every returned URL uses a host from the Docker
 // CSP's `frame-src` allowlist).
 
+const PORTAL_MOUNT_SLOT = createSingletonSlot();
+
+// Portal persists its saved share URL on the single `dm-portal-url-v1` key, so
+// a second live tile would clobber it — guard it as a singleton.
 export function PortalWidget() {
+  return (
+    <SingletonGate
+      slot={PORTAL_MOUNT_SLOT}
+      name="Portal"
+      icon={<Link2 className="w-6 h-6 text-amber-400/70" />}
+    >
+      <PortalBody />
+    </SingletonGate>
+  );
+}
+
+function PortalBody() {
   const [savedUrl, setSavedUrl] = useLocalStorage<string | null>(
     "dm-portal-url-v1",
     null,
@@ -23,6 +41,11 @@ export function PortalWidget() {
   // time) so a future addition to the allowlist above starts working for
   // an already-saved link without the DM having to re-paste it.
   const embedUrl = useMemo(() => (savedUrl ? toEmbedUrl(savedUrl) : null), [savedUrl]);
+
+  // Only expose "Open in new tab" as a real link when the saved value is an
+  // http(s) URL (see toExternalHref) — the read/backup validator is length-only,
+  // so a hostile `javascript:`/`data:` value must never reach an anchor href.
+  const externalHref = toExternalHref(savedUrl);
 
   const submit = () => {
     const trimmed = draft.trim();
@@ -89,15 +112,17 @@ export function PortalWidget() {
               <span className="truncate">{savedUrl}</span>
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
-              <a
-                href={savedUrl ?? undefined}
-                target="_blank"
-                rel="noreferrer"
-                title="Open in new tab"
-                className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-purple-400 transition-colors"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              {externalHref && (
+                <a
+                  href={externalHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Open in new tab"
+                  className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-purple-400 transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
               <button
                 onClick={() => {
                   setDraft(savedUrl ?? "");

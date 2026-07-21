@@ -18,12 +18,12 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 
 **38 findings: 0 P0 · 2 P1 · 11 P2 · 25 P3** (the duplicate-tile clobber was found independently by agents 1 and 2 and is counted once). No data-loss or crash bugs in shipped code paths; overall the codebase's hardest surfaces (backup atomicity, the add-to-initiative event contract, the bridge's localhost security) reviewed as genuinely robust.
 
-**Progress: 9 fixed (2 P1s + all 7 §1 findings) · 29 open** — see the remediation log below.
+**Progress: 17 fixed (2 P1s + all 7 §1 findings + all 8 §2 findings) · 21 open** — see the remediation log below.
 
 **Fix-first shortlist:**
 1. ~~**[P1] `{@recharge N}` stripping**~~ **FIXED** — see §3; regen also caught up the committed data with d1d13e8's cross-source gate.
 2. ~~**[P1] Duplicate feat ids**~~ **FIXED** — see §3; dedupe now keyed on the slug the ids are minted from.
-3. ~~**[P2] Duplicate stateful tiles clobber localStorage**~~ **PARTIALLY FIXED** — the §1 Initiative-tile case is fixed (Initiative is now a singleton widget, see §1); the broader §2 case (two Notepads, two Bestiaries, …) is still open.
+3. ~~**[P2] Duplicate stateful tiles clobber localStorage**~~ **FIXED** — the broader §2 case is now closed: all stateful widgets are singletons via the shared `SingletonGate` (see §2 remediation log).
 4. **[P2] claude-code-review.yml has no author gate** — drive-by PRs on a public repo burn subscription spend and open a prompt-injection surface (§5).
 5. **[P2] `.dockerignore` secret patterns are root-anchored** — a nested `services/ai-bridge/.env` would enter build layers; latent today (§5).
 6. **[P2] CI never runs `pnpm build`** — the 8 MiB precache cap, define assertions, and bundle scans don't gate merges (§5).
@@ -31,6 +31,33 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 **Recurring themes:** validators on the backup-import path are systematically weaker than the equivalent typed-input paths (§1 ×3, §2 Portal URL); the generators are entirely untested despite being the highest-regression-risk code (§3 — *partially addressed, see log*); dm-screen's config files and tests have zero typecheck coverage while the bridge's do (§5).
 
 ## Remediation log
+
+### 2026-07-21 — all 8 §2 (`src/components/widgets/`) findings fixed
+
+Every finding under §2 — the 1 P2 and 7 P3s — is resolved. Details inline at each finding heading; summary:
+
+- **[P2] Duplicate stateful tiles clobber** — resolved by the maintainer's choice to "singleton all stateful": Notepad, Oracle, Bestiary, Compendium, Wizard's Tome, and Portal join AI Chat + Initiative in `SINGLETON_WIDGET_TYPES` (`types.ts`). A new reusable `SingletonGate` (`src/lib/SingletonGate.tsx`) wraps each widget's stateful body (thin export → gated `…Body`), collapsing the mount-guard boilerplate Initiative/AI Chat had each inlined. Party stays exempt (partyStore's `dm-party-changed` already syncs same-tab). The selector-disable and both `App.tsx` add-path guards are already generic over the set, so no changes there. Because these widgets share one storage key, a second tile never showed independent state anyway — the guard loses no real capability.
+- **[P3] Heal has no upper clamp** — `updateHp` now caps a heal at `Math.max(c.maxHp, c.hp)` (never below current, in case stored hp already exceeds maxHp); damage still floors at 0.
+- **[P3] Compendium/Tome uncapped filtered lists** — both now cap the filtered render at `MAX_RESULTS = 200` with a "showing first 200 of N — refine your search" footer (mirrors Bestiary). Compendium additionally gained a precomputed lowercase `SEARCH_INDEX` + `useDeferredValue` (the Tome already had both), so a keystroke no longer re-lowercases every entry's full content.
+- **[P3] Firefox drag never starts** — the grip's `onDragStart` now calls `e.dataTransfer.setData("text/plain", "")` (payload unused; reorder is React-state-driven), which Firefox requires to initiate an HTML5 drag.
+- **[P3] Portal link no scheme check** — "Open in new tab" is rendered as a real anchor only when the saved value is an `http(s):` URL (`externalHref` guard), so a restored/hand-edited hostile `javascript:`/`data:` backup value can never reach an href.
+- **[P3] Tag-input refocus / dead loading** — both `WeaponTagInput` and `SpellTagInput` reopen cached matches on refocus (`onFocus` → `setOpen(true)` when a query + suggestions exist); the never-rendering `loading` state (and its now-unused `Search` import) were removed.
+- **[P3] "Ask Selene instead" silent no-op while streaming** — the escalate link is now `disabled` (with a "wait for the current answer" title) while a turn streams; `sending` threads through `MessageRow` as a primitive so the memo stays intact (flips twice per turn, not per chunk).
+- **[P3] Icon-only controls missing names** — the empty tile's "+" add button and Party's edit-pencil button gained `title` + `aria-label`.
+
+**Test coverage added (27 new tests across 8 files).** Two P3 fixes were extracted to pure helpers for cheap tier-1 coverage; the rest are tier-2 jsdom component tests that mock the heavy data modules (monsters.ts 4.7 MB, spells.ts 590 kB, compendiumRules.ts 660 kB) with small synthetic sets:
+- `combatant.test.ts` — `applyHpDelta` extracted from `updateHp` (heal caps at maxHp, never below current, damage floors at 0). +6.
+- `portalEmbed.test.ts` — `toExternalHref` extracted from the inline scheme guard (http(s) pass-through; `javascript:`/`data:`/protocol-relative rejected). +3.
+- `ChatLocalAnswer.test.tsx` — escalate link shown/hidden + **disabled while streaming** (the busy guard) + hidden for usage hints. +4.
+- `CompendiumWidget.test.tsx` / `WizardsTomeWidget.test.tsx` — 7-row unfiltered preview + 200-row filtered cap + footer + case-insensitive index. +7.
+- `PartyWidget.tagInput.test.tsx` — weapon tag-input reopens cached suggestions on refocus after an outside-click dismiss (SpellTagInput mirrors it). +1.
+- `BestiaryWidget.targetConsumption.test.tsx` — `dm-open-bestiary` target → detail view on a match, name-search fallback on a miss, signal cleared either way. +2.
+- `AIChatWidget.banner.test.tsx` — degraded-mode banner: offline vs. origin-blocked (403) vs. online, plus the banner-transition gap (successful Retry clears it). +4.
+- `SingletonGate.test.tsx` — the shared gate (owner/duplicate/handoff/single-mount + set membership). +4.
+
+**Verified:** 351/351 dm-screen tests · `pnpm typecheck` clean · `pnpm build` + verify-precache pass.
+
+**Still open (§2 coverage gaps):** AI Chat *streaming* internals (SSE-mock heavy) and full escalation-reset; Oracle functional tests; DMTile/App drag-reorder + corner-resize *geometry* (jsdom has no layout); Party import at the *widget* tier (file-picker-blocked — the pure two-phase logic is covered in `partyStore.test.ts`). The Firefox `setData` and AnchoredDropdown-flip items remain browser/Playwright-only. No logic findings remain — these are coverage-depth, not defects.
 
 ### 2026-07-21 — §1 `tilesLayoutConsistent` hardened: two spans overlapping on a shared `null` cell
 
@@ -144,35 +171,43 @@ A hand-crafted backup with `tiles.length === cols*rows` but a `colSpan: 2` tile 
 
 > Note: the first finding independently confirms §1's "two Initiative tiles" P2 and broadens it — **any** duplicated stateful widget (Notepad, Bestiary, …) has the same clobber, not just Initiative.
 
-### [P2] Duplicate non-singleton widget tiles silently clobber each other's persisted state
+### ~~[P2]~~ **FIXED** — Duplicate non-singleton widget tiles silently clobber each other's persisted state
+> **Fixed 2026-07-21:** "singleton all stateful" — Notepad, Oracle, Bestiary, Compendium, Wizard's Tome, Portal added to `SINGLETON_WIDGET_TYPES`, each wrapped in the new reusable `SingletonGate` (`src/lib/SingletonGate.tsx`). Party exempt (partyStore syncs via `dm-party-changed`). Selector-disable + both App add-path guards already generic over the set. Test: `SingletonGate.test.tsx`.
 `artifacts/dm-screen/src/App.tsx:236` / `artifacts/dm-screen/src/types.ts:34`
 Only `ai-chat` is in `SINGLETON_WIDGET_TYPES`, so the picker happily places two Notepad, Initiative, Bestiary, etc. tiles — and each mount holds an independent `useLocalStorage` instance on the *same* key with no same-tab sync (the hook has no changed-event mechanism; only `partyStore` does). Concrete failure: place two Notepads (`dm-notepad`, NotepadWidget.tsx:34), type a paragraph in tile A, then type one character in tile B — B's stale `valueRef` overwrites storage and A's paragraph is gone on reload. Two Initiative tiles diverge the same way on any HP click / remove / next-turn (the event path is first-consumer-guarded — combatant.ts:179–185 explicitly acknowledges dual mounts — but direct UI mutations are not). Fix: add the stateful widgets to `SINGLETON_WIDGET_TYPES` (reusing the existing `createSingletonSlot` mount guard), or broadcast a same-tab changed event per key like `dm-party-changed`.
 
-### [P3] Heal button has no upper clamp — HP can exceed maxHp and the 9999 cap
+### ~~[P3]~~ **FIXED** — Heal button has no upper clamp — HP can exceed maxHp and the 9999 cap
+> **Fixed 2026-07-21:** `updateHp` caps a heal at `Math.max(c.maxHp, c.hp)` (never below current, in case stored hp already exceeds maxHp); damage still floors at 0.
 `artifacts/dm-screen/src/components/widgets/InitiativeWidget.tsx:401-405`
 `updateHp` computes `Math.max(0, c.hp + delta)` — damage clamps at 0, but heal is unbounded, so repeated clicks show "27/20" and can eventually pass the `HP_MAX = 9999` every add form enforces (line 47). Not corrupting (`validateCombatants` accepts any finite number) but inconsistent with the widget's own bounds. Fix: `Math.min(c.maxHp, ...)` on heal, or at minimum `Math.min(HP_MAX, ...)`.
 
-### [P3] Compendium and Wizard's Tome render uncapped filtered lists with no virtualization; Compendium filter re-lowercases all content per keystroke
+### ~~[P3]~~ **FIXED** — Compendium and Wizard's Tome render uncapped filtered lists with no virtualization; Compendium filter re-lowercases all content per keystroke
+> **Fixed 2026-07-21:** both cap the filtered render at `MAX_RESULTS = 200` with a "showing first 200 of N" footer (mirrors Bestiary). Compendium gained a precomputed `SEARCH_INDEX` + `useDeferredValue` (the Tome already had both).
 `artifacts/dm-screen/src/components/widgets/CompendiumWidget.tsx:35-50` / `WizardsTomeWidget.tsx:97-98`
 Once `isFiltered`, both render the full match set — up to 642 Compendium rows (a one-character query matches nearly everything via `e.content.toLowerCase().includes(q)`) and 557 spell rows (e.g. filter "All Levels" + one class). Bestiary caps at `MAX_RESULTS = 200` for exactly this reason (BestiaryWidget.tsx:92); these two don't. Compendium additionally has neither `useDeferredValue` nor a precomputed lowercase index (Tome built `SPELL_SEARCH_INDEX` for this), so each keystroke re-lowercases every entry's full content. Fix: apply the Bestiary's cap + footer pattern and precompute a search index / defer the query.
 
-### [P3] Tile drag-to-reorder never starts in Firefox — dragstart sets no drag data
+### ~~[P3]~~ **FIXED** — Tile drag-to-reorder never starts in Firefox — dragstart sets no drag data
+> **Fixed 2026-07-21:** the grip's `onDragStart` now calls `e.dataTransfer.setData("text/plain", "")` (payload unused; reorder is React-state-driven).
 `artifacts/dm-screen/src/components/DMTile.tsx:207-211`
 The grip's `onDragStart` sets only `e.dataTransfer.effectAllowed = "move"`; there is no `setData` call anywhere in `src/components/` (grep confirms). Firefox requires `dataTransfer.setData(...)` in dragstart or the HTML5 drag never initiates, so reordering is silently dead there. Fix: `e.dataTransfer.setData("text/plain", "")` in the handler.
 
-### [P3] Portal "Open in new tab" renders the saved URL with no scheme check
+### ~~[P3]~~ **FIXED** — Portal "Open in new tab" renders the saved URL with no scheme check
+> **Fixed 2026-07-21:** the anchor renders only when the saved value is an `http(s):` URL (`externalHref` guard), so a restored/hand-edited `javascript:`/`data:` value never reaches an href.
 `artifacts/dm-screen/src/components/widgets/PortalWidget.tsx:92-99`
 The `<a href={savedUrl}>` uses the raw stored string, but both the read validator and the backup-import validator for `dm-portal-url-v1` are length-only (`validateNullableStringMax(PORTAL_URL_MAX)`, backup.ts:417). The UI submit path gates on `toEmbedUrl`, but a restored hostile/hand-edited backup can plant `javascript:`/`data:` — the header (with the link) still renders even when `embedUrl` is null ("no longer supported" only replaces the iframe). `target="_blank"` neuters `javascript:` in modern browsers, but the repo defends hostile backups everywhere else. Fix: require `http(s):` in the portal-URL validator or before rendering the anchor.
 
-### [P3] Tag-input suggestions can't be reopened by refocusing; loading spinner is unreachable
+### ~~[P3]~~ **FIXED** — Tag-input suggestions can't be reopened by refocusing; loading spinner is unreachable
+> **Fixed 2026-07-21:** both `WeaponTagInput` and `SpellTagInput` reopen cached matches on refocus (`onFocus` → `setOpen(true)` when a query + suggestions exist); the never-rendering `loading` state and its now-unused `Search` import were removed.
 `artifacts/dm-screen/src/components/widgets/PartyWidget.tsx:121`
 `onFocus={() => query && setSuggestions(s => s)}` is a no-op (identity setState) — after an outside-click dismiss (`onRequestClose` → `setOpen(false)`), clicking back into the weapon field with text present never reopens the list until the query changes; `SpellTagInput` lacks even the vestigial handler. Also `setLoading(true)`/`setLoading(false)` at lines 60/74 run synchronously in the same timer callback, so the spinner never renders. Fix: `onFocus` should `setOpen(true)` when suggestions exist; drop the dead loading state.
 
-### [P3] "Ask Selene instead" is a silent no-op while a turn is streaming
+### ~~[P3]~~ **FIXED** — "Ask Selene instead" is a silent no-op while a turn is streaming
+> **Fixed 2026-07-21:** the escalate link is `disabled` (with a "wait for the current answer" title) while a turn streams; `sending` threads through `MessageRow` as a primitive so the memo stays intact (flips twice per turn, not per chunk).
 `artifacts/dm-screen/src/components/widgets/AIChatWidget.tsx:810`
 `escalate` bails on `sendingRef.current` with zero UI feedback — the link stays enabled, the click just does nothing (the `send` path's identical guard at line 784 deliberately preserves composer text, but the escalate link has no such rationale). Fix: disable the link (or flash "wait for the current answer") while `sending`.
 
-### [P3] Icon-only controls missing accessible names
+### ~~[P3]~~ **FIXED** — Icon-only controls missing accessible names
+> **Fixed 2026-07-21:** the empty tile's "+" add button and Party's edit-pencil button gained `title` + `aria-label`. (Drag/resize handles remain pointer-only by design.)
 `artifacts/dm-screen/src/components/DMTile.tsx:177-184`
 The empty tile's "+" add button has neither `title` nor `aria-label` (compare the header's remove button at 224-230, which has `title`). Same for PartyWidget's edit-pencil button (PartyWidget.tsx:728-731; its delete sibling *does* have `title`). Drag/resize handles are pointer-only with no keyboard path (acknowledged trade-off, but worth noting). Fix: add `aria-label`/`title` to the icon-only buttons.
 
@@ -182,10 +217,10 @@ The empty tile's "+" add button has neither `title` nor `aria-label` (compare th
 - AI Chat stream handling: id-keyed (not index-keyed) message writes survive cap-trims mid-stream, the abort controller doubles as a turn-identity token gating every turn-global write, the stall watchdog sizes from the bridge's reported cap with a trust ceiling, a clean close without a terminal event is surfaced as an error, and degraded mode (offline vs. origin-blocked, banner + chip + per-message bubbles) is carefully disambiguated. Transcript growth is dual-capped (count + bytes, with per-message oversize clamping) below the backup importer's silent-skip threshold.
 - Every suggestion list portals through `AnchoredDropdown` (with scroll/resize/ResizeObserver re-measure and flip logic); no widget renders a dropdown inside the tile's `overflow: hidden`.
 
-**Coverage gaps:**
-- AI Chat has component tests only for the singleton mount guard; streaming, error/banner transitions, escalation reset, and the transcript cap behavior are untested at the component level (the parsers are covered in lib tests).
-- No component tests for Bestiary (target-consumption effect), Party (import two-phase flow, tag inputs), Compendium, Oracle, Portal, or DMTile/App drag-reorder and corner-resize geometry.
-- jsdom structurally can't cover the AnchoredDropdown flip, storage quota, or real modal semantics — tracked in MANUAL-TESTS-post-rebase.md, but the Firefox drag issue above shows browser-specific gaps aren't caught by the current manual list either.
+**Coverage gaps:** *(substantially narrowed 2026-07-21 — see the remediation-log entry; 27 tests added)*
+- ~~AI Chat has component tests only for the singleton mount guard~~ **PARTIALLY CLOSED** — the degraded-mode **banner** (offline/blocked/online) and its **transition** (Retry clears it) are now covered (`AIChatWidget.banner.test.tsx`), and the escalate-disable-while-streaming guard via `ChatLocalAnswer.test.tsx`. Still open: the SSE **streaming** loop internals and full escalation-reset (SSE-mock heavy); the transcript **cap** stays covered at the lib tier (`chatHistory.test.ts`).
+- ~~No component tests for Bestiary, Party tag inputs, Compendium, Portal~~ **CLOSED** — Bestiary target-consumption, Party weapon tag-input refocus, Compendium/Tome cap+footer+index, and the Portal scheme guard (`toExternalHref`, tier-1) all have tests now. **Still open:** Oracle functional tests, Party import at the *widget* tier (file-picker-blocked; pure logic covered in `partyStore.test.ts`), and DMTile/App drag-reorder + corner-resize **geometry** (needs real layout).
+- jsdom structurally can't cover the AnchoredDropdown flip, storage quota, real modal semantics, or the Firefox `setData` drag path — Playwright/manual only, tracked in MANUAL-TESTS-post-rebase.md.
 
 ---
 
