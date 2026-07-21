@@ -5,16 +5,25 @@ import type { AddressInfo } from "node:net";
 // The real runChatTurn spawns the Claude Agent SDK (+ ddb-mcp subprocess), so it
 // must be mocked; the HTTP server, sockets, and client disconnect are all real.
 // Each test assigns `chatTurnImpl` to control the streamed turn.
+type TestTurnControl = { interrupt?: () => Promise<void> };
+
 const mocks = vi.hoisted(() => ({
   chatTurnImpl: undefined as
-    | ((abort?: AbortController) => AsyncGenerator<{ type: string }>)
+    | ((abort?: AbortController, control?: TestTurnControl) => AsyncGenerator<{ type: string }>)
     | undefined,
 }));
 
 vi.mock("./agent", () => ({
-  runChatTurn: (_message: string, abort?: AbortController) => {
+  runChatTurn: (
+    _message: string,
+    abort?: AbortController,
+    _resume?: string,
+    _model?: string,
+    _effort?: string,
+    control?: TestTurnControl,
+  ) => {
     if (!mocks.chatTurnImpl) throw new Error("test forgot to set chatTurnImpl");
-    return mocks.chatTurnImpl(abort);
+    return mocks.chatTurnImpl(abort, control);
   },
 }));
 
@@ -301,6 +310,47 @@ describe("origin allowlist", () => {
   });
 });
 
+describe("startServer lifecycle", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("rejects the startServer promise on a listen failure (port in use)", async () => {
+    vi.resetModules();
+    const { startServer } = await import("./server");
+    const first = await startServer(0);
+    const busyPort = (first.address() as AddressInfo).port;
+    try {
+      await expect(startServer(busyPort)).rejects.toThrow();
+    } finally {
+      await new Promise<void>((resolve) => first.close(() => resolve()));
+    }
+  });
+
+  // The pre-listen `once("error", reject)` must not stay armed past a successful
+  // listen: the first post-listen 'error' would be swallowed as a no-op reject
+  // on a settled promise, and a SECOND would emit with zero listeners — an
+  // uncaught 'error' event that crashes the process. A logging handler installed
+  // at listen time keeps every later error non-fatal.
+  it("does not crash on post-listen server errors; logs them instead", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.resetModules();
+    const { startServer } = await import("./server");
+    const server = await startServer(0);
+    try {
+      expect(() => {
+        server.emit("error", new Error("late boom 1"));
+        server.emit("error", new Error("late boom 2"));
+      }).not.toThrow();
+      const logged = errorSpy.mock.calls.map((c) => c.map(String).join(" ")).join("\n");
+      expect(logged).toContain("late boom 1");
+      expect(logged).toContain("late boom 2");
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+});
+
 describe("chat concurrency cap", () => {
   let server: http.Server;
   let port: number;
@@ -450,6 +500,98 @@ describe("chat turn timeout", () => {
     };
     const next = await chatBody(port);
     expect(next).toContain("later");
+  });
+
+  // The wedge race must not be silent, and must escalate beyond the ignored
+  // abort: the operator has to learn turns are wedging (a healthy /health hides
+  // it otherwise), and the stuck turn's subprocess must be interrupted directly
+  // — turn.return() can't reach a generator wedged inside next().
+  it("logs the abandonment and interrupts the subprocess when a turn wedges", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const interrupt = vi.fn().mockResolvedValue(undefined);
+    mocks.chatTurnImpl = async function* (_abort, control) {
+      if (control) control.interrupt = interrupt;
+      yield { type: "text", text: "working" };
+      await new Promise(() => {}); // ignores the abort → wedges
+    };
+
+    const body = await chatBody(port);
+    expect(body).toContain("time limit");
+
+    expect(await waitFor(() => interrupt.mock.calls.length > 0)).toBe(true);
+    expect(
+      errorSpy.mock.calls.some((call) => call.map(String).join(" ").includes("wedged")),
+    ).toBe(true);
+    errorSpy.mockRestore();
+  });
+});
+
+describe("oversized request body", () => {
+  let server: http.Server;
+  let port: number;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    const { startServer } = await import("./server");
+    server = await startServer(0);
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterEach(async () => {
+    mocks.chatTurnImpl = undefined;
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  /** POST a raw body and resolve with the status + Connection header + body. */
+  function postRaw(p: number, body: string): Promise<{ status: number; connection?: string; text: string }> {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const clientReq = http.request(
+        { host: "127.0.0.1", port: p, method: "POST", path: "/chat", headers: { "Content-Type": "application/json" } },
+        (res) => {
+          settled = true;
+          let buf = "";
+          res.setEncoding("utf8");
+          res.on("data", (c) => (buf += c));
+          res.on("end", () =>
+            resolve({
+              status: res.statusCode ?? 0,
+              connection: res.headers.connection as string | undefined,
+              text: buf,
+            }),
+          );
+          res.on("error", () => {});
+        },
+      );
+      // The server sends 400 + `Connection: close` and tears the socket down; a
+      // write racing that teardown surfaces as ECONNRESET — ignore it once the
+      // response has already been received.
+      clientReq.on("error", (err) => {
+        if (!settled) reject(err);
+      });
+      clientReq.end(body);
+    });
+  }
+
+  // The 64 KB cap must reject before any work, and its `Connection: close`
+  // (server.ts) must tear the socket down so a keep-alive reuse of a
+  // half-consumed request can't wedge. Crucially the slot is never claimed —
+  // the next turn still works.
+  it("rejects a body over the 64 KB cap with 400 + Connection: close, without holding the slot", async () => {
+    const huge = JSON.stringify({ message: "x".repeat(70 * 1024) });
+    const rejected = await postRaw(port, huge);
+    expect(rejected.status).toBe(400);
+    expect(rejected.text).toMatch(/too large/i);
+    expect(rejected.connection).toBe("close");
+
+    // The slot was not consumed by the rejected body: a normal turn is accepted.
+    mocks.chatTurnImpl = async function* () {
+      yield { type: "text", text: "ok" };
+      yield { type: "done", subtype: "success", result: "ok" };
+    };
+    const { events } = await collectStream(port);
+    expect(events.some((e) => e.event === "text")).toBe(true);
   });
 });
 

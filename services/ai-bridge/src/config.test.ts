@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { envPort, parseAllowedOrigins } from "./config";
+import { envPort, envTurnTimeoutMs, parseAllowedOrigins } from "./config";
 
 describe("parseAllowedOrigins", () => {
   it("always includes the SPA's default :38080 origins", () => {
@@ -62,5 +62,40 @@ describe("envPort", () => {
         expect(() => envPort(VAR, 38900), JSON.stringify(bad)).toThrow(/Invalid AI_BRIDGE_PORT_TEST/);
       }
     }
+  });
+});
+
+describe("envTurnTimeoutMs", () => {
+  afterEach(() => {
+    delete process.env.AI_BRIDGE_TURN_TIMEOUT_MS;
+  });
+
+  it("falls back when the var is unset or empty", () => {
+    expect(envTurnTimeoutMs(180_000)).toBe(180_000);
+    process.env.AI_BRIDGE_TURN_TIMEOUT_MS = "";
+    expect(envTurnTimeoutMs(180_000)).toBe(180_000);
+  });
+
+  it("parses a valid millisecond budget", () => {
+    process.env.AI_BRIDGE_TURN_TIMEOUT_MS = "150";
+    expect(envTurnTimeoutMs(180_000)).toBe(150);
+  });
+
+  // The headline bug: Node clamps a setTimeout delay above 2^31-1 (or Infinity)
+  // to 1 ms, so an over-large budget turned every turn into a near-instant abort
+  // AND serialized as `turnTimeoutMs: null` in /health. Fail loud like envPort
+  // instead of silently degrading to a 1 ms outage.
+  it("throws on values above the setTimeout ceiling (2^31-1), non-positive, and garbage", () => {
+    for (const bad of ["2147483648", "99999999999", "Infinity", "0", "-1", "abc", "150abc", "1.5"]) {
+      process.env.AI_BRIDGE_TURN_TIMEOUT_MS = bad;
+      expect(() => envTurnTimeoutMs(180_000), JSON.stringify(bad)).toThrow(
+        /Invalid AI_BRIDGE_TURN_TIMEOUT_MS/,
+      );
+    }
+  });
+
+  it("accepts the exact setTimeout ceiling", () => {
+    process.env.AI_BRIDGE_TURN_TIMEOUT_MS = "2147483647";
+    expect(envTurnTimeoutMs(180_000)).toBe(2_147_483_647);
   });
 });

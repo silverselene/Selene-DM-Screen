@@ -4,8 +4,9 @@ import type { BridgeHealth } from "@workspace/bridge-protocol";
 import { config } from "./config";
 import { ALLOWED_TOOL_IDS } from "./ddbTools";
 import { resolveAuth } from "./auth";
-import { runChatTurn } from "./agent";
+import { runChatTurn, type TurnControl } from "./agent";
 import { parseChatRequest } from "./chatRequest";
+import { awaitWritable, writeSseFrame } from "./sse";
 
 const MAX_BODY_BYTES = 64 * 1024; // chat turns are short prompts, not uploads
 
@@ -22,10 +23,9 @@ let inFlightTurns = 0;
 // wall-clock budget so the slot is always reclaimed. (The client-disconnect
 // abort below does not cover this: a wedged turn can sit with the browser tab
 // still open, so no disconnect ever fires.) Overridable via env for tests /
-// slow hosts; a non-positive or unparseable value falls back to the default.
-const TURN_TIMEOUT_MS = Number(process.env.AI_BRIDGE_TURN_TIMEOUT_MS) > 0
-  ? Number(process.env.AI_BRIDGE_TURN_TIMEOUT_MS)
-  : 3 * 60 * 1000;
+// slow hosts; a garbage or over-large value fails startup loudly (see
+// envTurnTimeoutMs) instead of silently degrading to Node's 1 ms clamp.
+const TURN_TIMEOUT_MS = config.turnTimeoutMs;
 
 // The abort above is only *cooperative*: reclaiming the slot still requires the
 // SDK generator to settle its pending next() once the signal fires. A turn that
@@ -172,10 +172,6 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-function sse(res: ServerResponse, event: string, data: unknown) {
-  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-}
-
 // True while it's still safe to write to the response. `res.writable` covers our
 // own end(); it stays true on a peer-destroyed socket (Node 24), where only
 // `res.destroyed` flips — check both or a client disconnect falls through to a
@@ -271,11 +267,17 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
   let sentTerminal = false;
   let turnTimeout: NodeJS.Timeout | undefined;
   let wedgeTimer: NodeJS.Timeout | undefined;
+  // Wall-clock start, for the wedge log's turn age.
+  const turnStartedAt = Date.now();
+  // Populated by runChatTurn once its SDK query exists (before the first next()
+  // ever suspends), giving the wedge path a direct line to interrupt() the
+  // subprocess — see TurnControl and the wedge branch below.
+  const control: TurnControl = {};
   // Calling the generator function only *creates* the iterator (nothing runs
   // until the first next()), and it happens BEFORE the slot is claimed, so even
   // if it threw no slot would leak. Hoisted so the finally can hand it its
   // end-of-iteration signal.
-  const turn = runChatTurn(message, abort, resume, model, effort)[Symbol.asyncIterator]();
+  const turn = runChatTurn(message, abort, resume, model, effort, control)[Symbol.asyncIterator]();
 
   try {
     // Claim the turn slot as the very first thing in the guarded region so the
@@ -340,8 +342,30 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
         // generator keeps whatever it's stuck on, but it can no longer pin the
         // slot. (In the disconnect case there's no one to write to and canWrite
         // is already false.)
+        //
+        // Log it (the operator would otherwise see a green /health and never
+        // learn turns are wedging) and escalate past the ignored abort: ask the
+        // SDK query to interrupt() its subprocess out-of-band from the stuck
+        // generator (turn.return() in the finally can't — it queues behind the
+        // wedged next()). Best-effort and fire-and-forget: a rejection here must
+        // not surface as an unhandled rejection.
+        const ageSec = ((Date.now() - turnStartedAt) / 1000).toFixed(1);
+        const cause = timedOut ? `timeout (${TURN_TIMEOUT_MS} ms budget)` : "client disconnect";
+        console.error(
+          `[ai-bridge] chat turn wedged and abandoned after ${ageSec}s (cause: ${cause}); ` +
+            `reclaiming the slot and interrupting the subprocess.`,
+        );
+        // Wrapped in Promise.resolve().then so a *synchronous* throw from
+        // interrupt() (not only a rejected promise) is funneled into the same
+        // catch instead of escaping this fire-and-forget branch into the loop's
+        // outer catch.
+        void Promise.resolve()
+          .then(() => control.interrupt?.())
+          .catch((err) => {
+            console.error("[ai-bridge] failed to interrupt wedged turn:", err);
+          });
         if (canWrite(res)) {
-          sse(res, "error", {
+          writeSseFrame(res, "error", {
             type: "error",
             message: timedOut
               ? `Chat turn exceeded the ${TURN_TIMEOUT_MS / 1000}s time limit and was stopped.`
@@ -353,8 +377,21 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
       }
       if (result.done) break;
       if (!canWrite(res)) break;
-      sse(res, result.value.type, result.value);
+      const flushed = writeSseFrame(res, result.value.type, result.value);
       if (result.value.type === "done" || result.value.type === "error") sentTerminal = true;
+      // Backpressure: a connected-but-stalled reader would otherwise let the
+      // whole turn buffer in Node's heap. Park the pull loop until the socket
+      // drains (or the turn aborts, so the timeout can still reclaim the slot).
+      if (!flushed && canWrite(res)) {
+        await awaitWritable(res, abort.signal);
+        // awaitWritable also resolves on abort (so a stalled reader can't park
+        // the loop past the turn's deadline). If *that's* why we resumed, stop
+        // pulling: writing more to a still-full socket would let a misbehaving
+        // turn that keeps yielding after its abort buffer the rest of itself in
+        // Node's heap during the wedge-grace window. The abort paths (wedge race,
+        // next() rejection, finally's terminal) own the ending from here.
+        if (abort.signal.aborted) break;
+      }
     }
   } catch (err) {
     if (canWrite(res)) {
@@ -363,7 +400,7 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
         : err instanceof Error
           ? err.message
           : String(err);
-      sse(res, "error", { type: "error", message });
+      writeSseFrame(res, "error", { type: "error", message });
       sentTerminal = true;
     }
   } finally {
@@ -380,7 +417,7 @@ async function handleChat(req: IncomingMessage, res: ServerResponse) {
       // Never close cleanly without a terminal event: the widget would present
       // the partial reply as complete-but-truncated (see sentTerminal).
       if (!sentTerminal) {
-        sse(res, "error", { type: "error", message: "The turn ended without a final result." });
+        writeSseFrame(res, "error", { type: "error", message: "The turn ended without a final result." });
       }
       res.end();
     }
@@ -486,7 +523,21 @@ export function startServer(port: number = config.port) {
   server.requestTimeout = 60_000;
 
   return new Promise<ReturnType<typeof createServer>>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, config.host, () => resolve(server));
+    // Reject only PRE-listen failures (EADDRINUSE, EACCES). Left armed past
+    // listen, this once-listener would swallow the first post-listen 'error' as
+    // a no-op reject on a settled promise, and a SECOND would emit with zero
+    // listeners — an uncaught 'error' that crashes the process. So swap it for a
+    // permanent logging handler once listening.
+    const onListenError = (err: Error) => reject(err);
+    server.once("error", onListenError);
+    server.listen(port, config.host, () => {
+      server.removeListener("error", onListenError);
+      server.on("error", (err) => {
+        // Post-listen errors are rare (accept failures) but must have a listener
+        // or Node treats the 'error' event as fatal. Log and keep serving.
+        console.error("[ai-bridge] server error after listen:", err);
+      });
+      resolve(server);
+    });
   });
 }

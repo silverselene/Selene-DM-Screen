@@ -215,6 +215,35 @@ describe("parseSseRecord", () => {
   });
 });
 
+// Cross-implementation round-trip: the bridge's OWN frame formatter
+// (services/ai-bridge/src/sse.ts — the SSE producer) feeds this widget's OWN
+// parseSseRecord (the consumer). Previously each side was verified only against
+// a hand-rolled counterpart in its own suite, so a framing/validator drift
+// between them could slip through. Imported by relative path — the bridge isn't
+// a dm-screen dependency, but sse.ts is SDK-free (a type-only node:http import),
+// and dm-screen excludes tests from typecheck so no rootDir coupling results.
+describe("SSE round-trip: bridge formatSseFrame → widget parseSseRecord", () => {
+  const events = [
+    { type: "text", text: "Hello there" },
+    { type: "tool", name: "mcp__dndbeyond__ddb_get_monster" },
+    { type: "tool_result", tool: "ddb_get_monster", kind: "monster", title: "Goblin", markdown: "# Goblin" },
+    { type: "tool_error", tool: "ddb_get_character", message: "private" },
+    { type: "done", subtype: "success", result: "done", usage: { in: 1 }, costUsd: 0.02, sessionId: "s1" },
+    { type: "error", message: "boom" },
+  ] as const;
+
+  for (const event of events) {
+    it(`round-trips a ${event.type} event`, async () => {
+      const { formatSseFrame } = await import("../../../../services/ai-bridge/src/sse");
+      const frame = formatSseFrame(event.type, event);
+      // The client splits the byte stream on the "\n\n" delimiter before parsing
+      // a record; mirror that so we parse exactly what the widget's reader would.
+      const [record] = frame.split("\n\n").filter((r) => r.trim() !== "");
+      expect(parseSseRecord(record)).toEqual(event);
+    });
+  }
+});
+
 describe("friendlyToolName", () => {
   it("strips the mcp server prefix and ddb_ and title-cases", () => {
     expect(friendlyToolName("mcp__dndbeyond__ddb_get_character")).toBe("Get character");

@@ -18,7 +18,7 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 
 **38 findings: 0 P0 · 2 P1 · 11 P2 · 25 P3** (the duplicate-tile clobber was found independently by agents 1 and 2 and is counted once). No data-loss or crash bugs in shipped code paths; overall the codebase's hardest surfaces (backup atomicity, the add-to-initiative event contract, the bridge's localhost security) reviewed as genuinely robust.
 
-**Progress: 24 fixed (2 P1s + all 7 §1 + all 8 §2 + all 7 remaining §3 findings) · 14 open** — see the remediation log below. The 14 open are all §4 (AI bridge) and §5 (config/infra).
+**Progress: 30 fixed (2 P1s + all 7 §1 + all 8 §2 + all 7 remaining §3 + all 6 §4 findings) · 8 open** — see the remediation log below. The 8 open are all §5 (config/infra).
 
 **Fix-first shortlist:**
 1. ~~**[P1] `{@recharge N}` stripping**~~ **FIXED** — see §3; regen also caught up the committed data with d1d13e8's cross-source gate.
@@ -31,6 +31,25 @@ Severity scale: **P0** data loss / crash · **P1** functional bug · **P2** edge
 **Recurring themes:** validators on the backup-import path are systematically weaker than the equivalent typed-input paths (§1 ×3, §2 Portal URL) — *closed*; the generators were entirely untested despite being the highest-regression-risk code (§3 — *closed: 31 tests, pure logic extracted to `monsters-lib.ts`*); dm-screen's config files and tests have zero typecheck coverage while the bridge's do (§5 — *still open*).
 
 ## Remediation log
+
+### 2026-07-21 — all 6 §4 (`services/ai-bridge/`) findings fixed + all 4 coverage gaps closed
+
+Every finding under §4 — the 1 P2 and 5 P3s — is resolved, TDD (failing test first) for each new-behavior fix; the coverage-gap tests characterize existing behavior. Details inline at each finding heading; summary:
+
+- **[P2] Wedged turns — no cleanup, no logging** — the wedge branch now logs the abandonment (`console.error` with turn age + `timeout`/`disconnect` cause) and escalates: `runChatTurn` exposes the SDK query's `interrupt()` on a new `TurnControl` handle (`agent.ts`), which the wedge path calls to reclaim the subprocess out-of-band from the stuck generator.
+- **[P3] `AI_BRIDGE_TURN_TIMEOUT_MS` overflow → 1 ms** — new fail-loud `envTurnTimeoutMs()` (`config.ts`) bounds it to `[1, 2^31-1]` and throws on garbage/over-large/`Infinity`, matching `envPort`; `server.ts` reads `config.turnTimeoutMs`.
+- **[P3] `smoke.ts` drops tool_result/tool_error** — event switch extracted to pure `formatSmokeEvent()` (`smokeFormat.ts`); all six variants handled, `tool_error` prints and marks the run a failure (non-zero exit).
+- **[P3] `startServer` error listener past listen** — the pre-listen `once("error", reject)` is swapped for a permanent logging handler at listen time, so post-listen errors are logged and non-fatal instead of first-swallowed-then-crashing.
+- **[P3] SSE backpressure ignored** — framing extracted to SDK-free `sse.ts`; the streaming loop gates on `res.write`'s return and parks on `awaitWritable` (drain vs. abort) so a stalled reader buffers one event, not the whole turn.
+- **[P3] Stale coverage descriptions** — `vitest.config.ts` and CLAUDE.md now describe the two-tier suite (pure logic + real-socket HTTP lifecycle + SDK-mocking gate/mapping).
+
+**New modules for testability** (following the repo's "extract pure logic to a sibling" precedent): `sse.ts`, `smokeFormat.ts`, and `TurnControl` in `agent.ts`.
+
+**Coverage gaps closed (4).** The `agent.ts` SDK-message → BridgeEvent mapping loop (10 new tests via a message-yielding mock), the oversized-body 64 KB path (real-socket 400 + `Connection: close` + slot-not-held), a cross-implementation SSE round-trip (bridge `formatSseFrame` → widget `parseSseRecord`, all six variants, hosted in dm-screen for `import.meta.env` typing), and a ddb-mcp drift canary (`toolResults.canary.test.ts`: installed-version pin @ `2.10.1` + the three named degradation boundaries + an asterisk-italic control). A true replay-canary against real ddb-mcp output isn't possible offline (the package ships only a README), so the version pin is the drift tripwire.
+
+**Verified:** 121/121 ai-bridge tests · 357/357 dm-screen tests (incl. the moved round-trip) · 47/47 scripts tests · `pnpm typecheck` clean · `pnpm build` + verify-precache pass · bundle scans clean (`/api/`, `bridge-protocol`, and the bridge's `sse.ts` helpers all zero hits — the round-trip test's cross-package import never reaches the deployable).
+
+**Still open (§4):** none.
 
 ### 2026-07-21 — all 7 open §3 (`scripts/src/data-generators/`) findings fixed + coverage gaps closed
 
@@ -309,27 +328,33 @@ Every header hardcodes `Pinned to: 5etools-src @ v2.31.0` and `License: 5etools 
 
 ## 4. `services/ai-bridge/` — optional AI bridge
 
-### [P2] Wedged turns are abandoned with no subprocess cleanup and no operator logging
+### ~~[P2]~~ **FIXED** — Wedged turns are abandoned with no subprocess cleanup and no operator logging
+> **Fixed 2026-07-21:** the wedge branch now (1) logs the abandonment via `console.error` with the turn's age and cause (`timeout (N ms budget)` vs `client disconnect`) so an operator sees it despite a green `/health`, and (2) escalates past the ignored abort — `runChatTurn` plumbs the SDK query's `interrupt()` onto a new `TurnControl` handle (`agent.ts`), and the wedge path calls it fire-and-forget to reclaim the subprocess out-of-band from the stuck generator (`turn.return()` can't — it queues behind the wedged `next()`). Tests: `server.test.ts` ("logs the abandonment and interrupts the subprocess when a turn wedges") + `agent.test.ts` interrupt-handle group.
 `services/ai-bridge/src/server.ts:337-352,369-387`
 When the wedge race declares a turn abandoned, the slot is released and the response ended, but nothing attempts to reclaim the underlying Claude Code + ddb-mcp subprocess tree — the abort was by definition ignored (that is the wedge premise), `turn.return()` queues behind the stuck `next()` forever (server.ts:377), and the SDK `query` object's `interrupt()` is never exposed from `runChatTurn` (agent.ts:110) or invoked. Repeated wedges accumulate orphaned subprocess pairs that keep spending memory and potentially subscription until they self-terminate. The entire path is also silent — no `console.error` anywhere in the wedge/abandon branch, so the operator sees healthy `/health` and never learns turns are wedging. Fix: log the abandonment with the turn's age/cause, and escalate — expose the query handle so the wedge path can call `interrupt()` (or spawn-track PIDs for a hard kill).
 
-### [P3] `AI_BRIDGE_TURN_TIMEOUT_MS` > 2³¹−1 (or `Infinity`) silently becomes a 1 ms timeout — total chat outage
+### ~~[P3]~~ **FIXED** — `AI_BRIDGE_TURN_TIMEOUT_MS` > 2³¹−1 (or `Infinity`) silently becomes a 1 ms timeout — total chat outage
+> **Fixed 2026-07-21:** new `envTurnTimeoutMs()` in `config.ts` validates the var as an integer in `[1, 2147483647]` (Node's `setTimeout` ceiling) and throws on anything else — fail-loud parity with `envPort`, so an over-large/`Infinity`/garbage value stops startup instead of clamping to a 1 ms outage (and can no longer serialize as `turnTimeoutMs: null` in `/health`). `config.turnTimeoutMs` reads it; `server.ts` consumes `config.turnTimeoutMs`. Tests in `config.test.ts` (ceiling, `Infinity`, non-positive, garbage, exact-ceiling accept).
 `services/ai-bridge/src/server.ts:26-28,310-313`
 `TURN_TIMEOUT_MS` accepts any positive `Number(env)`; a value above 2147483647 (or `Infinity`) makes Node clamp `setTimeout` to 1 ms (verified: `TimeoutOverflowWarning … set to 1`), so every turn aborts near-instantly with a bizarre "exceeded the Ns time limit" message. `Infinity` additionally serializes as `turnTimeoutMs: null` in `/health` (verified), violating the `number | undefined` wire type — the client's `stallTimeoutForTurn` happens to guard `typeof number` so it degrades, but the health test at server.test.ts:161 would catch none of this. Inconsistent with the repo's own fail-loud `envPort` precedent (config.ts:12-20). Fix: validate as a bounded integer (reject or clamp at 2³¹−1) and fail startup loudly like `envPort`.
 
-### [P3] `smoke.ts` silently drops `tool_result` and `tool_error` events
+### ~~[P3]~~ **FIXED** — `smoke.ts` silently drops `tool_result` and `tool_error` events
+> **Fixed 2026-07-21:** the event switch is extracted to a pure, tested `formatSmokeEvent()` (`smokeFormat.ts`, following the repo's "run `main()` at import → extract pure logic to a sibling" precedent) that now handles all six variants — `tool_result` prints tool+title, and `tool_error` prints tool+message AND marks the run a failure so `process.exitCode = 1` (a broken/expired ddb session — the exact thing the README says to smoke-test for — now exits non-zero instead of looking clean). Tests in `smokeFormat.test.ts`.
 `services/ai-bridge/src/smoke.ts:22-40`
 The switch handles `text`/`tool`/`done`/`error` but has no case (and no default) for `tool_result` or `tool_error`, so a smoke run against a broken ddb session shows a tool being called and then nothing — a `tool_error` (e.g. expired `session.json`, the exact condition the README tells users to smoke-test for) is invisible and doesn't set `process.exitCode = 1`. Fix: print `tool_result` titles and treat `tool_error` like `error` for output (arguably not for exit code).
 
-### [P3] `startServer`'s error listener can't survive past listen — a later `server` 'error' is first swallowed, then fatal
+### ~~[P3]~~ **FIXED** — `startServer`'s error listener can't survive past listen — a later `server` 'error' is first swallowed, then fatal
+> **Fixed 2026-07-21:** the pre-listen `once("error", reject)` is now removed in the `listen` callback and replaced with a permanent logging handler, so `reject` fires only for pre-listen failures (EADDRINUSE) and every post-listen `'error'` is logged and non-fatal (a second one no longer emits with zero listeners and crashes the process). Tests in `server.test.ts` ("startServer lifecycle": EADDRINUSE rejects; two post-listen errors don't throw and are logged).
 `services/ai-bridge/src/server.ts:488-491`
 `server.once("error", reject)` stays armed after `listen` succeeds; the first post-listen `'error'` event consumes it as a no-op reject on a settled promise (silently swallowed), and any second `'error'` emits with zero listeners — an uncaught `'error'` event that crashes the process. Post-listen `http.Server` errors are rare (accept failures), so impact is low, but the intent (reject only pre-listen failures like EADDRINUSE) should be encoded: remove the listener in the listen callback and install a logging handler instead.
 
-### [P3] SSE writes ignore backpressure
+### ~~[P3]~~ **FIXED** — SSE writes ignore backpressure
+> **Fixed 2026-07-21:** SSE framing is extracted to a SDK-free `sse.ts` (`formatSseFrame`/`writeSseFrame`/`awaitWritable`). The streaming loop now checks `res.write`'s backpressure signal and, when the socket buffer is full, parks on `awaitWritable` (races `'drain'` against the turn's abort signal so the timeout can still reclaim the slot) — bounding a stalled-but-connected reader to one buffered event instead of the whole turn. Tests in `sse.test.ts` (drain, abort, immediate-when-aborted, no listener leak).
 `services/ai-bridge/src/server.ts:175-177,356`
 `sse()` discards `res.write()`'s return value and nothing awaits `'drain'`, so a connected-but-stalled reader buffers the whole turn in Node memory. Bounded in practice (`maxTurns: 12`, 96 K-char card cap → low single-digit MB worst case, loopback-only clients), so this is a note, not a fire: if card caps or turn limits ever grow, gate the pull loop on the write return.
 
-### [P3] Stale coverage descriptions: vitest config comment and CLAUDE.md
+### ~~[P3]~~ **FIXED** — Stale coverage descriptions: vitest config comment and CLAUDE.md
+> **Fixed 2026-07-21:** both descriptions now state the suite spans two tiers — pure logic (parsers, config/origin validation, SSE framing, smoke formatter) **and** real-socket HTTP lifecycle tests (`server.test.ts`) plus an SDK-mocking gate/mapping test (`agent.test.ts`), with the Agent SDK subprocess always mocked and the HTTP server/sockets real.
 `services/ai-bridge/vitest.config.ts:3-5`
 The comment claims "pure logic (tool-result parsing) … no SDK/network", and CLAUDE.md's testing section says the bridge config "covers the bridge's pure tool-result parsers in toolResults.ts" — but the suite now includes real-socket HTTP lifecycle tests (`server.test.ts` binds ephemeral ports, drops sockets) and an SDK-mocking gate test (`agent.test.ts`). Harmless, but a reader deciding where a new integration test belongs will be misled. Update both descriptions.
 
@@ -339,11 +364,11 @@ The comment claims "pure logic (tool-result parsing) … no SDK/network", and CL
 - Slot lifecycle is airtight where it's cooperative: claim-inside-try with once-guarded release, no awaits between check and claim, terminal-event guarantee on every exit path (synthesized in `finally`), disconnect abort via `res 'close'`, and the `pull.catch` unhandled-rejection guard on the abandoned race. Protocol symmetry with `aiBridge.ts` checks out exactly (event names, single-line JSON `data:`, `\n\n` framing, health field contract, 403/429 body shapes).
 - Auth scrubbing makes billing unambiguous in both modes (both credential directions tested), and secrets/paths never reach the wire or logs (`ddbMcpEntry` deliberately kept off `/health`, with a test pinning it).
 
-**Coverage gaps:**
-- The entire SDK-message → BridgeEvent mapping loop (`agent.ts:152-196`) — text/tool_use yielding, `toolNamesById` correlation, the `is_error` → `tool_error` branch, string-content skip, and `done` mapping for non-success subtypes — has zero tests; `agent.test.ts`'s mock generator yields nothing, so a drift in SDK message shape or a correlation regression passes CI silently.
-- No test for the oversized-body path: the 64 KB cap, the 400 + `Connection: close`, and the paused-request teardown (`server.ts:154-173,216-224`).
-- No cross-implementation SSE round-trip test: `sse()`'s framing and the widget's `parseSseRecord` are each verified only against hand-rolled counterparts in their own suites.
-- toolResults parsers are pinned to captured ddb-mcp 2.10.1 output; a wrapped/continuation `Spells:` line, a non-`(L#)` annotation like `(at will)`, or an underscore-italic monster subtitle would silently degrade (by design) with no canary test against the installed package's real output to flag the drift.
+**Coverage gaps:** *(all closed 2026-07-21 — see the remediation-log entry)*
+- ~~The entire SDK-message → BridgeEvent mapping loop (`agent.ts:152-196`)~~ **CLOSED** — `agent.test.ts`'s mock now yields representative SDK messages; 10 tests cover text/empty-text, tool_use → tool + `toolNamesById` correlation (incl. `unknown_tool` for an orphan result), the `is_error` → `tool_error` branch (with the no-text fallback), the string-content-user skip, suppressed-card tools, and `done` mapping for success + non-success subtypes.
+- ~~No test for the oversized-body path~~ **CLOSED** — `server.test.ts` ("oversized request body") posts a >64 KB body and asserts 400 + `too large` + `Connection: close`, and that the slot was never claimed (a normal turn still succeeds after).
+- ~~No cross-implementation SSE round-trip test~~ **CLOSED** — the bridge's own `formatSseFrame` (`sse.ts`) is fed through the widget's own `parseSseRecord` for all six event variants. Lives in `artifacts/dm-screen/src/lib/aiBridge.test.ts` (the widget parser needs Vite's `import.meta.env` typing the bridge's Node tsconfig lacks); imports the SDK-free `sse.ts` by relative path.
+- ~~toolResults parsers … no canary … to flag the drift~~ **CLOSED (as far as offline allows)** — the installed `@iamjameslennon/ddb-mcp` ships only a README (no replayable fixtures; real output needs a live DDB session), so `toolResults.canary.test.ts` pins the two drift signals we CAN see: the installed package **version** (`2.10.1` — fails on a bump so a human re-captures + re-verifies before shipping) and the three named format-degradation boundaries (`(at will)` not stripped, wrapped `Spells:` continuation dropped, underscore-italic monster subtitle → no `type`), plus an asterisk-italic control.
 
 ---
 

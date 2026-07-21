@@ -19,6 +19,18 @@ You cannot modify anything on D&D Beyond and have no access to the local filesys
 // shared bridge/widget wire contract; re-exported so local imports keep working.
 export type { BridgeEvent };
 
+/**
+ * Out-of-band control handle for an in-flight turn. runChatTurn populates
+ * `interrupt` with the SDK query's own `interrupt()` as soon as the query
+ * exists, so the HTTP layer can reclaim a *wedged* turn's subprocess directly:
+ * a generator stuck inside `next()` can't be reached by `turn.return()` (that
+ * queues behind the same stuck `next()`), but `interrupt()` is a control-channel
+ * request that doesn't. Optional — the normal (non-wedge) path passes nothing.
+ */
+export interface TurnControl {
+  interrupt?: () => Promise<void>;
+}
+
 function authAwareError(err: unknown, auth: ResolvedAuth): string {
   const msg = err instanceof Error ? err.message : String(err);
   const looksLikeAuth = /auth|api key|api_key|credential|401|unauthor|login/i.test(msg);
@@ -78,6 +90,7 @@ export async function* runChatTurn(
   resumeSessionId?: string,
   model?: string,
   effort?: EffortLevel,
+  control?: TurnControl,
 ): AsyncGenerator<BridgeEvent> {
   const auth = resolveAuth();
 
@@ -143,6 +156,10 @@ export async function* runChatTurn(
         ...(abortController ? { abortController } : {}),
       },
     });
+
+    // Hand the HTTP layer a direct line to the query's control channel so a
+    // wedged turn's subprocess can be interrupted out-of-band (see TurnControl).
+    if (control) control.interrupt = () => response.interrupt();
 
     // Correlate a tool_use (assistant) with its later tool_result (user) so we
     // can label the result with the tool that produced it. The SDK delivers the

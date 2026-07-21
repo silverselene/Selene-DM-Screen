@@ -20,6 +20,35 @@ export function envPort(name: string, fallback: number): number {
 }
 
 /**
+ * Node clamps a `setTimeout` delay above this (or a non-finite one) to 1 ms —
+ * see `TimeoutOverflowWarning`. A turn budget past it would make every turn
+ * abort near-instantly, so it's the hard upper bound for AI_BRIDGE_TURN_TIMEOUT_MS.
+ */
+const MAX_TIMER_MS = 2_147_483_647; // 2^31 - 1
+
+/**
+ * Read the per-turn wall-clock budget (ms) from AI_BRIDGE_TURN_TIMEOUT_MS,
+ * failing startup loudly on garbage — the same fail-loud contract as `envPort`.
+ * A silent fallback used to hide two footguns: a value above MAX_TIMER_MS (or
+ * `Infinity`) made Node clamp the abort timer to 1 ms — a total /chat outage
+ * with a bizarre "exceeded the Ns time limit" on every turn — and `Infinity`
+ * serialized as `turnTimeoutMs: null` in /health, off its `number | undefined`
+ * wire type. Unset/empty → the caller's fallback; anything else must be an
+ * integer in [1, MAX_TIMER_MS]. Exported for unit tests.
+ */
+export function envTurnTimeoutMs(fallback: number): number {
+  const raw = process.env.AI_BRIDGE_TURN_TIMEOUT_MS;
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > MAX_TIMER_MS) {
+    throw new Error(
+      `Invalid AI_BRIDGE_TURN_TIMEOUT_MS value: "${raw}" (expected an integer 1–${MAX_TIMER_MS} ms)`,
+    );
+  }
+  return n;
+}
+
+/**
  * Browser origins allowed to call the bridge (CORS allowlist + hard 403; see
  * server.ts). The defaults cover the SPA's standard origin — dev, preview,
  * and Docker all serve on :38080. Extra origins come from the
@@ -89,4 +118,10 @@ export const config = {
    * Optional model override. Undefined → the Agent SDK / subscription default.
    */
   model: process.env.AI_BRIDGE_MODEL || undefined,
+  /**
+   * Per-turn wall-clock budget in ms. Overridable via AI_BRIDGE_TURN_TIMEOUT_MS
+   * (fail-loud on garbage; see envTurnTimeoutMs). Bounded to Node's setTimeout
+   * ceiling so an over-large value can't silently degrade to a 1 ms outage.
+   */
+  turnTimeoutMs: envTurnTimeoutMs(3 * 60 * 1000),
 } as const;

@@ -52,7 +52,7 @@ pnpm --filter @workspace/scripts run generate:compendium
 docker compose up --build                            # http://localhost:38080 (host) → 8080 (non-root nginx container)
 ```
 
-**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts)) and, since the AI-bridge work, for `services/ai-bridge` ([vitest.config.ts](services/ai-bridge/vitest.config.ts), Node-env / no-jsdom — covers the bridge's pure tool-result parsers in `toolResults.ts`). Tests live beside the code as `*.test.ts` / `*.test.tsx`, both excluded from the build via `tsconfig.json` — **add new test globs to that `exclude` list**, or the file leaks into `pnpm build`'s typecheck.
+**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts)) and, since the AI-bridge work, for `services/ai-bridge` ([vitest.config.ts](services/ai-bridge/vitest.config.ts), Node-env / no-jsdom). The bridge suite spans both tiers: pure logic (tool-result parsers in `toolResults.ts`, config/origin validation, SSE framing in `sse.ts`, the smoke formatter) **and** real-socket HTTP lifecycle tests (`server.test.ts` binds ephemeral ports and drops sockets to exercise the wedge/timeout/backpressure/oversized-body paths) plus an SDK-mocking gate/mapping test (`agent.test.ts`) — the Agent SDK subprocess is always mocked, the HTTP server and sockets are real. Tests live beside the code as `*.test.ts` / `*.test.tsx`, both excluded from the build via `tsconfig.json` — **add new test globs to that `exclude` list**, or the file leaks into `pnpm build`'s typecheck.
 
 Two tiers, and the default env is **`"node"`** — keep it that way:
 

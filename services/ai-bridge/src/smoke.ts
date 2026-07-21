@@ -9,6 +9,7 @@
  */
 import { runChatTurn } from "./agent";
 import { resolveAuth } from "./auth";
+import { formatSmokeEvent } from "./smokeFormat";
 
 async function main() {
   const message =
@@ -19,24 +20,13 @@ async function main() {
   console.error(`[smoke] prompt : ${message}\n`);
 
   for await (const ev of runChatTurn(message)) {
-    switch (ev.type) {
-      case "text":
-        process.stdout.write(ev.text);
-        break;
-      case "tool":
-        console.error(`\n[smoke] tool → ${ev.name}`);
-        break;
-      case "done":
-        console.error(
-          `\n\n[smoke] done (${ev.subtype})` +
-            (ev.costUsd != null ? ` cost=$${ev.costUsd}` : "") +
-            (ev.sessionId ? ` session=${ev.sessionId}` : ""),
-        );
-        break;
-      case "error":
-        console.error(`\n[smoke] ERROR: ${ev.message}`);
-        process.exitCode = 1;
-        break;
+    for (const line of formatSmokeEvent(ev)) {
+      // stdout = the streamed answer body (no trailing newline); stderr =
+      // diagnostics (console.error appends one). A tool_error / error line marks
+      // the run a failure so a broken ddb session exits non-zero.
+      if (line.stream === "out") process.stdout.write(line.text);
+      else console.error(line.text);
+      if (line.failure) process.exitCode = 1;
     }
   }
 }
