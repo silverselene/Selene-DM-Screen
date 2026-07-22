@@ -159,7 +159,9 @@ export async function* runChatTurn(
 
     // Hand the HTTP layer a direct line to the query's control channel so a
     // wedged turn's subprocess can be interrupted out-of-band (see TurnControl).
-    if (control) control.interrupt = () => response.interrupt();
+    // SDK 0.3.21x widened interrupt()'s return to SDKControlInterruptResponse |
+    // undefined; TurnControl only needs the completion signal, so discard it.
+    if (control) control.interrupt = async () => { await response.interrupt(); };
 
     // Correlate a tool_use (assistant) with its later tool_result (user) so we
     // can label the result with the tool that produced it. The SDK delivers the

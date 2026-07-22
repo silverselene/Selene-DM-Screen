@@ -1,0 +1,45 @@
+# Dependabot keeps dependencies current across the pnpm workspace, the GitHub
+# Actions workflows, and the Docker image. See the update strategy notes in
+# CLAUDE.md — majors are deliberately reviewed one at a time, so only
+# minor/patch bumps are grouped into a single PR here.
+version: 2
+updates:
+  # ── npm / pnpm workspace (root manifest + catalog + all packages) ──────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      # One rollup PR for every safe minor/patch bump across the workspace,
+      # so the weekly review is a single diff instead of dozens of PRs.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # @types/node is pinned to ^24 on purpose to match the Node 24 runtime we
+      # ship on (Dockerfile build stage + README). Do not let dependabot push
+      # the types ahead of the runtime; a manual bump follows a runtime bump.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  # ── GitHub Actions used by the CI / Claude workflows ──────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── Docker base images in the multi-stage Dockerfile ──────────────────────
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"

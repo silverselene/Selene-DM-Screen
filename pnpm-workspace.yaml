@@ -34,32 +34,27 @@ packages:
   - services/*
 
 catalog:
-  '@tailwindcss/vite': ^4.1.14
+  '@tailwindcss/vite': ^4.3.3
   # Pinned to ^24 to match the documented Node 24+ runtime (Dockerfile build
   # stage + README); ^25 types drift ahead of the runtime we actually ship on.
-  '@types/node': ^24
-  '@types/react': ^19.2.0
-  '@types/react-dom': ^19.2.0
-  '@vitejs/plugin-react': ^5.0.4
-  class-variance-authority: ^0.7.1
-  clsx: ^2.1.1
-  framer-motion: ^12.23.24
+  '@types/node': ^24.13.3
+  '@types/react': ^19.2.17
+  '@types/react-dom': ^19.2.3
+  '@vitejs/plugin-react': ^5.2.0
   lucide-react: ^0.545.0
   # Caret range (patch/minor within 19.x) — kept in step with the @types/react
   # range above. There is no expo in this workspace; the old exact-`19.1.0`
   # "because expo requires it" pin was stale and blocked React patch/security
   # updates for a constraint that no longer exists.
-  react: ^19.1.0
-  react-dom: ^19.1.0
-  tailwind-merge: ^3.3.1
-  tailwindcss: ^4.1.14
-  tsx: ^4.21.0
+  react: ^19.2.7
+  react-dom: ^19.2.7
+  tailwindcss: ^4.3.3
+  tsx: ^4.23.1
   # Single source of truth for the Vitest version across every package (see the
   # peer-hash hazard in CLAUDE.md: two copies drifting to different minors would
   # produce two `.pnpm` vitest instances and confusing symlink behavior).
-  vitest: ^4.1.9
-  vite: ^7.3.0
-  zod: ^3.25.76
+  vitest: ^4.1.10
+  vite: ^7.3.6
 
 autoInstallPeers: false
 
