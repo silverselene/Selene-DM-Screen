@@ -1,0 +1,16 @@
+{
+  // Type-checks the build/tooling config files that tsconfig.json's
+  // `include: ["src/**/*"]` never sees. Vite loads vite.config.ts and Vitest
+  // loads vitest.config.ts through esbuild (type-stripping only), so a type
+  // error in the PWA config or the test runner config would otherwise surface
+  // nowhere. Wired into the package `typecheck` script so `pnpm build`
+  // (typecheck:deployable) catches config regressions before they ship.
+  "extends": "../../tsconfig.base.json",
+  "include": ["vite.config.ts", "vitest.config.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  }
+}

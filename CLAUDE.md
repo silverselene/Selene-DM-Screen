@@ -28,11 +28,16 @@ pnpm build        # typecheck + vite build → artifacts/dm-screen/dist/public/
 pnpm preview      # vite preview of the built bundle
 
 # Typecheck only
-pnpm typecheck                                       # whole workspace (incl. services/ai-bridge)
-pnpm --filter @workspace/dm-screen run typecheck     # single package
+pnpm typecheck                                       # whole workspace (incl. services/ai-bridge) — also runs each package's typecheck:tests
+pnpm --filter @workspace/dm-screen run typecheck     # single package (src + config files)
 # `pnpm build` runs `typecheck:deployable` (artifacts + scripts only) — NOT the
 # bridge — because the Docker build image never installs the bridge's Agent-SDK
 # deps. Use `pnpm typecheck` to type-check the bridge locally.
+# dm-screen's `typecheck` covers src + the config files (vite.config.ts,
+# vitest.config.ts) via tsconfig.node.json; its separate `typecheck:tests`
+# (tsconfig.test.json) covers the *.test.ts(x) files. Root `pnpm typecheck`
+# runs both; `typecheck:deployable`/`pnpm build` runs only the former, so a
+# test type error fails CI but does not block a deploy.
 
 # Tests (Vitest — dm-screen pure logic; Node env, no jsdom)
 pnpm test                                            # all packages that define a test script
@@ -52,14 +57,14 @@ pnpm --filter @workspace/scripts run generate:compendium
 docker compose up --build                            # http://localhost:38080 (host) → 8080 (non-root nginx container)
 ```
 
-**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts)) and, since the AI-bridge work, for `services/ai-bridge` ([vitest.config.ts](services/ai-bridge/vitest.config.ts), Node-env / no-jsdom). The bridge suite spans both tiers: pure logic (tool-result parsers in `toolResults.ts`, config/origin validation, SSE framing in `sse.ts`, the smoke formatter) **and** real-socket HTTP lifecycle tests (`server.test.ts` binds ephemeral ports and drops sockets to exercise the wedge/timeout/backpressure/oversized-body paths) plus an SDK-mocking gate/mapping test (`agent.test.ts`) — the Agent SDK subprocess is always mocked, the HTTP server and sockets are real. Tests live beside the code as `*.test.ts` / `*.test.tsx`, both excluded from the build via `tsconfig.json` — **add new test globs to that `exclude` list**, or the file leaks into `pnpm build`'s typecheck.
+**Testing.** Vitest is wired up for the dm-screen package ([vitest.config.ts](artifacts/dm-screen/vitest.config.ts)) and, since the AI-bridge work, for `services/ai-bridge` ([vitest.config.ts](services/ai-bridge/vitest.config.ts), Node-env / no-jsdom). The bridge suite spans both tiers: pure logic (tool-result parsers in `toolResults.ts`, config/origin validation, SSE framing in `sse.ts`, the smoke formatter) **and** real-socket HTTP lifecycle tests (`server.test.ts` binds ephemeral ports and drops sockets to exercise the wedge/timeout/backpressure/oversized-body paths) plus an SDK-mocking gate/mapping test (`agent.test.ts`) — the Agent SDK subprocess is always mocked, the HTTP server and sockets are real. Tests live beside the code as `*.test.ts` / `*.test.tsx`, excluded from the *deployable* program via `tsconfig.json`'s `**/*.test.ts(x)` globs so they don't leak into `pnpm build`'s typecheck — but they ARE type-checked: dm-screen runs `tsc -p tsconfig.test.json` under the `typecheck:tests` script (root `pnpm typecheck` invokes it; the ai-bridge/scripts packages' own `typecheck` already includes their tests since their tsconfigs have no test exclude). So a test asserting against a stale API shape now fails CI. The tsconfig `exclude` globs are wildcards, so a *new* test file needs no config change; only add to `exclude` if you introduce a differently-named test pattern.
 
 Two tiers, and the default env is **`"node"`** — keep it that way:
 
 - **Tier 1 — pure logic (the bulk).** dm-screen's `src/lib` (validators, id minting, backup/restore, the initiative add rules in `combatant.ts`) and the bridge's parsers. Runs in the plain Node env; storage-dependent tests install a fake `window.localStorage` per-test rather than pulling in jsdom.
-- **Tier 2 — component tests, opt-in per file.** A `// @vitest-environment jsdom` docblock at the top of the file — **not** a global `test.environment` flip, which would tax every pure-logic file with a DOM setup it doesn't need. Currently one file: [InitiativeWidget.addPaths.test.tsx](artifacts/dm-screen/src/components/widgets/InitiativeWidget.addPaths.test.tsx), which guards that all four "add to initiative" paths converge on the shared rule — an invariant tier 1 structurally cannot see. Mock heavy data modules when you mount a widget (that file mocks `@/lib/monsterSearch`, since `src/data/monsters.ts` is 4.7 MB).
+- **Tier 2 — component tests, opt-in per file.** A `// @vitest-environment jsdom` docblock at the top of the file — **not** a global `test.environment` flip, which would tax every pure-logic file with a DOM setup it doesn't need. Currently one file: [InitiativeWidget.addPaths.test.tsx](artifacts/dm-screen/src/components/widgets/InitiativeWidget.addPaths.test.tsx), which guards that all four "add to initiative" paths converge on the shared rule — an invariant tier 1 structurally cannot see. Mock heavy data modules when you mount a widget (that file mocks `@/lib/monsterSearch`, since `src/data/monsters.ts` is 4.8 MB).
 
-**jsdom is not a browser.** Its `window.confirm`/`alert` throw "Not implemented" (stub them; assert on message + effect, not that a modal blocked), it has no layout (`getBoundingClientRect` returns zeros, so the anchored-dropdown flip is out of reach), and it enforces no storage quota. Those, plus service-worker updates and file-picker dismissal, still need manual verification (see [MANUAL-TESTS-post-rebase.md](MANUAL-TESTS-post-rebase.md)) or Playwright.
+**jsdom is not a browser.** Its `window.confirm`/`alert` throw "Not implemented" (stub them; assert on message + effect, not that a modal blocked), it has no layout (`getBoundingClientRect` returns zeros, so the anchored-dropdown flip is out of reach), and it enforces no storage quota. Those, plus service-worker updates and file-picker dismissal, still need manual verification or Playwright coverage.
 
 Full verification is `pnpm test` + `pnpm typecheck` + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero). New deps are subject to the `minimumReleaseAge: 1440` gate. Note that `vitest` takes an optional peer on `jsdom`, so adding/removing it re-hashes vitest's `.pnpm` path for **every** workspace project — run a full `pnpm install` (not a filtered one) afterward or the other packages' `vitest` symlinks dangle.
 
@@ -141,7 +146,7 @@ The app is a PWA via `vite-plugin-pwa` configured in `vite.config.ts`:
 - `navigateFallback: "index.html"` for SPA routing.
 - `build.rollupOptions.output.manualChunks` splits the big datasets into stable `data-spells` / `data-monsters` / `data-weapons` / `data-compendium-rules` chunks, and widgets are `React.lazy`-loaded per tile, so the main `index` chunk is ~237 kB and a widget edit no longer busts the dataset precache.
 - `maximumFileSizeToCacheInBytes: 8 MiB` (headroom for the largest dataset chunk — `data-monsters` alone is ~4.1 MB now that most of the 2,160-row monster dataset carries a full stat block; default 2 MiB cap was uncomfortably close).
-- `globPatterns` precaches `js, css, html, svg, png, ico, webp, woff, woff2`.
+- `globPatterns` precaches `js, css, html, svg, png, jpg, jpeg, ico, webp, woff, woff2`.
 - Two `runtimeCaching` rules for Google Fonts (stylesheet StaleWhileRevalidate, woff2 CacheFirst).
 
 The nginx config in `artifacts/dm-screen/docker/nginx.conf` sets `Cache-Control: no-cache` on `sw.js` / `registerSW.js` / `manifest.webmanifest` / `index.html` so PWA updates land on the next reload instead of being pinned by intermediate caches.

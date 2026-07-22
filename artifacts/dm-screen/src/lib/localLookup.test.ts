@@ -45,6 +45,7 @@ const spell: Spell = {
   name: "Fireball", level: 3, school: "Evocation", castingTime: "1 action",
   range: "150 feet", components: "V, S, M", duration: "Instantaneous",
   classes: ["Sorcerer", "Wizard"], description: "A bright streak flashes...",
+  damageSummary: "8d6 Fire (Dex save)",
 };
 
 const goblin: MonsterEntry = {

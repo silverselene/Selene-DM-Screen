@@ -45,13 +45,19 @@ catalog:
   clsx: ^2.1.1
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
-  # Must be this exact version because expo requires it
-  react: 19.1.0
-  # Must be this exact version because expo requires it
-  react-dom: 19.1.0
+  # Caret range (patch/minor within 19.x) — kept in step with the @types/react
+  # range above. There is no expo in this workspace; the old exact-`19.1.0`
+  # "because expo requires it" pin was stale and blocked React patch/security
+  # updates for a constraint that no longer exists.
+  react: ^19.1.0
+  react-dom: ^19.1.0
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
+  # Single source of truth for the Vitest version across every package (see the
+  # peer-hash hazard in CLAUDE.md: two copies drifting to different minors would
+  # produce two `.pnpm` vitest instances and confusing symlink behavior).
+  vitest: ^4.1.9
   vite: ^7.3.0
   zod: ^3.25.76
 

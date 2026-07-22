@@ -19,6 +19,6 @@
     "@types/node": "catalog:",
     "@workspace/bridge-protocol": "workspace:*",
     "tsx": "catalog:",
-    "vitest": "^4.1.9"
+    "vitest": "catalog:"
   }
 }

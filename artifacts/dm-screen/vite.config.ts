@@ -100,7 +100,7 @@ export default defineConfig({
         // Precache everything the build emits, plus the bundled data files
         // and Google Fonts on first online visit so the table never needs
         // network.
-        globPatterns: ["**/*.{js,css,html,svg,png,ico,webp,woff,woff2}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,jpg,jpeg,ico,webp,woff,woff2}"],
         // The dm-screen JS bundle is ~1.6 MB, and data-monsters alone is
         // ~4.1 MB now that most of the 2,160-row monster dataset carries a
         // full stat block. Default precache cap is 2 MB — raise well past

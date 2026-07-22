@@ -1,4 +1,10 @@
 {
+  // Intentionally empty root marker. Cross-package imports resolve through the
+  // `workspace` export condition, NOT TypeScript project references, so this
+  // has no `files`/`references` and compiles nothing. It exists only so a bare
+  // `tsc` at the repo root is a safe no-op and editors have a root to anchor
+  // on. Each package is type-checked by its own `typecheck` script (run via
+  // `pnpm -r`); there is deliberately no root `tsc --build` step.
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],

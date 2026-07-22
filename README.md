@@ -33,7 +33,7 @@ saved in the sidebar for quick restore. Layout persists across sessions via
 - **Oracle** — random generator with four tabs: Names (by ancestry/race),
   Places (7 settlement types with combinatorial name patterns and
   descriptors), Loot (by CR tier), and Items (mundane & common magic).
-- **Bestiary** — full-text search over a unified 2,160-monster dataset, 2,146
+- **Bestiary** — full-text search over a unified 2,160-monster dataset, 2,144
   of them with a full stat block (traits, actions, reactions, legendary
   actions) rather than just a thin index entry. CR-coloured badges throughout.
 - **Wizard's Tome** — searchable spell compendium (557 spells). Filter by
@@ -144,8 +144,8 @@ pnpm dev        # http://localhost:38080 (dev server with HMR)
 ### Production build
 
 ```bash
-pnpm typecheck  # project-references-aware tsc across the workspace
-pnpm build      # typechecks, then builds the SPA to artifacts/dm-screen/dist/public/
+pnpm typecheck  # tsc across the whole workspace (every package + its tests)
+pnpm build      # typechecks the deployable, then builds the SPA to artifacts/dm-screen/dist/public/
 pnpm preview    # serves the built bundle on http://localhost:38080
 ```
 
@@ -233,10 +233,10 @@ Dockerfile, docker-compose.yml, .dockerignore
 | Dataset | Count | Source |
 |---|---|---|
 | Spells | 557 | 5etools v2.31.0 (`data/spells/*.json` + `sources.json`) |
-| Monsters | 2,160 (2,146 with full stat blocks) | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools v2.31.0 bestiary (2024 XMM preferred) + Open5e (OGL) |
+| Monsters | 2,160 (2,144 with full stat blocks) | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools v2.31.0 bestiary (2024 XMM preferred) + Open5e (OGL) |
 | Weapons | 251 | 5etools v2.31.0 (`data/items.json` + `items-base.json`) |
 | Compendium (hand-curated) | 78 | hand-curated DM summaries |
-| Compendium (bulk rules) | 564 | 5etools v2.31.0 (feats, actions, skills, senses, variant rules) + Open5e (OGL) |
+| Compendium (bulk rules) | 561 | 5etools v2.31.0 (feats, actions, skills, senses, variant rules) + Open5e (OGL) |
 
 The data is generated **offline** from local sibling clones of `5etools-src`
 pinned at tag `v2.31.0` and, for the Open5e-sourced portions of the monster

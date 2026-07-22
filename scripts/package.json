@@ -17,6 +17,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
-    "vitest": "^4.1.9"
+    "vitest": "catalog:"
   }
 }

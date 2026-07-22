@@ -12,12 +12,14 @@ on:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+    # Gate on the PR author's repo relationship. This job holds
+    # CLAUDE_CODE_OAUTH_TOKEN (subscription spend) + id-token:write and runs
+    # attacker-authored PR content through Claude, so on a public repo a
+    # drive-by PR from anyone must NOT be able to trigger it — same trust gate
+    # claude.yml applies to @claude mentions. Fork PRs from non-members carry
+    # author_association CONTRIBUTOR/NONE/FIRST_TIME_CONTRIBUTOR and are
+    # skipped; a maintainer can still review them manually.
+    if: contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     permissions:
       contents: read

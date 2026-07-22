@@ -40,9 +40,99 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Full workspace typecheck — including services/ai-bridge, which the
-      # build's typecheck:deployable intentionally skips.
+      # build's typecheck:deployable intentionally skips. `pnpm typecheck` now
+      # also runs each package's `typecheck:tests` (dm-screen's config +
+      # *.test.ts(x) files), which the deployable build does NOT — a test/config
+      # type error should fail CI, not block a deploy.
+      # This runs BEFORE the ~minute-long `pnpm build` step so a type error
+      # fails fast (seconds). `pnpm build` re-runs typecheck:deployable over the
+      # deployable src, so that subset is checked twice per run; the fast-fail
+      # feedback is worth the few redundant seconds, and there is no single
+      # script for "bridge + tests only" that would let us cut it cleanly.
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
+
+      # `pnpm build` chains typecheck:deployable + vite build + verify-precache
+      # (the 8 MiB precache-cap guard on the data-* chunks and the baked
+      # AI_BRIDGE_URL define assertion). Without this in CI those guards run
+      # only on a developer's machine or inside a Docker build nobody is
+      # required to run pre-merge — so a dataset regen that blows the cap, or a
+      # Vite change that drops the define, would merge green and first break at
+      # deploy time.
+      - name: Build (typecheck:deployable + vite build + verify-precache)
+        run: pnpm build
+
+      # Bundle-content invariants documented in CLAUDE.md: the static SPA must
+      # carry no `/api/` references (the pre-migration Express server is gone)
+      # and the types-only @workspace/bridge-protocol must be erased from every
+      # chunk. Both scans are scoped to *.js: a types-only import can only leak
+      # into a JS chunk, and *.js excludes *.js.map — so if build sourcemaps are
+      # ever enabled, a map that legitimately records the original module path
+      # won't false-fail this job. grep exits 0 on a match, so any hit fails.
+      - name: Bundle scans (no /api/, bridge-protocol erased)
+        run: |
+          assets="artifacts/dm-screen/dist/public/assets"
+          fail=0
+          if grep -rn "/api/" "$assets"/*.js; then
+            echo "::error::Found /api/ references in the built bundle"
+            fail=1
+          fi
+          if grep -rn "bridge-protocol" "$assets"/*.js; then
+            echo "::error::@workspace/bridge-protocol leaked into the built bundle"
+            fail=1
+          fi
+          if [ "$fail" -eq 0 ]; then
+            echo "Bundle scans clean: no /api/ refs, bridge-protocol erased."
+          fi
+          exit "$fail"
+
+  docker:
+    name: Docker build + container smoke
+    runs-on: ubuntu-latest
+    # The static bundle's CSP, security headers, and SPA-fallback routing live
+    # in the nginx layer and are sent ONLY by the container (dev/preview send no
+    # CSP) — so a CSP/header regression, or a filtered-install breakage (e.g. a
+    # forgotten `COPY <pkg>/package.json` after adding a workspace dep), is
+    # otherwise caught only when a human runs `docker compose up --build`. This
+    # job builds the image and boots it so those land on the PR instead.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Build image
+        run: docker build -t dm-screen:ci .
+
+      - name: Boot container and assert CSP + security headers + app serves
+        run: |
+          docker run -d --name dm-screen-ci -p 8080:8080 dm-screen:ci
+          # nginx listens on 8080 (non-root image). Wait for it to answer.
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/ >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          headers="$(curl -fsSI http://localhost:8080/)" || {
+            echo "::error::Container did not serve the app on :8080"
+            docker logs dm-screen-ci || true
+            docker rm -f dm-screen-ci >/dev/null 2>&1 || true
+            exit 1
+          }
+          echo "$headers"
+          fail=0
+          for h in "content-security-policy" "x-content-type-options" "x-frame-options"; do
+            if ! printf '%s' "$headers" | grep -iq "^$h:"; then
+              echo "::error::Response is missing the $h header"
+              fail=1
+            fi
+          done
+          # The SPA fallback must return 200 (index.html) for an unknown route.
+          code="$(curl -fsS -o /dev/null -w '%{http_code}' http://localhost:8080/deep/link || true)"
+          if [ "$code" != "200" ]; then
+            echo "::error::SPA fallback did not return 200 for /deep/link (got $code)"
+            fail=1
+          fi
+          docker rm -f dm-screen-ci >/dev/null 2>&1 || true
+          if [ "$fail" -eq 0 ]; then echo "Container smoke passed: CSP + headers + SPA fallback OK."; fi
+          exit "$fail"

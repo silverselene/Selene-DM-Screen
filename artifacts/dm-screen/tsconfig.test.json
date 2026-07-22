@@ -1,0 +1,23 @@
+{
+  // Type-checks the *.test.ts(x) files that tsconfig.json deliberately
+  // excludes from the deployable program. Inherits every compilerOption from
+  // tsconfig.json (jsx, the dom libs, the @/* paths, vite/client types) and
+  // only drops the test-file excludes so the tests are in the program.
+  //
+  // Run by the package `typecheck:tests` script, which the root `pnpm
+  // typecheck` (CI) invokes — but NOT `typecheck:deployable` / `pnpm build`:
+  // a type error in a test should fail CI, not block a production deploy.
+  // Config files (tsconfig.node.json) DO gate the deploy because vite.config
+  // is part of the build; tests are not.
+  //
+  // `include` is the whole src tree, not just *.test.ts(x): tests import from
+  // src, so src must be in the program to resolve them. That means this pass
+  // re-checks src (already covered by tsconfig.json) on top of the tests — an
+  // accepted cost, since the alternative (composite/project references to
+  // share the src program) is the wiring this workspace deliberately avoids
+  // (see CLAUDE.md: cross-package resolution goes through the `workspace`
+  // export condition, not references).
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "build", "dist"]
+}

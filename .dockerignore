@@ -25,22 +25,41 @@
 .DS_Store
 **/*.swp
 
-# Logs and local-only state.
-*.log
+# Logs and local-only state. `**/` so a nested log (e.g. a package dir) is
+# excluded too, not just one dropped at the context root.
+**/*.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Local Claude Code state (settings.local.json permission allowlists, etc.) —
+# local-only, exactly the kind of state this file's preamble excludes. `**/`
+# so a package-level .claude/ is caught as well.
+**/.claude/
 
 # Secrets. The app needs no env vars, so any such file is local-only by
 # definition — but `COPY . .` would still pull it into build-stage layers
 # (which leak via pushed intermediate layers or registry-backed build
-# caches) if someone drops one in the repo root.
-.env
-.env.*
-*.pem
-*.key
-*.p12
-*.pfx
-secrets*
+# caches) if someone drops one in the repo. `**/`-prefixed so a NESTED secret
+# (e.g. services/ai-bridge/.env — the one package that IS env-configured, or
+# an artifacts/dm-screen/dev.key) is excluded too: a bare `.env` pattern
+# matches only the context root, which is the exact leak this list exists to
+# prevent.
+#
+# Tradeoff: these are secret/cert-shaped names (crypto key & cert extensions,
+# dotenv files, a `secrets*` prefix) that no source artifact in this workspace
+# uses, and the `**/` makes them shadow such a file at ANY depth. If someone
+# ever DID name real source with one of these (e.g. src/secretsManager.ts, a
+# *.key fixture), `COPY . .` would silently omit it and the image build would
+# fail — but that failure is loud and immediate, and keeping a would-be secret
+# out of build-stage layers is the priority. Narrowing these back to the
+# context root would reopen the nested-secret leak this block exists to close.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/secrets*
 
 # Docker scaffolding (no point shipping the Dockerfile into the image).
 Dockerfile
