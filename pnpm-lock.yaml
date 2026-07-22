@@ -195,8 +195,8 @@ importers:
         specifier: 0.3.216
         version: 0.3.216(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       '@iamjameslennon/ddb-mcp':
-        specifier: 2.10.1
-        version: 2.10.1
+        specifier: 2.10.2
+        version: 2.10.2
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -881,9 +881,9 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@iamjameslennon/ddb-mcp@2.10.1':
-    resolution: {integrity: sha512-1h3cXIfAhi2ZbwX9kh1NGTukDPVe7/FHoOBojWTala+ci5BmedxtH4W2RpMaiiKP72qUkaa2mDlTn/K6WfyEEA==}
-    engines: {node: '>=20'}
+  '@iamjameslennon/ddb-mcp@2.10.2':
+    resolution: {integrity: sha512-ohkHgP3IZVEYupxqYlgeh37XGl79UaHKSPlEUkeO+o66YC66ObW4qX4xDWz0Nr/T0u5+GU8BRoR9HieLQeXVkA==}
+    engines: {node: '>=22'}
     hasBin: true
 
   '@isaacs/cliui@9.0.0':
@@ -2105,8 +2105,21 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  lightningcss-darwin-arm64@1.33.0:
+    resolution: {integrity: sha512-Sciaz8eenNTKn9b3t7+xr0ipTp9YxKQY4npwQ3mrRuL0BAVHBLyZxofhaKBAVtzmtRZ/zTyo0/to4B1uWG/Djg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [darwin]
+
   lightningcss-linux-arm64-gnu@1.32.0:
     resolution: {integrity: sha512-0nnMyoyOLRJXfbMOilaSRcLH3Jw5z9HDNGfT/gwCPgaDjnx0i8w7vBzFLFR1f6CMLKF8gVbebmkUN3fa/kQJpQ==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  lightningcss-linux-arm64-gnu@1.33.0:
+    resolution: {integrity: sha512-j2v/itmy4HlNxlc6voKXYgBqNi0Ng2LShg4z7GufpEgs05P+2suBVyi9I6YHq5uoVFx9ETin3eCEhLVyXGQnKg==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
@@ -2119,8 +2132,19 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  lightningcss-linux-x64-gnu@1.33.0:
+    resolution: {integrity: sha512-ar+Ju7LmcN0Jo4FpL4hpFybwNG9/3A/Br5KW2n2jyODg3MEZXaDYADdemoNS+BDNfMgKvylJLj4S5tyRActuAg==}
+    engines: {node: '>= 12.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
   lightningcss@1.32.0:
     resolution: {integrity: sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==}
+    engines: {node: '>= 12.0.0'}
+
+  lightningcss@1.33.0:
+    resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
 
   lodash.debounce@4.0.8:
@@ -3705,7 +3729,7 @@ snapshots:
     dependencies:
       hono: 4.12.31
 
-  '@iamjameslennon/ddb-mcp@2.10.1':
+  '@iamjameslennon/ddb-mcp@2.10.2':
     dependencies:
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       cheerio: 1.2.0
@@ -4960,10 +4984,19 @@ snapshots:
   lightningcss-darwin-arm64@1.32.0:
     optional: true
 
+  lightningcss-darwin-arm64@1.33.0:
+    optional: true
+
   lightningcss-linux-arm64-gnu@1.32.0:
     optional: true
 
+  lightningcss-linux-arm64-gnu@1.33.0:
+    optional: true
+
   lightningcss-linux-x64-gnu@1.32.0:
+    optional: true
+
+  lightningcss-linux-x64-gnu@1.33.0:
     optional: true
 
   lightningcss@1.32.0:
@@ -4973,6 +5006,14 @@ snapshots:
       lightningcss-darwin-arm64: 1.32.0
       lightningcss-linux-arm64-gnu: 1.32.0
       lightningcss-linux-x64-gnu: 1.32.0
+
+  lightningcss@1.33.0:
+    dependencies:
+      detect-libc: 2.1.2
+    optionalDependencies:
+      lightningcss-darwin-arm64: 1.33.0
+      lightningcss-linux-arm64-gnu: 1.33.0
+      lightningcss-linux-x64-gnu: 1.33.0
 
   lodash.debounce@4.0.8: {}
 
@@ -5619,7 +5660,7 @@ snapshots:
 
   vite@8.1.5(@types/node@24.13.3)(esbuild@0.27.3)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1):
     dependencies:
-      lightningcss: 1.32.0
+      lightningcss: 1.33.0
       picomatch: 4.0.5
       postcss: 8.5.21
       rolldown: 1.1.5
