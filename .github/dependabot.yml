@@ -43,3 +43,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    ignore:
+      # The build stage is pinned to Node 24 (current LTS) on purpose — it must
+      # match the linux-{x64,arm64}-gnu native binaries and the @types/node ^24
+      # pin above. Node 25+ also removed bundled corepack, breaking the pnpm
+      # bootstrap. Moving off 24 is a deliberate manual bump, not an auto-PR.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
