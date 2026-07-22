@@ -5,7 +5,7 @@
 # overrides currently exclude the musl variants of rollup / esbuild /
 # lightningcss / @tailwindcss/oxide. node:24-bookworm-slim ships glibc, which
 # matches the linux-x64-gnu binaries that aren't excluded.
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 
 # Corepack is bundled with node 24; use it to materialise the exact pnpm
 # version pinned by root package.json's `packageManager` field (corepack
