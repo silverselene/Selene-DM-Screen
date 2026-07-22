@@ -41,7 +41,7 @@ catalog:
   '@types/react': ^19.2.17
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^5.2.0
-  lucide-react: ^0.545.0
+  lucide-react: ^1.25.0
   # Caret range (patch/minor within 19.x) — kept in step with the @types/react
   # range above. There is no expo in this workspace; the old exact-`19.1.0`
   # "because expo requires it" pin was stale and blocked React patch/security
