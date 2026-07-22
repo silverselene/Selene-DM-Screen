@@ -54,7 +54,7 @@ catalog:
   # peer-hash hazard in CLAUDE.md: two copies drifting to different minors would
   # produce two `.pnpm` vitest instances and confusing symlink behavior).
   vitest: ^4.1.10
-  vite: ^7.3.6
+  vite: ^8.1.5
 
 autoInstallPeers: false
 
