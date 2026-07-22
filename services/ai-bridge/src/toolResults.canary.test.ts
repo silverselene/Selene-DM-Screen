@@ -18,7 +18,7 @@ describe("ddb-mcp output canaries", () => {
   // parsers scrape. This fails on any version change so a human re-captures
   // sample output and re-verifies toolResults.ts before shipping the bump —
   // update this constant in the same commit once that's done.
-  const CAPTURED_DDB_MCP_VERSION = "2.10.1";
+  const CAPTURED_DDB_MCP_VERSION = "2.10.2";
 
   it("is pinned to the ddb-mcp version its fixtures were captured against", () => {
     const { version } = require("@iamjameslennon/ddb-mcp/package.json") as { version: string };
