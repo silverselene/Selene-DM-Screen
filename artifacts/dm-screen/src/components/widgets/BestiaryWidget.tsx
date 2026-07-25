@@ -234,10 +234,44 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
   return (
     // `flex-1 min-h-0` claims the remaining height inside the detail-view
     // card; `overflow-hidden` forces the column to honour its computed
-    // height instead of stretching to the tab body's content.
+    // height instead of stretching to fit its content.
     <div className="flex-1 min-h-0 overflow-hidden flex flex-col text-[10px] leading-relaxed">
-      {/* ── Sticky header (always visible) ───────────────────────────────── */}
-      <div className="shrink-0">
+      {/* ── Tab strip (pinned above the scroll region) ───────────────────────
+          Only this stays fixed, so switching tabs never costs a scroll-back-up.
+          Everything else — the AC/HP/ability-score/saves header AND the active
+          tab's body — used to be split between a non-scrolling `shrink-0` block
+          and a separately-scrolling tab body. In a short tile the header block
+          had no scroll region of its own: `overflow-hidden` on this column just
+          clipped it, with no way to reach the rest. Folding the header into the
+          SAME scroll container as the tab body (below) fixes that — a DM can
+          now scroll through the whole stat block in a small tile instead of
+          having to resize it. */}
+      {presentTabs.length > 0 && (
+        <div className="flex gap-0.5 border-b border-purple-900/40 shrink-0 mb-1.5">
+          {presentTabs.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                  isActive
+                    ? "text-purple-300 border-purple-400"
+                    : "text-gray-500 border-transparent hover:text-purple-400"
+                }`}
+              >
+                {TAB_LABELS[tab]}
+                {tabCounts[tab] > 0 && (
+                  <span className="ml-1 text-[9px] opacity-60">{tabCounts[tab]}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
           <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
           <div className="flex items-center gap-1.5">
@@ -284,36 +318,11 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
           {monster.senses && <div><span className="text-gray-500 font-semibold">Senses </span><span className="text-gray-300">{monster.senses}</span></div>}
           {monster.languages && <div><span className="text-gray-500 font-semibold">Languages </span><span className="text-gray-300">{monster.languages}</span></div>}
         </div>
-      </div>
 
-      {/* ── Tab strip + scrollable tab body ──────────────────────────────── */}
-      {presentTabs.length === 0 ? (
-        <p className="text-[10px] text-gray-600 italic mt-2 shrink-0">Full stat block not available for this monster.</p>
-      ) : (
-        <>
-          <div className="flex gap-0.5 border-b border-purple-900/40 shrink-0">
-            {presentTabs.map((tab) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
-                    isActive
-                      ? "text-purple-300 border-purple-400"
-                      : "text-gray-500 border-transparent hover:text-purple-400"
-                  }`}
-                >
-                  {TAB_LABELS[tab]}
-                  {tabCounts[tab] > 0 && (
-                    <span className="ml-1 text-[9px] opacity-60">{tabCounts[tab]}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto pt-1.5">
+        {presentTabs.length === 0 ? (
+          <p className="text-[10px] text-gray-600 italic">Full stat block not available for this monster.</p>
+        ) : (
+          <>
             {activeTab === "attacks" && <AttackOptions options={combat} />}
             {activeTab === "spells" && <SpellOptions options={combat} />}
             {activeTab !== null && isProseTab(activeTab) && (
@@ -325,9 +334,9 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
                 ))}
               </div>
             )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
