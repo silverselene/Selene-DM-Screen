@@ -36,7 +36,7 @@ export function SingletonGate({
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
         {icon}
-        <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
+        <p className="text-sm leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
           {name} is already open in another tile. It keeps one saved state, so it
           can only be open once — remove this tile, or close the other one to use
           it here.

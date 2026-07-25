@@ -177,7 +177,7 @@ function FooterPicker<T extends string>({
               onChange(o.id);
               close(true);
             }}
-            className={`block w-full text-left px-2 py-1 text-[11px] whitespace-nowrap hover:bg-amber-900/30 focus:bg-amber-900/30 outline-none transition-colors ${
+            className={`block w-full text-left px-2 py-1 text-[13px] whitespace-nowrap hover:bg-amber-900/30 focus:bg-amber-900/30 outline-none transition-colors ${
               o.id === value ? "text-amber-300" : "text-gray-200"
             }`}
           >
@@ -239,7 +239,7 @@ function BridgeDownBanner({
   return (
     <div className="shrink-0 mb-2 flex items-start gap-2 rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1.5">
       <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0 text-amber-500/80" />
-      <div className="flex-1 min-w-0 text-[10px] leading-relaxed text-amber-300/90">
+      <div className="flex-1 min-w-0 text-[12px] leading-relaxed text-amber-300/90">
         {status === "offline" ? (
           <>
             <span className="font-semibold">AI bridge not running.</span> Lookups from your bundled
@@ -267,7 +267,7 @@ function BridgeDownBanner({
           void onRetry().finally(() => setRetrying(false));
         }}
         disabled={retrying}
-        className="shrink-0 flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-amber-700/50 text-amber-300/90 hover:bg-amber-900/20 disabled:opacity-50 transition-colors"
+        className="shrink-0 flex items-center gap-1 text-[12px] px-1.5 py-0.5 rounded border border-amber-700/50 text-amber-300/90 hover:bg-amber-900/20 disabled:opacity-50 transition-colors"
       >
         <RefreshCw className={`w-2.5 h-2.5 ${retrying ? "animate-spin" : ""}`} />{" "}
         {retrying ? "Retrying…" : "Retry"}
@@ -302,7 +302,7 @@ const MessageRow = memo(function MessageRow({
   if (m.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-lg rounded-br-sm px-2.5 py-1.5 text-xs whitespace-pre-wrap break-words bg-amber-900/25 border border-amber-800/40" style={{ color: "var(--dm-t2)" }}>
+        <div className="max-w-[85%] rounded-lg rounded-br-sm px-2.5 py-1.5 text-sm whitespace-pre-wrap break-words bg-amber-900/25 border border-amber-800/40" style={{ color: "var(--dm-t2)" }}>
           {m.text}
         </div>
       </div>
@@ -315,7 +315,7 @@ const MessageRow = memo(function MessageRow({
           {m.tools.map((t, j) => (
             <span
               key={j}
-              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-cyan-800/50 text-cyan-300/80 bg-cyan-950/30"
+              className="inline-flex items-center gap-1 text-[12px] px-1.5 py-0.5 rounded border border-cyan-800/50 text-cyan-300/80 bg-cyan-950/30"
             >
               <Search className="w-2.5 h-2.5" /> {t}
             </span>
@@ -330,7 +330,7 @@ const MessageRow = memo(function MessageRow({
       {m.toolErrors.length > 0 && (
         <div className="flex flex-col gap-1">
           {m.toolErrors.map((te, j) => (
-            <div key={j} className="flex items-start gap-1.5 text-xs text-red-400/90">
+            <div key={j} className="flex items-start gap-1.5 text-sm text-red-400/90">
               <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
               <span className="whitespace-pre-wrap break-words">
                 <span className="font-semibold">{te.tool}:</span> {te.message}
@@ -356,12 +356,12 @@ const MessageRow = memo(function MessageRow({
         </div>
       )}
       {m.pending && !m.text && m.tools.length === 0 && m.cards.length === 0 && m.toolErrors.length === 0 && (
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--dm-t3)" }}>
+        <div className="flex items-center gap-1.5 text-sm" style={{ color: "var(--dm-t3)" }}>
           <Loader2 className="w-3 h-3 animate-spin" /> Thinking…
         </div>
       )}
       {m.error && (
-        <div className="flex items-start gap-1.5 text-xs text-red-400/90">
+        <div className="flex items-start gap-1.5 text-sm text-red-400/90">
           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
           <span className="whitespace-pre-wrap break-words">{m.error}</span>
         </div>
@@ -392,7 +392,7 @@ export function AIChatWidget() {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
         <Sparkles className="w-6 h-6 text-amber-400/70" />
-        <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
+        <p className="text-sm leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
           AI Chat is already open in another tile. It keeps one saved
           conversation, so it can only be open once — remove this tile, or close
           the other one to use it here.
@@ -897,7 +897,7 @@ function AIChatSession() {
           <button
             onClick={newChat}
             title="Start a new conversation (clears context)"
-            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-amber-800/50 text-amber-300/80 hover:bg-amber-900/20 transition-colors"
+            className="flex items-center gap-1 text-[12px] px-1.5 py-0.5 rounded border border-amber-800/50 text-amber-300/80 hover:bg-amber-900/20 transition-colors"
           >
             <SquarePen className="w-2.5 h-2.5" /> New chat
           </button>
@@ -908,7 +908,7 @@ function AIChatSession() {
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
             <Sparkles className="w-6 h-6 text-amber-400/70" />
-            <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
+            <p className="text-sm leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
               Ask about rules, or look things up instantly from your bundled data with{" "}
               <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">/spell</code>,{" "}
               <code className="px-1 py-0.5 rounded bg-black/30 text-amber-300/90">/monster</code>,{" "}
@@ -928,7 +928,7 @@ function AIChatSession() {
       {/* Persist failure: storage writes are throwing (quota / private mode),
           so the transcript above is in-memory only and gone on reload. */}
       {persistFailed && (
-        <div className="shrink-0 mt-1.5 flex items-start gap-1.5 text-[10px] rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1 text-amber-300/90">
+        <div className="shrink-0 mt-1.5 flex items-start gap-1.5 text-[12px] rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1 text-amber-300/90">
           <AlertTriangle className="w-3 h-3 mt-px shrink-0" />
           <span>
             Chat history isn't being saved (browser storage may be full, or blocked in private
@@ -947,7 +947,7 @@ function AIChatSession() {
             onKeyDown={onKeyDown}
             rows={1}
             placeholder="Ask Selene…"
-            className="flex-1 resize-none max-h-24 overflow-y-auto text-xs px-2 py-1.5 rounded-md bg-black/20 border outline-none focus:border-amber-600/60"
+            className="flex-1 resize-none max-h-24 overflow-y-auto text-sm px-2 py-1.5 rounded-md bg-black/20 border outline-none focus:border-amber-600/60"
             style={{ borderColor: "var(--dm-border)", color: "var(--dm-t2)" }}
           />
           {sending ? (
@@ -969,7 +969,7 @@ function AIChatSession() {
             </button>
           )}
         </div>
-        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[10px]" style={{ color: "var(--dm-t3)" }}>
+        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[12px]" style={{ color: "var(--dm-t3)" }}>
           <FooterPicker<string> value={model} options={MODELS} onChange={setModel} title="Model" />
           <span className="opacity-40">·</span>
           <span>Effort:</span>

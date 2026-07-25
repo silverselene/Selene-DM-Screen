@@ -164,7 +164,7 @@ export function InitiativeWidget() {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
         <Swords className="w-6 h-6 text-amber-400/70" />
-        <p className="text-xs leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
+        <p className="text-sm leading-relaxed max-w-[16rem]" style={{ color: "var(--dm-t3)" }}>
           Initiative is already open in another tile. It tracks one live
           encounter, so it can only be open once — remove this tile, or close
           the other one to use it here.
@@ -544,19 +544,19 @@ function InitiativeSession() {
     setCombatants([]); setActiveId(null); setRound(1);
   };
 
-  const inputCls = "px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
+  const inputCls = "px-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
 
   return (
     <div className="h-full min-h-0 flex flex-col">
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between mb-2 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-purple-400">Round</span>
-          <span className="text-sm font-bold text-white">{round}</span>
+          <span className="text-sm text-purple-400">Round</span>
+          <span className="text-base font-bold text-white">{round}</span>
         </div>
         <div className="flex gap-1">
           <button onClick={nextTurn} disabled={sorted.length === 0}
-            className="flex items-center gap-1 text-xs px-2 py-1 bg-purple-800/50 hover:bg-purple-700/60 disabled:opacity-40 rounded transition-colors text-purple-200">
+            className="flex items-center gap-1 text-sm px-2 py-1 bg-purple-800/50 hover:bg-purple-700/60 disabled:opacity-40 rounded transition-colors text-purple-200">
             <SkipForward className="w-3 h-3" />Next
           </button>
           <button
@@ -575,12 +575,12 @@ function InitiativeSession() {
               });
             }}
             title="Add a combatant"
-            className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-700/60 hover:bg-gray-600/60 rounded transition-colors text-gray-300">
+            className="flex items-center gap-1 text-sm px-2 py-1 bg-gray-700/60 hover:bg-gray-600/60 rounded transition-colors text-gray-300">
             <Plus className="w-3 h-3" />
           </button>
           <button onClick={reset}
             title="Reset encounter"
-            className="flex items-center gap-1 text-xs px-2 py-1 bg-red-900/40 hover:bg-red-800/50 rounded transition-colors text-red-400">
+            className="flex items-center gap-1 text-sm px-2 py-1 bg-red-900/40 hover:bg-red-800/50 rounded transition-colors text-red-400">
             <RotateCcw className="w-3 h-3" />
           </button>
         </div>
@@ -593,17 +593,17 @@ function InitiativeSession() {
               then Party, then Custom for the rare hand-typed NPC/PC. */}
           <div className="flex gap-1 mb-2">
             <button onClick={() => setAddMode("monster")}
-              className={`flex-1 flex items-center justify-center gap-1 py-1 text-xs rounded border transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1 py-1 text-sm rounded border transition-all ${
                 addMode === "monster" ? "bg-rose-900/50 border-rose-700 text-rose-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
               <Skull className="w-3 h-3" />Monster
             </button>
             <button onClick={() => setAddMode("party")}
-              className={`flex-1 flex items-center justify-center gap-1 py-1 text-xs rounded border transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1 py-1 text-sm rounded border transition-all ${
                 addMode === "party" ? "bg-emerald-900/50 border-emerald-700 text-emerald-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
               <Users className="w-3 h-3" />Party
             </button>
             <button onClick={() => setAddMode("player")}
-              className={`flex-1 flex items-center justify-center gap-1 py-1 text-xs rounded border transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1 py-1 text-sm rounded border transition-all ${
                 addMode === "player" ? "bg-green-900/50 border-green-700 text-green-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
               <User className="w-3 h-3" />Custom
             </button>
@@ -615,17 +615,17 @@ function InitiativeSession() {
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-purple-400" />
                 <input placeholder="Search monsters…" value={monsterQuery}
                   onChange={(e) => { setMonsterQuery(e.target.value); setSelectedMonster(null); }}
-                  className={`w-full pl-6 pr-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-rose-500`} />
+                  className={`w-full pl-6 pr-2 py-1 bg-gray-800 border border-gray-600 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-rose-500`} />
               </div>
               {monsterResults.length > 0 && !selectedMonster && (
                 <div className="max-h-36 overflow-y-auto rounded border border-gray-700 bg-gray-900 divide-y divide-gray-800">
                   {monsterResults.map((m) => (
                     <button key={m.id} onClick={() => selectMonster(m)}
-                      className="w-full text-left px-2 py-1 text-xs hover:bg-rose-900/30 transition-colors">
+                      className="w-full text-left px-2 py-1 text-sm hover:bg-rose-900/30 transition-colors">
                       <div className="flex items-center gap-1">
                         <span className="text-gray-200 font-medium">{m.name}</span>
-                        {m.is_legendary && <span className="text-[9px] text-amber-400 border border-amber-700/50 rounded px-0.5 leading-tight">LEG</span>}
-                        {m.source && <span className="text-[9px] text-gray-600 ml-auto shrink-0">{m.source}</span>}
+                        {m.is_legendary && <span className="text-[11px] text-amber-400 border border-amber-700/50 rounded px-0.5 leading-tight">LEG</span>}
+                        {m.source && <span className="text-[11px] text-gray-600 ml-auto shrink-0">{m.source}</span>}
                       </div>
                       <div className="text-gray-500 mt-0.5">
                         {[m.size, m.type].filter(Boolean).join(" ")} · CR {m.cr} · AC {m.ac} · {m.hp.split(" ")[0]} HP
@@ -635,11 +635,11 @@ function InitiativeSession() {
                 </div>
               )}
               {selectedMonster && (
-                <div className="bg-rose-950/30 border border-rose-800/40 rounded px-2 py-1.5 text-xs">
+                <div className="bg-rose-950/30 border border-rose-800/40 rounded px-2 py-1.5 text-sm">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="font-semibold text-rose-300">{selectedMonster.name}</span>
-                    {selectedMonster.is_legendary && <span className="text-[9px] text-amber-400 border border-amber-700/50 rounded px-1 leading-tight">LEGENDARY</span>}
-                    {selectedMonster.source && <span className="text-[9px] text-gray-500 ml-auto">{selectedMonster.source}</span>}
+                    {selectedMonster.is_legendary && <span className="text-[11px] text-amber-400 border border-amber-700/50 rounded px-1 leading-tight">LEGENDARY</span>}
+                    {selectedMonster.source && <span className="text-[11px] text-gray-500 ml-auto">{selectedMonster.source}</span>}
                   </div>
                   <div className="text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span>CR {selectedMonster.cr}</span>
@@ -655,13 +655,13 @@ function InitiativeSession() {
               )}
               <div className="flex gap-1">
                 <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5" title="Your d20 roll">d20 roll</label>
+                  <label className="text-[12px] text-gray-500 block mb-0.5" title="Your d20 roll">d20 roll</label>
                   <input type="number" min="1" max="20" value={monsterD20Roll}
                     onChange={(e) => updateD20(e.target.value)} className={`w-full ${inputCls}`} />
                 </div>
                 <div className="w-1/3">
                   <label
-                    className="text-[10px] text-gray-500 block mb-0.5"
+                    className="text-[12px] text-gray-500 block mb-0.5"
                     title={
                       selectedMonster?.initiative_modifier != null
                         ? `d20 + ${selectedMonster.initiative_modifier >= 0 ? "+" : ""}${selectedMonster.initiative_modifier} DEX mod`
@@ -674,13 +674,13 @@ function InitiativeSession() {
                     onChange={(e) => setMonsterInitiative(e.target.value)} className={`w-full ${inputCls}`} />
                 </div>
                 <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">HP override</label>
+                  <label className="text-[12px] text-gray-500 block mb-0.5">HP override</label>
                   <input type="number" min="0" value={monsterHpOverride}
                     onChange={(e) => setMonsterHpOverride(e.target.value)} className={`w-full ${inputCls}`} />
                 </div>
               </div>
               <button onClick={addMonster} disabled={!selectedMonster}
-                className="w-full py-1 bg-rose-800 hover:bg-rose-700 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
+                className="w-full py-1 bg-rose-800 hover:bg-rose-700 disabled:opacity-40 rounded text-sm text-white font-semibold transition-colors">
                 Add Monster to Initiative
               </button>
             </div>
@@ -689,7 +689,7 @@ function InitiativeSession() {
           {addMode === "party" && (
             <div className="space-y-1.5">
               {partyChars.length === 0 && (
-                <p className="text-xs text-gray-500 text-center py-2">No characters saved yet — add them in the Party widget.</p>
+                <p className="text-sm text-gray-500 text-center py-2">No characters saved yet — add them in the Party widget.</p>
               )}
               {partyChars.length > 0 && (
                 <div className="space-y-1 max-h-40 overflow-y-auto">
@@ -700,16 +700,16 @@ function InitiativeSession() {
                           ? "bg-emerald-900/50 border-emerald-600"
                           : "bg-gray-800/60 border-gray-700 hover:border-emerald-700/50"}`}>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-gray-100 truncate">{pc.name}</div>
-                        <div className="text-[10px] text-gray-500">{[pc.race, pc.class, pc.level ? `Lv ${pc.level}` : null].filter(Boolean).join(" · ")}</div>
+                        <div className="text-sm font-semibold text-gray-100 truncate">{pc.name}</div>
+                        <div className="text-[12px] text-gray-500">{[pc.race, pc.class, pc.level ? `Lv ${pc.level}` : null].filter(Boolean).join(" · ")}</div>
                       </div>
                       {pc.ac != null && (
-                        <span className="text-[10px] text-blue-400 flex items-center gap-0.5 shrink-0">
+                        <span className="text-[12px] text-blue-400 flex items-center gap-0.5 shrink-0">
                           <Shield className="w-2.5 h-2.5" />{pc.ac}
                         </span>
                       )}
                       {pc.hp != null && (
-                        <span className="text-[10px] text-red-400 shrink-0">{pc.hp}hp</span>
+                        <span className="text-[12px] text-red-400 shrink-0">{pc.hp}hp</span>
                       )}
                     </button>
                   ))}
@@ -717,7 +717,7 @@ function InitiativeSession() {
               )}
               {selectedPc && (
                 <div className="flex gap-1 items-center">
-                  <span className="text-xs text-emerald-400 shrink-0">Initiative for {selectedPc.name}:</span>
+                  <span className="text-sm text-emerald-400 shrink-0">Initiative for {selectedPc.name}:</span>
                   <input autoFocus placeholder="Roll" type="number" value={pcInitiative}
                     onChange={(e) => setPcInitiative(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addFromParty(); }}
@@ -725,7 +725,7 @@ function InitiativeSession() {
                 </div>
               )}
               <button onClick={addFromParty} disabled={!selectedPc}
-                className="w-full py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
+                className="w-full py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-sm text-white font-semibold transition-colors">
                 Add {selectedPc ? selectedPc.name : "Party Member"} to Initiative
               </button>
             </div>
@@ -739,28 +739,28 @@ function InitiativeSession() {
                 className={`w-full ${inputCls}`} />
               <div className="flex gap-1">
                 <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">Initiative</label>
+                  <label className="text-[12px] text-gray-500 block mb-0.5">Initiative</label>
                   <input type="number" value={form.initiative}
                     onChange={(e) => setForm({ ...form, initiative: e.target.value })} className={`w-full ${inputCls}`} />
                 </div>
                 <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">HP</label>
+                  <label className="text-[12px] text-gray-500 block mb-0.5">HP</label>
                   <input type="number" min="0" value={form.hp}
                     onChange={(e) => setForm({ ...form, hp: e.target.value })} className={`w-full ${inputCls}`} />
                 </div>
                 <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
+                  <label className="text-[12px] text-gray-500 block mb-0.5">AC</label>
                   <input type="number" min="0" value={form.ac}
                     onChange={(e) => setForm({ ...form, ac: e.target.value })} className={`w-full ${inputCls}`} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
                 <input type="checkbox" checked={form.isPlayer}
                   onChange={(e) => setForm({ ...form, isPlayer: e.target.checked })} className="accent-purple-500" />
                 Player Character
               </label>
               <button onClick={addPlayer}
-                className="w-full py-1 bg-purple-700 hover:bg-purple-600 rounded text-xs text-white font-semibold transition-colors">
+                className="w-full py-1 bg-purple-700 hover:bg-purple-600 rounded text-sm text-white font-semibold transition-colors">
                 Add to Initiative
               </button>
             </div>
@@ -771,7 +771,7 @@ function InitiativeSession() {
       {/* ── Combatant list ── */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
         {sorted.length === 0 && (
-          <div className="text-center py-4 text-gray-500 text-xs flex flex-col items-center gap-2">
+          <div className="text-center py-4 text-gray-500 text-sm flex flex-col items-center gap-2">
             <Swords className="w-6 h-6 opacity-30" />
             No combatants yet — click + to add a player, party member, or monster.
           </div>
@@ -788,16 +788,16 @@ function InitiativeSession() {
                 isActive ? "bg-purple-900/60 border-purple-500 shadow-[0_0_8px_rgba(139,92,246,0.4)]"
                   : "bg-gray-900/60 border-gray-700/50 hover:border-purple-800/50"
               } ${isDead ? "opacity-50" : ""}`}>
-              <span className={`text-xs font-bold w-5 text-center shrink-0 ${isActive ? "text-white" : "text-gray-500"}`}>
+              <span className={`text-sm font-bold w-5 text-center shrink-0 ${isActive ? "text-white" : "text-gray-500"}`}>
                 {c.initiative}
               </span>
               <div className="flex-1 min-w-0">
                 {c.isPlayer ? (
-                  <div className="text-xs font-semibold truncate text-green-400">{isActive && "▶ "}{c.name}</div>
+                  <div className="text-sm font-semibold truncate text-green-400">{isActive && "▶ "}{c.name}</div>
                 ) : (
                   <button onClick={() => window.dispatchEvent(new CustomEvent("dm-open-bestiary", { detail: { name: c.name } }))}
                     title="Open bestiary entry"
-                    className="text-xs font-semibold truncate text-rose-300 hover:text-rose-100 hover:underline text-left w-full flex items-center gap-0.5 group/name">
+                    className="text-sm font-semibold truncate text-rose-300 hover:text-rose-100 hover:underline text-left w-full flex items-center gap-0.5 group/name">
                     {isActive && "▶ "}{c.name}
                     <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover/name:opacity-60 shrink-0 transition-opacity" />
                   </button>
@@ -820,11 +820,11 @@ function InitiativeSession() {
               )}
               {c.ac != null && (
                 <div className="flex items-center gap-0.5 shrink-0 text-blue-400 bg-blue-900/30 border border-blue-800/30 rounded px-1 py-0.5">
-                  <Shield className="w-2.5 h-2.5" /><span className="text-xs font-bold">{c.ac}</span>
+                  <Shield className="w-2.5 h-2.5" /><span className="text-sm font-bold">{c.ac}</span>
                 </div>
               )}
               <div className="flex items-center gap-0.5 shrink-0">
-                <button onClick={() => updateHp(c.id, -1)} aria-label={`Damage ${c.name || "combatant"}`} title={`Damage ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-red-900/60 hover:bg-red-800 rounded text-xs text-red-300">
+                <button onClick={() => updateHp(c.id, -1)} aria-label={`Damage ${c.name || "combatant"}`} title={`Damage ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-red-900/60 hover:bg-red-800 rounded text-sm text-red-300">
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 {editingHpId === c.id ? (
@@ -854,19 +854,19 @@ function InitiativeSession() {
                       }
                     }}
                     aria-label={`Set HP for ${c.name || "combatant"}`}
-                    className="w-12 text-xs font-mono text-center bg-gray-800 border border-purple-500 rounded text-gray-100 focus:outline-none focus:border-purple-400"
+                    className="w-12 text-sm font-mono text-center bg-gray-800 border border-purple-500 rounded text-gray-100 focus:outline-none focus:border-purple-400"
                   />
                 ) : (
                   <button
                     onClick={() => startEditHp(c)}
                     aria-label={`Edit HP for ${c.name || "combatant"}`}
                     title="Click to set HP"
-                    className={`text-xs font-mono w-12 text-center rounded hover:bg-gray-800/80 transition-colors ${isDead ? "text-red-500 font-bold" : "text-gray-300"}`}
+                    className={`text-sm font-mono w-12 text-center rounded hover:bg-gray-800/80 transition-colors ${isDead ? "text-red-500 font-bold" : "text-gray-300"}`}
                   >
                     {isDead ? "DEAD" : `${c.hp}/${c.maxHp}`}
                   </button>
                 )}
-                <button onClick={() => updateHp(c.id, 1)} aria-label={`Heal ${c.name || "combatant"}`} title={`Heal ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-green-900/60 hover:bg-green-800 rounded text-xs text-green-300">
+                <button onClick={() => updateHp(c.id, 1)} aria-label={`Heal ${c.name || "combatant"}`} title={`Heal ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-green-900/60 hover:bg-green-800 rounded text-sm text-green-300">
                   <ChevronUp className="w-3 h-3" />
                 </button>
               </div>

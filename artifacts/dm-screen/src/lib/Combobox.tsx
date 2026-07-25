@@ -158,7 +158,7 @@ export function Combobox({
         }}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className="w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
+        className="w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
       />
       <AnchoredDropdown anchor={wrapperRef.current} open={listOpen} role="listbox" id={listboxId}>
         {suggestions.map((o, i) => {
@@ -176,7 +176,7 @@ export function Combobox({
                 pick(o);
               }}
               onMouseEnter={() => setHighlight(i)}
-              className={`w-full text-left px-2 py-1.5 text-xs transition-colors ${
+              className={`w-full text-left px-2 py-1.5 text-sm transition-colors ${
                 isHighlighted
                   ? "bg-purple-900/50 text-purple-100"
                   : isSelected

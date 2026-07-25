@@ -95,13 +95,13 @@ function CompendiumBody() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedEntry(null); }}
             placeholder="Search 5.5e rules…"
-            className="w-full pl-7 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            className="w-full pl-7 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
           />
         </div>
         <select
           value={selectedCategory}
           onChange={(e) => { setSelectedCategory(e.target.value); setSelectedEntry(null); }}
-          className="text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-purple-500"
+          className="text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1 text-gray-300 focus:outline-none focus:border-purple-500"
         >
           <option>All</option>
           {categories.map((c) => (
@@ -114,21 +114,21 @@ function CompendiumBody() {
         <div className="flex-1 min-h-0 overflow-y-auto">
           <button
             onClick={() => setSelectedEntry(null)}
-            className="text-xs text-purple-400 hover:text-purple-300 mb-2 flex items-center gap-1"
+            className="text-sm text-purple-400 hover:text-purple-300 mb-2 flex items-center gap-1"
           >
             ← Back to results
           </button>
           <div className="bg-gray-900/80 border border-purple-700/40 rounded p-3">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="text-sm font-bold text-white">{entry.title}</h3>
-              <span className="text-xs text-purple-400 bg-purple-900/40 px-2 py-0.5 rounded-full shrink-0">
+              <h3 className="text-base font-bold text-white">{entry.title}</h3>
+              <span className="text-sm text-purple-400 bg-purple-900/40 px-2 py-0.5 rounded-full shrink-0">
                 {entry.category}
               </span>
             </div>
-            <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">{entry.content}</p>
+            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">{entry.content}</p>
             <div className="flex flex-wrap gap-1 mt-3">
               {entry.tags.map((tag) => (
-                <span key={tag} className="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
+                <span key={tag} className="text-sm text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
                   {tag}
                 </span>
               ))}
@@ -138,7 +138,7 @@ function CompendiumBody() {
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
           {filtered.length === 0 && (
-            <div className="text-center py-4 text-gray-500 text-xs flex flex-col items-center gap-2">
+            <div className="text-center py-4 text-gray-500 text-sm flex flex-col items-center gap-2">
               <BookOpen className="w-6 h-6 opacity-30" />
               No entries found
             </div>
@@ -150,20 +150,20 @@ function CompendiumBody() {
               className="w-full text-left px-2 py-1.5 bg-gray-900/60 hover:bg-purple-900/30 border border-purple-900/30 hover:border-purple-600/50 rounded transition-all group"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-200 group-hover:text-white transition-colors">
+                <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
                   {e.title}
                 </span>
-                <span className="text-xs text-purple-500 shrink-0">{e.category}</span>
+                <span className="text-sm text-purple-500 shrink-0">{e.category}</span>
               </div>
             </button>
           ))}
           {!isFiltered && filtered.length > UNFILTERED_PREVIEW && (
-            <div className="text-center py-2 text-[10px] text-gray-600">
+            <div className="text-center py-2 text-[12px] text-gray-600">
               Showing {UNFILTERED_PREVIEW} of {filtered.length} — search to filter
             </div>
           )}
           {isFiltered && filtered.length > MAX_RESULTS && (
-            <div className="text-center py-2 text-[10px] text-gray-600">
+            <div className="text-center py-2 text-[12px] text-gray-600">
               Showing first {MAX_RESULTS} of {filtered.length.toLocaleString()} — refine your search
             </div>
           )}

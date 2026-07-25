@@ -96,7 +96,7 @@ function OracleBody() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 rounded text-sm font-semibold transition-all ${
               tab === t.id
                 ? "bg-purple-700 text-white shadow-[0_0_6px_rgba(139,43,226,0.4)]"
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
@@ -114,7 +114,7 @@ function OracleBody() {
           <select
             value={selectedRace}
             onChange={(e) => setSelectedRace(e.target.value)}
-            className="w-full text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
           >
             {Object.keys(namesByRace).map((r) => (
               <option key={r}>{r}</option>
@@ -125,7 +125,7 @@ function OracleBody() {
           <select
             value={selectedCR}
             onChange={(e) => setSelectedCR(e.target.value)}
-            className="w-full text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
           >
             {Object.keys(lootByCR).map((cr) => (
               <option key={cr}>{cr}</option>
@@ -133,7 +133,7 @@ function OracleBody() {
           </select>
         )}
         {tab === "items" && (
-          <div className="text-xs text-gray-500 italic px-1">
+          <div className="text-sm text-gray-500 italic px-1">
             Generates mundane items or common magic items at random.
           </div>
         )}
@@ -141,7 +141,7 @@ function OracleBody() {
           <select
             value={selectedSettlement}
             onChange={(e) => setSelectedSettlement(e.target.value)}
-            className="w-full text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
           >
             {Object.entries(settlementTypes).map(([key, { label }]) => (
               <option key={key} value={key}>{label}</option>
@@ -153,7 +153,7 @@ function OracleBody() {
       {/* Generate button */}
       <button
         onClick={generate}
-        className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-purple-800 to-purple-600 hover:from-purple-700 hover:to-purple-500 rounded text-white text-xs font-bold transition-all shadow-[0_0_10px_rgba(139,43,226,0.3)] hover:shadow-[0_0_14px_rgba(139,43,226,0.5)]"
+        className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-purple-800 to-purple-600 hover:from-purple-700 hover:to-purple-500 rounded text-white text-sm font-bold transition-all shadow-[0_0_10px_rgba(139,43,226,0.3)] hover:shadow-[0_0_14px_rgba(139,43,226,0.5)]"
       >
         <Wand2 className="w-4 h-4" />
         Generate
@@ -167,12 +167,12 @@ function OracleBody() {
             <>
               <div className="flex items-center gap-1.5 mb-1">
                 <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                <span className="text-sm text-white font-bold tracking-wide">{placeName}</span>
+                <span className="text-base text-white font-bold tracking-wide">{placeName}</span>
               </div>
-              <div className="text-xs text-gray-400 italic leading-relaxed">{placeDesc}</div>
+              <div className="text-sm text-gray-400 italic leading-relaxed">{placeDesc}</div>
             </>
           ) : (
-            <div className="text-sm text-white font-semibold leading-relaxed">{result}</div>
+            <div className="text-base text-white font-semibold leading-relaxed">{result}</div>
           )}
         </div>
       )}
@@ -180,12 +180,12 @@ function OracleBody() {
       {/* History */}
       {tabHistory.length > 1 && (
         <div className="mt-3 flex-1 min-h-0 overflow-y-auto">
-          <div className="text-xs text-gray-600 mb-1">Previous Results</div>
+          <div className="text-sm text-gray-600 mb-1">Previous Results</div>
           <div className="space-y-1">
             {tabHistory.slice(1).map((h, i) => {
               const [pn, pd] = tab === "places" ? h.split(" — ") : [h, ""];
               return (
-                <div key={i} className="text-xs text-gray-500 px-2 py-1 bg-gray-900/40 rounded border border-gray-800">
+                <div key={i} className="text-sm text-gray-500 px-2 py-1 bg-gray-900/40 rounded border border-gray-800">
                   {tab === "places" && pd ? (
                     <><span className="text-gray-300 font-semibold">{pn}</span>
                     <span className="text-gray-600"> — {pd}</span></>

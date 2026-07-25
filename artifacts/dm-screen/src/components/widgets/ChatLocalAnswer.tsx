@@ -41,25 +41,25 @@ export function ChatLocalAnswer({
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="inline-flex items-center gap-1 text-[10px]" style={{ color: "var(--dm-t3)" }}>
+      <div className="inline-flex items-center gap-1 text-[12px]" style={{ color: "var(--dm-t3)" }}>
         <BookOpen className="w-2.5 h-2.5" /> From your bundled data
       </div>
 
       {answer.hint && (
-        <div className="text-xs" style={{ color: "var(--dm-t3)" }}>{answer.hint}</div>
+        <div className="text-sm" style={{ color: "var(--dm-t3)" }}>{answer.hint}</div>
       )}
 
       {shownCard && <ChatToolCard card={shownCard} />}
 
       {!shownCard && answer.candidates && answer.candidates.length > 0 && (
         <div className="flex flex-col gap-1">
-          <div className="text-[10px]" style={{ color: "var(--dm-t3)" }}>Did you mean:</div>
+          <div className="text-[12px]" style={{ color: "var(--dm-t3)" }}>Did you mean:</div>
           <div className="flex flex-wrap gap-1">
             {answer.candidates.map((c) => (
               <button
                 key={c.name}
                 onClick={() => setPicked(c)}
-                className="text-[11px] px-1.5 py-0.5 rounded border border-amber-800/50 text-amber-300/80 hover:bg-amber-900/30 transition-colors"
+                className="text-[13px] px-1.5 py-0.5 rounded border border-amber-800/50 text-amber-300/80 hover:bg-amber-900/30 transition-colors"
               >
                 {c.name}
               </button>
@@ -69,7 +69,7 @@ export function ChatLocalAnswer({
       )}
 
       {answer.noMatch && !shownCard && (
-        <div className="text-xs" style={{ color: "var(--dm-t3)" }}>
+        <div className="text-sm" style={{ color: "var(--dm-t3)" }}>
           No match in bundled data for "{answer.noMatch}".
         </div>
       )}
@@ -79,7 +79,7 @@ export function ChatLocalAnswer({
           onClick={() => onEscalate(picked?.name)}
           disabled={busy}
           title={busy ? "Wait for the current answer to finish" : undefined}
-          className="self-start inline-flex items-center gap-1 text-[10px] text-amber-300/70 hover:text-amber-200/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-amber-300/70"
+          className="self-start inline-flex items-center gap-1 text-[12px] text-amber-300/70 hover:text-amber-200/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-amber-300/70"
         >
           <Sparkles className="w-2.5 h-2.5" /> Ask Selene instead →
         </button>

@@ -131,9 +131,9 @@ function AbilityScore({ label, score }: { label: string; score: number }) {
   const m = mod(score);
   return (
     <div className="flex flex-col items-center bg-gray-900/60 rounded px-1.5 py-1 min-w-[32px]">
-      <span className="text-[9px] text-gray-500 uppercase font-bold">{label}</span>
-      <span className="text-xs font-bold text-gray-200">{score}</span>
-      <span className={`text-[10px] font-semibold ${m.startsWith("+") ? "text-green-400" : "text-red-400"}`}>{m}</span>
+      <span className="text-[11px] text-gray-500 uppercase font-bold">{label}</span>
+      <span className="text-sm font-bold text-gray-200">{score}</span>
+      <span className={`text-[12px] font-semibold ${m.startsWith("+") ? "text-green-400" : "text-red-400"}`}>{m}</span>
     </div>
   );
 }
@@ -142,10 +142,10 @@ function TraitSection({ title, items }: { title: string; items: { name: string; 
   if (!items || items.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="text-[10px] font-bold uppercase text-purple-400 tracking-wider mb-1 border-b border-purple-900/40 pb-0.5">{title}</div>
+      <div className="text-[12px] font-bold uppercase text-purple-400 tracking-wider mb-1 border-b border-purple-900/40 pb-0.5">{title}</div>
       <div className="space-y-1.5">
         {items.map((t, i) => (
-          <div key={i} className="text-[10px] leading-relaxed text-gray-300">
+          <div key={i} className="text-[12px] leading-relaxed text-gray-300">
             <span className="font-bold italic text-gray-100">{t.name}. </span>{t.desc}
           </div>
         ))}
@@ -235,7 +235,7 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
     // `flex-1 min-h-0` claims the remaining height inside the detail-view
     // card; `overflow-hidden` forces the column to honour its computed
     // height instead of stretching to fit its content.
-    <div className="flex-1 min-h-0 overflow-hidden flex flex-col text-[10px] leading-relaxed">
+    <div className="flex-1 min-h-0 overflow-hidden flex flex-col text-[12px] leading-relaxed">
       {/* ── Tab strip (pinned above the scroll region) ───────────────────────
           Only this stays fixed, so switching tabs never costs a scroll-back-up.
           Everything else — the AC/HP/ability-score/saves header AND the active
@@ -255,7 +255,7 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                className={`px-2 py-1 text-[12px] font-semibold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
                   isActive
                     ? "text-purple-300 border-purple-400"
                     : "text-gray-500 border-transparent hover:text-purple-400"
@@ -263,7 +263,7 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
               >
                 {TAB_LABELS[tab]}
                 {tabCounts[tab] > 0 && (
-                  <span className="ml-1 text-[9px] opacity-60">{tabCounts[tab]}</span>
+                  <span className="ml-1 text-[11px] opacity-60">{tabCounts[tab]}</span>
                 )}
               </button>
             );
@@ -275,8 +275,8 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
         <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
           <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
           <div className="flex items-center gap-1.5">
-            {monster.source && <span className="text-[9px] text-gray-600 bg-gray-900/60 px-1 rounded">{monster.source}</span>}
-            <span className={`text-xs font-bold ${crColor(monster.cr)}`}>CR {monster.cr}</span>
+            {monster.source && <span className="text-[11px] text-gray-600 bg-gray-900/60 px-1 rounded">{monster.source}</span>}
+            <span className={`text-sm font-bold ${crColor(monster.cr)}`}>CR {monster.cr}</span>
           </div>
         </div>
 
@@ -320,7 +320,7 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
         </div>
 
         {presentTabs.length === 0 ? (
-          <p className="text-[10px] text-gray-600 italic">Full stat block not available for this monster.</p>
+          <p className="text-[12px] text-gray-600 italic">Full stat block not available for this monster.</p>
         ) : (
           <>
             {activeTab === "attacks" && <AttackOptions options={combat} />}
@@ -328,7 +328,7 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
             {activeTab !== null && isProseTab(activeTab) && (
               <div className="space-y-1.5">
                 {tabContent[activeTab].map((t, i) => (
-                  <div key={i} className="text-[10px] leading-relaxed text-gray-300">
+                  <div key={i} className="text-[12px] leading-relaxed text-gray-300">
                     <span className="font-bold italic text-gray-100">{t.name}. </span>{t.desc}
                   </div>
                 ))}
@@ -505,12 +505,12 @@ function BestiaryBody({ target, onTargetClear }: Props) {
       <div className="h-full min-h-0 flex flex-col">
         <button
           onClick={handleBack}
-          className="text-xs text-purple-400 hover:text-purple-300 mb-2 flex items-center gap-1 shrink-0"
+          className="text-sm text-purple-400 hover:text-purple-300 mb-2 flex items-center gap-1 shrink-0"
         >
           ← Back to list
         </button>
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-gray-900/80 border border-red-900/40 rounded p-2.5">
-          <h3 className="text-sm font-bold text-white mb-1 shrink-0">{selected.name}</h3>
+          <h3 className="text-base font-bold text-white mb-1 shrink-0">{selected.name}</h3>
           <StatBlock monster={selected} />
         </div>
       </div>
@@ -528,19 +528,19 @@ function BestiaryBody({ target, onTargetClear }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search ${MONSTER_COUNT.toLocaleString()} monsters…`}
-            className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
+            className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-purple-800/50 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500"
           />
         </div>
         <select
           value={crFilter}
           onChange={(e) => setCrFilter(e.target.value)}
-          className="text-xs bg-gray-900 border border-purple-800/50 rounded px-1.5 py-1 text-gray-300 focus:outline-none focus:border-purple-500"
+          className="text-sm bg-gray-900 border border-purple-800/50 rounded px-1.5 py-1 text-gray-300 focus:outline-none focus:border-purple-500"
         >
           {crOptions.map((o) => <option key={o}>{o}</option>)}
         </select>
         <button
           onClick={() => setSortMode((m) => m === "alpha" ? "cr" : "alpha")}
-          className="flex items-center gap-0.5 text-xs px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-gray-400 hover:text-gray-200 transition-colors shrink-0"
+          className="flex items-center gap-0.5 text-sm px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-gray-400 hover:text-gray-200 transition-colors shrink-0"
           title={`Sort by ${sortMode === "alpha" ? "CR" : "name"}`}
         >
           {sortMode === "alpha" ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
@@ -550,7 +550,7 @@ function BestiaryBody({ target, onTargetClear }: Props) {
 
       <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
         {totalResults === 0 && (
-          <div className="text-xs text-gray-600 text-center py-4">No monsters found</div>
+          <div className="text-sm text-gray-600 text-center py-4">No monsters found</div>
         )}
         {visibleList.map((m) => (
           <button
@@ -559,22 +559,22 @@ function BestiaryBody({ target, onTargetClear }: Props) {
             className="w-full text-left flex items-center justify-between px-2 py-1.5 bg-gray-900/60 hover:bg-red-950/30 border border-gray-800/60 hover:border-red-800/50 rounded transition-all group"
           >
             <div className="min-w-0">
-              <span className="text-xs font-semibold text-gray-200 group-hover:text-white">{m.name}</span>
-              <span className="text-[10px] text-gray-500 ml-1.5 italic">{[m.size, m.type].filter(Boolean).join(" ")}</span>
+              <span className="text-sm font-semibold text-gray-200 group-hover:text-white">{m.name}</span>
+              <span className="text-[12px] text-gray-500 ml-1.5 italic">{[m.size, m.type].filter(Boolean).join(" ")}</span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0 ml-2">
-              {m.source && <span className="text-[9px] text-gray-600">{m.source}</span>}
-              <span className={`text-[10px] font-bold ${crColor(m.cr)}`}>CR {m.cr}</span>
+              {m.source && <span className="text-[11px] text-gray-600">{m.source}</span>}
+              <span className={`text-[12px] font-bold ${crColor(m.cr)}`}>CR {m.cr}</span>
             </div>
           </button>
         ))}
         {!isFiltered && totalResults > UNFILTERED_PREVIEW && (
-          <div className="text-center py-2 text-[10px] text-gray-600">
+          <div className="text-center py-2 text-[12px] text-gray-600">
             Showing {UNFILTERED_PREVIEW} of {totalResults.toLocaleString()} — search to filter
           </div>
         )}
         {isFiltered && totalResults > MAX_RESULTS && (
-          <div className="text-center py-2 text-[10px] text-gray-600">
+          <div className="text-center py-2 text-[12px] text-gray-600">
             Showing first {MAX_RESULTS} of {totalResults.toLocaleString()} — refine your search
           </div>
         )}

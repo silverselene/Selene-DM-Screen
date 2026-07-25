@@ -259,24 +259,24 @@ export function MiniMarkdown({ text, variant = "card" }: { text: string; variant
   const blocks = useMemo(() => parseMarkdownBlocks(text), [text]);
   const wrapperClass =
     variant === "prose"
-      ? "space-y-1.5 text-xs leading-relaxed break-words"
-      : "space-y-1 text-[11px] leading-relaxed";
+      ? "space-y-1.5 text-sm leading-relaxed break-words"
+      : "space-y-1 text-[13px] leading-relaxed";
   return (
     <div className={wrapperClass} style={{ color: "var(--dm-t2)" }}>
       {blocks.map((b, i) => {
         if (b.kind === "heading") {
           if (b.level === 1) {
-            return <div key={i} className="text-xs font-bold" style={{ color: "var(--dm-t1)" }}>{b.text}</div>;
+            return <div key={i} className="text-sm font-bold" style={{ color: "var(--dm-t1)" }}>{b.text}</div>;
           }
           if (b.level === 2) {
-            return <div key={i} className="text-[11px] font-bold uppercase tracking-wider text-amber-300/80 mt-1.5">{b.text}</div>;
+            return <div key={i} className="text-[13px] font-bold uppercase tracking-wider text-amber-300/80 mt-1.5">{b.text}</div>;
           }
-          return <div key={i} className="text-[11px] font-semibold mt-1" style={{ color: "var(--dm-t1)" }}>{b.text}</div>;
+          return <div key={i} className="text-[13px] font-semibold mt-1" style={{ color: "var(--dm-t1)" }}>{b.text}</div>;
         }
         if (b.kind === "rule") return <div key={i} className="border-t my-1" style={{ borderColor: "var(--dm-border)" }} />;
         if (b.kind === "code") {
           return (
-            <pre key={i} className="overflow-x-auto rounded bg-black/30 px-2 py-1.5 text-[11px]" style={{ color: "var(--dm-t1)" }}>
+            <pre key={i} className="overflow-x-auto rounded bg-black/30 px-2 py-1.5 text-[13px]" style={{ color: "var(--dm-t1)" }}>
               <code>{b.text}</code>
             </pre>
           );
@@ -291,7 +291,7 @@ export function MiniMarkdown({ text, variant = "card" }: { text: string; variant
         if (b.kind === "table") {
           return (
             <div key={i} className="overflow-x-auto">
-              <table className="text-[11px] border-collapse">
+              <table className="text-[13px] border-collapse">
                 <thead>
                   <tr>
                     {b.header.map((h, j) => (

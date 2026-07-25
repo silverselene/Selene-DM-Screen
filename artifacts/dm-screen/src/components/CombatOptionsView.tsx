@@ -38,7 +38,7 @@ function OriginBadge({ origin }: { origin: OptionOrigin }) {
   const badge = ORIGIN_BADGE[origin];
   if (!badge) return null;
   return (
-    <span className={`text-[8px] border rounded px-0.5 leading-tight shrink-0 ${badge.cls}`}>
+    <span className={`text-[10px] border rounded px-0.5 leading-tight shrink-0 ${badge.cls}`}>
       {badge.label}
     </span>
   );
@@ -78,7 +78,7 @@ function ExpandableRow({
         <span className="flex-1 min-w-0">{summary}</span>
       </button>
       {expanded && (
-        <div className="px-1.5 pb-1.5 pl-5 text-[10px] leading-relaxed text-gray-400">{detail}</div>
+        <div className="px-1.5 pb-1.5 pl-5 text-[12px] leading-relaxed text-gray-400">{detail}</div>
       )}
     </div>
   );
@@ -95,18 +95,18 @@ function AttackRow({ attack }: { attack: MonsterAttack }) {
       summary={
         <>
           <span className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] font-bold text-gray-100">{attack.name}</span>
+            <span className="text-[12px] font-bold text-gray-100">{attack.name}</span>
             <OriginBadge origin={attack.origin} />
             {attack.isSpellAttack && (
-              <span className="text-[8px] text-cyan-400 border border-cyan-700/50 rounded px-0.5 leading-tight shrink-0">
+              <span className="text-[10px] text-cyan-400 border border-cyan-700/50 rounded px-0.5 leading-tight shrink-0">
                 SPELL
               </span>
             )}
-            <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1">
+            <span className="text-[12px] font-mono font-bold text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1">
               {formatToHit(attack.toHit)}
             </span>
           </span>
-          <span className="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[10px] text-gray-400">
+          <span className="flex items-center gap-x-2 gap-y-0.5 flex-wrap text-[12px] text-gray-400">
             <span className="text-gray-500">{KIND_LABEL[attack.kind]}</span>
             {distance && <span>{distance}</span>}
             {damage ? (
@@ -127,7 +127,7 @@ function AttackRow({ attack }: { attack: MonsterAttack }) {
       detail={
         <>
           {attack.weapon && (
-            <div className="mb-1 text-[10px]">
+            <div className="mb-1 text-[12px]">
               <span className="text-gray-500 font-semibold">Weapon </span>
               <span className="text-gray-300">
                 {attack.weapon.name}
@@ -139,7 +139,7 @@ function AttackRow({ attack }: { attack: MonsterAttack }) {
               {attack.weapon.properties.length > 0 && (
                 <span className="flex flex-wrap gap-1 mt-0.5">
                   {attack.weapon.properties.map((p) => (
-                    <span key={p} className="text-[9px] px-1 bg-gray-800 text-gray-400 rounded">
+                    <span key={p} className="text-[11px] px-1 bg-gray-800 text-gray-400 rounded">
                       {p}
                     </span>
                   ))}
@@ -164,13 +164,13 @@ function SaveActionRow({ action }: { action: MonsterSaveAction }) {
       summary={
         <>
           <span className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] font-bold text-gray-100">{action.name}</span>
+            <span className="text-[12px] font-bold text-gray-100">{action.name}</span>
             <OriginBadge origin={action.origin} />
-            <span className="text-[10px] font-mono font-bold text-purple-200 bg-purple-950/50 border border-purple-800/40 rounded px-1">
+            <span className="text-[12px] font-mono font-bold text-purple-200 bg-purple-950/50 border border-purple-800/40 rounded px-1">
               DC {action.save.dc} {action.save.ability.slice(0, 3).toUpperCase()}
             </span>
           </span>
-          <span className="flex items-center gap-x-2 flex-wrap text-[10px] text-gray-400">
+          <span className="flex items-center gap-x-2 flex-wrap text-[12px] text-gray-400">
             <span className="text-gray-500">Save</span>
             {damage && <span className="text-rose-300">{damage}</span>}
           </span>
@@ -199,17 +199,17 @@ function SpellChip({
       onClick={onToggle}
       aria-expanded={open}
       title={`${spell.level === 0 ? "Cantrip" : `${spellLevelLabels[spell.level]}-level`} ${spell.school}`}
-      className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
+      className={`flex items-center gap-1 text-[12px] px-1.5 py-0.5 rounded border transition-colors ${
         open
           ? "bg-cyan-900/50 border-cyan-600 text-cyan-100"
           : "bg-gray-800/70 border-gray-700 text-gray-300 hover:border-cyan-700/60 hover:text-cyan-200"
       }`}
     >
-      <span className="font-mono text-[9px] text-gray-500">{spell.level === 0 ? "C" : spell.level}</span>
+      <span className="font-mono text-[11px] text-gray-500">{spell.level === 0 ? "C" : spell.level}</span>
       <span>{spell.name}</span>
-      {spell.concentration && <span className="text-[8px] text-blue-400">●C</span>}
-      {spell.ritual && <span className="text-[8px] text-yellow-500">●R</span>}
-      <span className={`text-[8px] ${spellSchoolColors[spell.school] ?? "text-gray-500"}`}>
+      {spell.concentration && <span className="text-[10px] text-blue-400">●C</span>}
+      {spell.ritual && <span className="text-[10px] text-yellow-500">●R</span>}
+      <span className={`text-[10px] ${spellSchoolColors[spell.school] ?? "text-gray-500"}`}>
         {spell.school.slice(0, 4)}
       </span>
     </button>
@@ -229,16 +229,16 @@ function SpellcastingSection({ block }: { block: SpellcastingBlock }) {
   return (
     <div className="space-y-1">
       <div className="flex items-baseline gap-1.5 flex-wrap">
-        <span className="text-[10px] font-bold text-cyan-300">{block.name}</span>
+        <span className="text-[12px] font-bold text-cyan-300">{block.name}</span>
         <OriginBadge origin={block.origin} />
-        {block.ability && <span className="text-[10px] text-gray-500">{block.ability}</span>}
+        {block.ability && <span className="text-[12px] text-gray-500">{block.ability}</span>}
         {block.saveDc !== null && (
-          <span className="text-[10px] font-mono text-purple-200 bg-purple-950/50 border border-purple-800/40 rounded px-1">
+          <span className="text-[12px] font-mono text-purple-200 bg-purple-950/50 border border-purple-800/40 rounded px-1">
             save DC {block.saveDc}
           </span>
         )}
         {block.attackBonus !== null && (
-          <span className="text-[10px] font-mono text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1">
+          <span className="text-[12px] font-mono text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1">
             {formatToHit(block.attackBonus)} spell atk
           </span>
         )}
@@ -246,7 +246,7 @@ function SpellcastingSection({ block }: { block: SpellcastingBlock }) {
 
       {block.groups.map((group) => (
         <div key={group.label}>
-          <div className="text-[9px] uppercase tracking-wider text-gray-500 font-semibold">
+          <div className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
             {group.label}
           </div>
           <div className="flex flex-wrap gap-1 mt-0.5">
@@ -275,12 +275,12 @@ function SpellcastingSection({ block }: { block: SpellcastingBlock }) {
         type="button"
         onClick={() => setShowSource((v) => !v)}
         aria-expanded={showSource}
-        className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
       >
         {showSource ? "Hide" : "Show"} stat block text
       </button>
       {showSource && (
-        <p className="text-[10px] leading-relaxed text-gray-400 whitespace-pre-line">{block.desc}</p>
+        <p className="text-[12px] leading-relaxed text-gray-400 whitespace-pre-line">{block.desc}</p>
       )}
     </div>
   );
@@ -288,7 +288,7 @@ function SpellcastingSection({ block }: { block: SpellcastingBlock }) {
 
 function SectionHeading({ icon, label, count }: { icon: React.ReactNode; label: string; count: number }) {
   return (
-    <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-gray-500">
+    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-gray-500">
       {icon}
       {label}
       <span className="opacity-60">{count}</span>
@@ -301,7 +301,7 @@ export function AttackOptions({ options }: { options: CombatOptions }) {
   const { attacks, saveActions, multiattack } = options;
   if (attacks.length === 0 && saveActions.length === 0 && multiattack === null) {
     return (
-      <p className="text-[10px] text-gray-600 italic">
+      <p className="text-[12px] text-gray-600 italic">
         No attacks or save effects found in this stat block.
       </p>
     );
@@ -310,10 +310,10 @@ export function AttackOptions({ options }: { options: CombatOptions }) {
     <div className="space-y-1.5">
       {multiattack && (
         <div className="bg-amber-950/25 border border-amber-900/40 rounded px-1.5 py-1">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
             Multiattack
           </span>
-          <p className="text-[10px] leading-relaxed text-gray-300">{multiattack}</p>
+          <p className="text-[12px] leading-relaxed text-gray-300">{multiattack}</p>
         </div>
       )}
       {attacks.length > 0 && (
@@ -339,7 +339,7 @@ export function AttackOptions({ options }: { options: CombatOptions }) {
 /** The spell half: every spellcasting block the stat block describes. */
 export function SpellOptions({ options }: { options: CombatOptions }) {
   if (options.spellcasting.length === 0) {
-    return <p className="text-[10px] text-gray-600 italic">This creature has no spellcasting.</p>;
+    return <p className="text-[12px] text-gray-600 italic">This creature has no spellcasting.</p>;
   }
   return (
     <div className="space-y-2">
@@ -371,7 +371,7 @@ export function CombatOptionsView({ options }: { options: CombatOptions }) {
         </div>
       )}
       {!hasAttacks && options.spellcasting.length === 0 && (
-        <p className="text-[10px] text-gray-600 italic">
+        <p className="text-[12px] text-gray-600 italic">
           No attacks or spells in this creature's stat block.
         </p>
       )}

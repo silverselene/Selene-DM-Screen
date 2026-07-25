@@ -52,13 +52,13 @@ export function ChatToolCard({ card }: { card: ToolResultCard }) {
     <div className="rounded-lg border border-amber-800/40 bg-amber-950/20 px-2.5 py-2">
       <div className="flex items-center gap-1.5">
         {cardIcon(card.kind)}
-        <span className="text-xs font-semibold" style={{ color: "var(--dm-t1)" }}>{card.title}</span>
+        <span className="text-sm font-semibold" style={{ color: "var(--dm-t1)" }}>{card.title}</span>
       </div>
-      {sub && <div className="mt-0.5 text-[10px] italic" style={{ color: "var(--dm-t3)" }}>{sub}</div>}
+      {sub && <div className="mt-0.5 text-[12px] italic" style={{ color: "var(--dm-t3)" }}>{sub}</div>}
       {chips.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {chips.map((c) => (
-            <span key={c.label} className="inline-flex items-baseline gap-1 text-[10px] px-1.5 py-0.5 rounded border border-amber-800/40 bg-black/20">
+            <span key={c.label} className="inline-flex items-baseline gap-1 text-[12px] px-1.5 py-0.5 rounded border border-amber-800/40 bg-black/20">
               <span className="uppercase tracking-wide text-amber-300/70">{c.label}</span>
               <span style={{ color: "var(--dm-t2)" }}>{c.value}</span>
             </span>
@@ -78,7 +78,7 @@ export function ChatToolCard({ card }: { card: ToolResultCard }) {
         <>
           <button
             onClick={() => setOpen((v) => !v)}
-            className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-300/70 hover:text-amber-200/90 transition-colors"
+            className="mt-1.5 flex items-center gap-1 text-[12px] text-amber-300/70 hover:text-amber-200/90 transition-colors"
           >
             <ChevronRight className={`w-3 h-3 transition-transform ${open ? "rotate-90" : ""}`} />
             {open ? "Hide details" : "Full stat block"}
