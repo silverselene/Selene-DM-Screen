@@ -204,10 +204,12 @@ function InitiativeSession() {
   );
   const [showForm, setShowForm] = useState(false);
   // Persist the last-used Add tab — the DM tends to add the same kind of
-  // combatant repeatedly in a given session.
+  // combatant repeatedly in a given session. Monster is the default: most
+  // adds mid-encounter are monsters, so a DM opening the form for the first
+  // time lands on the tab they need without an extra click.
   const [addMode, setAddMode] = useLocalStorage<AddMode>(
     "dm-initiative-mode-v1",
-    "player",
+    "monster",
     validateAddMode,
   );
 
@@ -488,6 +490,41 @@ function InitiativeSession() {
     );
   };
 
+  // Manual HP entry: click the HP readout to replace it with a number input,
+  // for the "cast Heal for 70" / "rolled 34 damage" case where clicking +/-
+  // one at a time isn't realistic. Not persisted — this is transient UI
+  // state, like `openStatBlocks` above.
+  const [editingHpId, setEditingHpId] = useState<string | null>(null);
+  const [hpDraft, setHpDraft] = useState("");
+  // Distinguishes "blur because the DM pressed Escape" (discard) from every
+  // other blur (commit) without relying on unmount timing, which isn't a
+  // reliable signal for whether a real `blur` event will fire first.
+  const cancelingHpEdit = useRef(false);
+
+  const startEditHp = (c: Combatant) => {
+    setEditingHpId(c.id);
+    setHpDraft(String(c.hp));
+  };
+
+  // Reads the fallback HP from the list at commit time, not from the `c`
+  // closed over when the row rendered, so a same-tick HP change (a duplicate
+  // dm-add-to-initiative dispatch, say) can't be clobbered by a stale value.
+  const commitHp = (id: string, raw: string) => {
+    setCombatants((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, hp: clampInt(raw, 0, HP_MAX, c.hp) } : c)),
+    );
+    setEditingHpId(null);
+  };
+
+  const hpInputKeyDown = (id: string) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !isImeComposing(e)) {
+      e.currentTarget.blur(); // → onBlur commits
+    } else if (e.key === "Escape") {
+      cancelingHpEdit.current = true;
+      e.currentTarget.blur(); // → onBlur discards, see the flag below
+    }
+  };
+
   const nextTurn = () => {
     if (sorted.length === 0) return;
     // If nobody is active yet (or the previously-active combatant is no
@@ -552,104 +589,25 @@ function InitiativeSession() {
       {/* ── Add form ── */}
       {showForm && (
         <div className="mb-2 p-2 bg-gray-900/80 border border-purple-700/40 rounded shrink-0">
-          {/* Mode tabs */}
+          {/* Mode tabs. Monster leads — most adds mid-encounter are monsters —
+              then Party, then Custom for the rare hand-typed NPC/PC. */}
           <div className="flex gap-1 mb-2">
-            <button onClick={() => setAddMode("player")}
+            <button onClick={() => setAddMode("monster")}
               className={`flex-1 flex items-center justify-center gap-1 py-1 text-xs rounded border transition-all ${
-                addMode === "player" ? "bg-green-900/50 border-green-700 text-green-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
-              <User className="w-3 h-3" />Custom
+                addMode === "monster" ? "bg-rose-900/50 border-rose-700 text-rose-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
+              <Skull className="w-3 h-3" />Monster
             </button>
             <button onClick={() => setAddMode("party")}
               className={`flex-1 flex items-center justify-center gap-1 py-1 text-xs rounded border transition-all ${
                 addMode === "party" ? "bg-emerald-900/50 border-emerald-700 text-emerald-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
               <Users className="w-3 h-3" />Party
             </button>
-            <button onClick={() => setAddMode("monster")}
+            <button onClick={() => setAddMode("player")}
               className={`flex-1 flex items-center justify-center gap-1 py-1 text-xs rounded border transition-all ${
-                addMode === "monster" ? "bg-rose-900/50 border-rose-700 text-rose-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
-              <Skull className="w-3 h-3" />Monster
+                addMode === "player" ? "bg-green-900/50 border-green-700 text-green-300" : "bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-600"}`}>
+              <User className="w-3 h-3" />Custom
             </button>
           </div>
-
-          {addMode === "player" && (
-            <div className="space-y-1.5">
-              <input placeholder="Name" value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addPlayer(); }}
-                className={`w-full ${inputCls}`} />
-              <div className="flex gap-1">
-                <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">Initiative</label>
-                  <input type="number" value={form.initiative}
-                    onChange={(e) => setForm({ ...form, initiative: e.target.value })} className={`w-full ${inputCls}`} />
-                </div>
-                <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">HP</label>
-                  <input type="number" min="0" value={form.hp}
-                    onChange={(e) => setForm({ ...form, hp: e.target.value })} className={`w-full ${inputCls}`} />
-                </div>
-                <div className="w-1/3">
-                  <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
-                  <input type="number" min="0" value={form.ac}
-                    onChange={(e) => setForm({ ...form, ac: e.target.value })} className={`w-full ${inputCls}`} />
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-                <input type="checkbox" checked={form.isPlayer}
-                  onChange={(e) => setForm({ ...form, isPlayer: e.target.checked })} className="accent-purple-500" />
-                Player Character
-              </label>
-              <button onClick={addPlayer}
-                className="w-full py-1 bg-purple-700 hover:bg-purple-600 rounded text-xs text-white font-semibold transition-colors">
-                Add to Initiative
-              </button>
-            </div>
-          )}
-
-          {addMode === "party" && (
-            <div className="space-y-1.5">
-              {partyChars.length === 0 && (
-                <p className="text-xs text-gray-500 text-center py-2">No characters saved yet — add them in the Party widget.</p>
-              )}
-              {partyChars.length > 0 && (
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {partyChars.map(pc => (
-                    <button key={pc.id} onClick={() => { setSelectedPc(pc); setPcInitiative(""); }}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all ${
-                        selectedPc?.id === pc.id
-                          ? "bg-emerald-900/50 border-emerald-600"
-                          : "bg-gray-800/60 border-gray-700 hover:border-emerald-700/50"}`}>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-gray-100 truncate">{pc.name}</div>
-                        <div className="text-[10px] text-gray-500">{[pc.race, pc.class, pc.level ? `Lv ${pc.level}` : null].filter(Boolean).join(" · ")}</div>
-                      </div>
-                      {pc.ac != null && (
-                        <span className="text-[10px] text-blue-400 flex items-center gap-0.5 shrink-0">
-                          <Shield className="w-2.5 h-2.5" />{pc.ac}
-                        </span>
-                      )}
-                      {pc.hp != null && (
-                        <span className="text-[10px] text-red-400 shrink-0">{pc.hp}hp</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedPc && (
-                <div className="flex gap-1 items-center">
-                  <span className="text-xs text-emerald-400 shrink-0">Initiative for {selectedPc.name}:</span>
-                  <input autoFocus placeholder="Roll" type="number" value={pcInitiative}
-                    onChange={(e) => setPcInitiative(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addFromParty(); }}
-                    className={`w-20 ${inputCls}`} />
-                </div>
-              )}
-              <button onClick={addFromParty} disabled={!selectedPc}
-                className="w-full py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
-                Add {selectedPc ? selectedPc.name : "Party Member"} to Initiative
-              </button>
-            </div>
-          )}
 
           {addMode === "monster" && (
             <div className="space-y-1.5">
@@ -727,6 +685,86 @@ function InitiativeSession() {
               </button>
             </div>
           )}
+
+          {addMode === "party" && (
+            <div className="space-y-1.5">
+              {partyChars.length === 0 && (
+                <p className="text-xs text-gray-500 text-center py-2">No characters saved yet — add them in the Party widget.</p>
+              )}
+              {partyChars.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {partyChars.map(pc => (
+                    <button key={pc.id} onClick={() => { setSelectedPc(pc); setPcInitiative(""); }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all ${
+                        selectedPc?.id === pc.id
+                          ? "bg-emerald-900/50 border-emerald-600"
+                          : "bg-gray-800/60 border-gray-700 hover:border-emerald-700/50"}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-gray-100 truncate">{pc.name}</div>
+                        <div className="text-[10px] text-gray-500">{[pc.race, pc.class, pc.level ? `Lv ${pc.level}` : null].filter(Boolean).join(" · ")}</div>
+                      </div>
+                      {pc.ac != null && (
+                        <span className="text-[10px] text-blue-400 flex items-center gap-0.5 shrink-0">
+                          <Shield className="w-2.5 h-2.5" />{pc.ac}
+                        </span>
+                      )}
+                      {pc.hp != null && (
+                        <span className="text-[10px] text-red-400 shrink-0">{pc.hp}hp</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedPc && (
+                <div className="flex gap-1 items-center">
+                  <span className="text-xs text-emerald-400 shrink-0">Initiative for {selectedPc.name}:</span>
+                  <input autoFocus placeholder="Roll" type="number" value={pcInitiative}
+                    onChange={(e) => setPcInitiative(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addFromParty(); }}
+                    className={`w-20 ${inputCls}`} />
+                </div>
+              )}
+              <button onClick={addFromParty} disabled={!selectedPc}
+                className="w-full py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
+                Add {selectedPc ? selectedPc.name : "Party Member"} to Initiative
+              </button>
+            </div>
+          )}
+
+          {addMode === "player" && (
+            <div className="space-y-1.5">
+              <input placeholder="Name" value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onKeyDown={(e) => { if (e.key === "Enter" && !isImeComposing(e)) addPlayer(); }}
+                className={`w-full ${inputCls}`} />
+              <div className="flex gap-1">
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">Initiative</label>
+                  <input type="number" value={form.initiative}
+                    onChange={(e) => setForm({ ...form, initiative: e.target.value })} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">HP</label>
+                  <input type="number" min="0" value={form.hp}
+                    onChange={(e) => setForm({ ...form, hp: e.target.value })} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="w-1/3">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
+                  <input type="number" min="0" value={form.ac}
+                    onChange={(e) => setForm({ ...form, ac: e.target.value })} className={`w-full ${inputCls}`} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                <input type="checkbox" checked={form.isPlayer}
+                  onChange={(e) => setForm({ ...form, isPlayer: e.target.checked })} className="accent-purple-500" />
+                Player Character
+              </label>
+              <button onClick={addPlayer}
+                className="w-full py-1 bg-purple-700 hover:bg-purple-600 rounded text-xs text-white font-semibold transition-colors">
+                Add to Initiative
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -789,9 +827,45 @@ function InitiativeSession() {
                 <button onClick={() => updateHp(c.id, -1)} aria-label={`Damage ${c.name || "combatant"}`} title={`Damage ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-red-900/60 hover:bg-red-800 rounded text-xs text-red-300">
                   <ChevronDown className="w-3 h-3" />
                 </button>
-                <span className={`text-xs font-mono w-12 text-center ${isDead ? "text-red-500 font-bold" : "text-gray-300"}`}>
-                  {isDead ? "DEAD" : `${c.hp}/${c.maxHp}`}
-                </span>
+                {editingHpId === c.id ? (
+                  // `type="text"` + `inputMode="numeric"`, not `type="number"`:
+                  // the numeric keyboard on mobile is all `type="number"` would
+                  // buy here (the spinner arrows are redundant with the +/-
+                  // buttons either side), and it costs the pre-select-on-focus
+                  // below — the selection APIs (`select()`/`selectionStart`)
+                  // are spec-restricted to text-like input types and THROW on
+                  // `type="number"` in Firefox. Free text is fine: `commitHp`
+                  // parses and clamps whatever lands here.
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="-?[0-9]*"
+                    autoFocus
+                    value={hpDraft}
+                    onChange={(e) => setHpDraft(e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onKeyDown={hpInputKeyDown(c.id)}
+                    onBlur={() => {
+                      if (cancelingHpEdit.current) {
+                        cancelingHpEdit.current = false;
+                        setEditingHpId(null);
+                      } else {
+                        commitHp(c.id, hpDraft);
+                      }
+                    }}
+                    aria-label={`Set HP for ${c.name || "combatant"}`}
+                    className="w-12 text-xs font-mono text-center bg-gray-800 border border-purple-500 rounded text-gray-100 focus:outline-none focus:border-purple-400"
+                  />
+                ) : (
+                  <button
+                    onClick={() => startEditHp(c)}
+                    aria-label={`Edit HP for ${c.name || "combatant"}`}
+                    title="Click to set HP"
+                    className={`text-xs font-mono w-12 text-center rounded hover:bg-gray-800/80 transition-colors ${isDead ? "text-red-500 font-bold" : "text-gray-300"}`}
+                  >
+                    {isDead ? "DEAD" : `${c.hp}/${c.maxHp}`}
+                  </button>
+                )}
                 <button onClick={() => updateHp(c.id, 1)} aria-label={`Heal ${c.name || "combatant"}`} title={`Heal ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center bg-green-900/60 hover:bg-green-800 rounded text-xs text-green-300">
                   <ChevronUp className="w-3 h-3" />
                 </button>
