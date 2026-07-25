@@ -1,12 +1,16 @@
-import { useState, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Swords,
   SkipForward, RotateCcw, Search, Skull, User, Shield, ExternalLink, Users,
+  BookOpen,
 } from "lucide-react";
 import type { Combatant, PlayerCharacter } from "@/types";
+import type { MonsterEntry } from "@/data/monsters";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useParty } from "@/lib/partyStore";
-import { searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
+import { findCombatantMonster, searchMonsters, type MonsterSearchHit } from "@/lib/monsterSearch";
+import { CombatOptionsView } from "@/components/CombatOptionsView";
+import { deriveCombatOptions } from "@/lib/statblockCombat";
 import {
   INITIATIVE_MODES,
   mintCombatantId,
@@ -96,6 +100,19 @@ function hitToSummary(h: MonsterSearchHit): MonsterSummary {
 function parseMaxHp(hpStr: string): number {
   const m = hpStr.match(/^(\d+)/);
   return m ? parseInt(m[1]) : 10;
+}
+
+// The stat-block panel a monster row expands into: its attacks, the saves it
+// forces, and the spells it can cast. Lives here rather than in the row so the
+// parse (`deriveCombatOptions`) is only paid for rows the DM actually opened —
+// a 20-combatant encounter shouldn't parse 20 stat blocks to draw a list.
+function CombatantOptions({ monster }: { monster: MonsterEntry }) {
+  const options = useMemo(() => deriveCombatOptions(monster), [monster]);
+  return (
+    <div className="ml-6 mr-1 mt-1 px-2 py-1.5 bg-gray-950/70 border border-purple-900/40 rounded">
+      <CombatOptionsView options={options} />
+    </div>
+  );
 }
 
 // Initial-value factory for `useLocalStorage` that falls back to the
@@ -227,6 +244,34 @@ function InitiativeSession() {
   const currentIndex = activeId
     ? sorted.findIndex((c) => c.id === activeId)
     : -1;
+
+  // Which monster rows have their attacks/spells panel open. Deliberately NOT
+  // persisted: unlike HP and turn order, an open panel is a "looking at it right
+  // now" state, not encounter state worth restoring after a server bounce.
+  const [openStatBlocks, setOpenStatBlocks] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const toggleStatBlock = (id: string) =>
+    setOpenStatBlocks((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  // Resolved once per list change rather than per row render: `findCombatantMonster`
+  // falls back to suffix-stripping passes, and the result decides whether a row
+  // even gets the toggle button. Non-players only — a PC's sheet isn't in the
+  // bestiary, and a PC who happens to share a monster's name (a tabaxi called
+  // "Panther") must not sprout a stat block.
+  const monsterByCombatantId = useMemo(() => {
+    const map = new Map<string, MonsterEntry>();
+    for (const c of combatants) {
+      if (c.isPlayer) continue;
+      const hit = findCombatantMonster(c.name, c.monsterName);
+      if (hit) map.set(c.id, hit);
+    }
+    return map;
+  }, [combatants]);
 
   // Reconcile a dangling active-id. `activeId` and the combatant list live
   // under separate localStorage keys and validate independently, so a load
@@ -369,6 +414,9 @@ function InitiativeSession() {
       id: mintCombatantId(), name: selectedMonster.name,
       initiative: clampInitiative(monsterInitiative),
       hp, maxHp: hp, ac: selectedMonster.ac, isPlayer: false,
+      // Remember which bestiary entry this row came from so its attacks and
+      // spells keep resolving after the DM renames it to "Goblin #2".
+      monsterName: selectedMonster.name,
     };
     // Monsters can't be duplicates (findDuplicatePlayer ignores them), so the
     // confirm never fires here — passing it anyway keeps one add path.
@@ -693,8 +741,11 @@ function InitiativeSession() {
         {sorted.map((c) => {
           const isActive = c.id === activeId;
           const isDead = c.hp === 0;
+          const monster = monsterByCombatantId.get(c.id);
+          const statBlockOpen = openStatBlocks.has(c.id);
           return (
-            <div key={c.id}
+            <div key={c.id}>
+            <div
               className={`flex items-center gap-1.5 px-2 py-1.5 rounded border transition-all ${
                 isActive ? "bg-purple-900/60 border-purple-500 shadow-[0_0_8px_rgba(139,92,246,0.4)]"
                   : "bg-gray-900/60 border-gray-700/50 hover:border-purple-800/50"
@@ -714,6 +765,21 @@ function InitiativeSession() {
                   </button>
                 )}
               </div>
+              {monster && (
+                <button
+                  onClick={() => toggleStatBlock(c.id)}
+                  aria-expanded={statBlockOpen}
+                  aria-label={`${statBlockOpen ? "Hide" : "Show"} attacks and spells for ${c.name || "combatant"}`}
+                  title={`${statBlockOpen ? "Hide" : "Show"} attacks and spells`}
+                  className={`w-4 h-4 flex items-center justify-center rounded shrink-0 transition-colors ${
+                    statBlockOpen
+                      ? "text-purple-200 bg-purple-800/70"
+                      : "text-gray-500 hover:text-purple-300 hover:bg-purple-900/40"
+                  }`}
+                >
+                  <BookOpen className="w-3 h-3" />
+                </button>
+              )}
               {c.ac != null && (
                 <div className="flex items-center gap-0.5 shrink-0 text-blue-400 bg-blue-900/30 border border-blue-800/30 rounded px-1 py-0.5">
                   <Shield className="w-2.5 h-2.5" /><span className="text-xs font-bold">{c.ac}</span>
@@ -733,6 +799,8 @@ function InitiativeSession() {
               <button onClick={() => removeCombatant(c.id)} aria-label={`Remove ${c.name || "combatant"}`} title={`Remove ${c.name || "combatant"}`} className="w-4 h-4 flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors shrink-0">
                 <Trash2 className="w-3 h-3" />
               </button>
+            </div>
+            {monster && statBlockOpen && <CombatantOptions monster={monster} />}
             </div>
           );
         })}

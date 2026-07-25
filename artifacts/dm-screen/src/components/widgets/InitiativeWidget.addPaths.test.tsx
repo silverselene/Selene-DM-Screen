@@ -28,7 +28,12 @@ import type { Combatant, PlayerCharacter } from "@/types";
 // that the monster form's add goes through the same rule as every other path.
 // So mock the module down to one fixture hit rather than make every run in this
 // file pay to transform the dataset.
+// `findCombatantMonster` decides whether a combatant row gets the
+// attacks/spells toggle. Stubbed to "nothing resolves" so these tests keep
+// asserting the add rules against the plain row markup; the resolution itself is
+// covered in monsterSearch.test.ts.
 vi.mock("@/lib/monsterSearch", () => ({
+  findCombatantMonster: () => null,
   searchMonsters: () => [
     {
       id: "index:Goblin:MM",

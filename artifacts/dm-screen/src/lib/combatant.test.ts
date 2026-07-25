@@ -630,3 +630,36 @@ describe("duplicatePlayerMessage", () => {
     expect(msg).toContain("18");
   });
 });
+
+// `monsterName` is the bestiary key the Initiative tracker uses to show a
+// combatant's attacks and spells. It is optional and additive, so the validator
+// has to carry it through without letting a junk value pose as a real key.
+describe("validateCombatants — monsterName", () => {
+  const row = (extra: Record<string, unknown>) => ({
+    id: "c-1", name: "Goblin #2", initiative: 12, hp: 7, maxHp: 7, isPlayer: false, ...extra,
+  });
+
+  it("preserves a stored monsterName", () => {
+    expect(validateCombatants([row({ monsterName: "Goblin" })])?.[0].monsterName).toBe("Goblin");
+  });
+
+  it("leaves it undefined when absent", () => {
+    expect(validateCombatants([row({})])?.[0].monsterName).toBeUndefined();
+  });
+
+  it("drops a non-string value instead of coercing it", () => {
+    expect(validateCombatants([row({ monsterName: 42 })])?.[0].monsterName).toBeUndefined();
+    expect(validateCombatants([row({ monsterName: null })])?.[0].monsterName).toBeUndefined();
+    expect(validateCombatants([row({ monsterName: ["Goblin"] })])?.[0].monsterName).toBeUndefined();
+  });
+
+  it("drops a blank value, which would read as 'has a stat block' while never matching", () => {
+    expect(validateCombatants([row({ monsterName: "   " })])?.[0].monsterName).toBeUndefined();
+  });
+
+  it("caps the length like name does", () => {
+    const long = "G".repeat(500);
+    expect(validateCombatants([row({ monsterName: long })])?.[0].monsterName).toHaveLength(200);
+  });
+});
+

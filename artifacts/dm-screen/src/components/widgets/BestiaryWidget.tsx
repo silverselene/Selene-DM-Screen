@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useDeferredValue } from "react";
 import { Search, Shield, Heart, Zap, ChevronDown, ChevronUp, ExternalLink, Skull } from "lucide-react";
 import { monsters, mod, crToNumber, type MonsterEntry } from "@/data/monsters";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { AttackOptions, SpellOptions } from "@/components/CombatOptionsView";
+import { deriveCombatOptions } from "@/lib/statblockCombat";
 import { createSingletonSlot } from "@/lib/singletonWidget";
 import { SingletonGate } from "@/lib/SingletonGate";
 import {
@@ -152,30 +154,73 @@ function TraitSection({ title, items }: { title: string; items: { name: string; 
   );
 }
 
-type StatBlockTab = "traits" | "actions" | "reactions" | "legendary";
+// "Attacks" and "Spells" lead: they answer the question a DM actually has open
+// in front of them ("what can this thing do to the party this round?"), which
+// the prose tabs below only answer by being read in full. Both are DERIVED from
+// the same traits/actions text the other tabs show verbatim — see
+// `deriveCombatOptions` — so nothing is duplicated away, it is re-cut.
+/** Tabs whose body is the dataset's own prose, rendered verbatim. */
+type ProseTab = "traits" | "actions" | "reactions" | "legendary";
+type StatBlockTab = "attacks" | "spells" | ProseTab;
+
+function isProseTab(tab: StatBlockTab): tab is ProseTab {
+  return tab !== "attacks" && tab !== "spells";
+}
 
 const TAB_LABELS: Record<StatBlockTab, string> = {
+  attacks: "Attacks",
+  spells: "Spells",
   traits: "Traits",
   actions: "Actions",
   reactions: "Reactions",
   legendary: "Legendary",
 };
 
+const TAB_ORDER: StatBlockTab[] = [
+  "attacks", "spells", "traits", "actions", "reactions", "legendary",
+];
+
 function StatBlock({ monster }: { monster: UnifiedMonster }) {
   const hasAbilities = monster.str !== 10 || monster.dex !== 10 || monster.con !== 10 || monster.int !== 10;
+
+  // Derived per monster, not per list row: the Bestiary maps up to 200 entries
+  // through `toUnified` for the result list, and parsing every one of their
+  // stat blocks to render a name and a CR would be wasted work.
+  const combat = useMemo(
+    () => deriveCombatOptions(monster),
+    // `monster` is rebuilt by `toUnified` on each render of the detail view but
+    // its content is fully determined by the name.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [monster.name],
+  );
 
   // Decide which tabs have content. Pick the first non-empty as default; reset
   // when the monster changes so jumping from Aboleth → Goblin starts at the
   // first tab that's actually populated for the new entry.
-  const tabContent: Record<StatBlockTab, { name: string; desc: string }[]> = {
+  const tabContent: Record<ProseTab, { name: string; desc: string }[]> = {
     traits: monster.traits,
     actions: monster.actions,
     reactions: monster.reactions,
     legendary: monster.legendaryActions,
   };
-  const presentTabs = (Object.keys(tabContent) as StatBlockTab[]).filter(
-    (k) => tabContent[k].length > 0,
-  );
+  // The derived tabs count their own rows — an attack and the action it was
+  // parsed out of are the same text seen two ways, so they can't share a count.
+  const tabCounts: Record<StatBlockTab, number> = {
+    attacks: combat.attacks.length + combat.saveActions.length,
+    spells: combat.spellCount,
+    traits: monster.traits.length,
+    actions: monster.actions.length,
+    reactions: monster.reactions.length,
+    legendary: monster.legendaryActions.length,
+  };
+  const presentTabs = TAB_ORDER.filter((tab) => {
+    if (tab === "attacks") return tabCounts.attacks > 0 || combat.multiattack !== null;
+    // Count spellcasting BLOCKS, not resolved spells: a block whose spells are
+    // all homebrew resolves to zero chips but still carries the save DC and its
+    // own text, which is worth a tab.
+    if (tab === "spells") return combat.spellcasting.length > 0;
+    return tabContent[tab].length > 0;
+  });
   const [activeTab, setActiveTab] = useState<StatBlockTab | null>(
     presentTabs[0] ?? null,
   );
@@ -261,13 +306,17 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
                   }`}
                 >
                   {TAB_LABELS[tab]}
-                  <span className="ml-1 text-[9px] opacity-60">{tabContent[tab].length}</span>
+                  {tabCounts[tab] > 0 && (
+                    <span className="ml-1 text-[9px] opacity-60">{tabCounts[tab]}</span>
+                  )}
                 </button>
               );
             })}
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto pt-1.5">
-            {activeTab && (
+            {activeTab === "attacks" && <AttackOptions options={combat} />}
+            {activeTab === "spells" && <SpellOptions options={combat} />}
+            {activeTab !== null && isProseTab(activeTab) && (
               <div className="space-y-1.5">
                 {tabContent[activeTab].map((t, i) => (
                   <div key={i} className="text-[10px] leading-relaxed text-gray-300">

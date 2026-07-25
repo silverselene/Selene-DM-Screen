@@ -53,6 +53,11 @@ export function monsterCardToCombatant(card: ToolResultCard, d20: number): Comba
     maxHp: max,
     ac: parseLeadingInt(f.ac),
     isPlayer: false,
+    // The card's title is the creature name it was looked up under, so it also
+    // serves as the bestiary key for the Initiative tracker's attacks/spells
+    // panel. A card for something outside the bundled dataset (a bridge lookup
+    // of a homebrew monster) simply won't resolve — same outcome as before.
+    monsterName: card.title,
   };
 }
 

@@ -45,8 +45,10 @@ import {
   OPEN5E_SLUGS,
   parseCSV,
   requireColumns,
+  renderSpellcasting,
   resolveFiveToolsKey,
   richMatchesCsv,
+  type FiveToolsSpellcasting,
   type Open5eSlug,
 } from "./monsters-lib.js";
 
@@ -170,6 +172,9 @@ interface FiveToolsMonster {
   reaction?: FiveToolsTrait[];
   legendary?: FiveToolsTrait[];
   legendaryHeader?: unknown;
+  // A monster's spell list lives here, NOT in trait/action — see
+  // renderSpellcasting in monsters-lib.ts.
+  spellcasting?: FiveToolsSpellcasting[];
 }
 
 interface MonsterTrait {
@@ -462,11 +467,27 @@ function transformRich(src: FiveToolsMonster): RichFields {
   const condImmune = formatDamageList(src.conditionImmune);
   if (condImmune) out.conditionImmunities = condImmune;
   const traits = renderTraits(src.trait);
-  if (traits.length > 0) out.traits = traits;
   const reactions = renderTraits(src.reaction);
   if (reactions.length > 0) out.reactions = reactions;
   const legendary = renderTraits(src.legendary);
   if (legendary.length > 0) out.legendaryActions = legendary;
+  // Spellcasting is a sibling of trait/action in the 5etools schema, so it has
+  // to be folded in explicitly. `displayAs` decides where: 2014 stat blocks
+  // list Spellcasting among the traits, 2024 ones make it an action. Appended
+  // after the section's own entries, matching how 5etools renders it.
+  for (const block of src.spellcasting ?? []) {
+    const rendered = renderSpellcasting(block, renderEntries);
+    if (!rendered) continue;
+    const entry = { name: rendered.name, desc: rendered.desc };
+    if (rendered.displayAs === "action") {
+      // `actions` is optional on MonsterEntry but always assigned above, so
+      // seed an array rather than assert non-null.
+      out.actions = [...(out.actions ?? []), entry];
+    } else {
+      traits.push(entry);
+    }
+  }
+  if (traits.length > 0) out.traits = traits;
   return out;
 }
 

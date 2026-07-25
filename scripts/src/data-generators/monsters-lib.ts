@@ -222,3 +222,141 @@ export function canonicalPrefersOpen5e(csvSource: string | undefined): boolean {
     Object.prototype.hasOwnProperty.call(OPEN5E_SLUG_BY_CSV_SOURCE, csvSource)
   );
 }
+
+// ── 5etools `spellcasting` blocks ───────────────────────────────────────────
+//
+// 5etools does NOT put a monster's spell list in `trait` or `action` — it lives
+// in a dedicated `spellcasting` array with the groups held as structured keys
+// (`will`, `daily: {"3e": [...]}`, `spells: {"1": {slots: 4, spells: [...]}}`).
+// The generator originally read only trait/action/reaction/legendary, so every
+// WotC caster shipped with no spells at all: the Lich, Mage, Archmage and the
+// dragons all reached the app with a stat block whose Multiattack referred to
+// "a use of Spellcasting" that was nowhere in the data. (The third-party Open5e
+// books were unaffected — they embed spellcasting prose in `special_abilities`,
+// which already flowed through `renderTraits`.)
+//
+// This renders the structured block back into the SAME prose shape the Open5e
+// entries already use — a header sentence, then one "<Label>: <spells>" line per
+// group — because that is the shape `src/lib/statblockCombat.ts` parses in the
+// app, and the shape a DM reads when the parse misses. Emitting a bespoke
+// structure here instead would mean two formats to parse for no gain.
+
+export interface FiveToolsSpellcasting {
+  name?: string;
+  headerEntries?: unknown;
+  footerEntries?: unknown;
+  /** Cast at will, no limit. */
+  will?: unknown;
+  /** Always active. */
+  constant?: unknown;
+  /** Castable as a ritual only. */
+  ritual?: unknown;
+  /** Keyed by uses: "1" = 1/day, "1e" = 1/day EACH. Same for the rest/weekly forms. */
+  daily?: Record<string, unknown>;
+  rest?: Record<string, unknown>;
+  weekly?: Record<string, unknown>;
+  monthly?: Record<string, unknown>;
+  yearly?: Record<string, unknown>;
+  /** Keyed by spell level: "0" = cantrips. `slots` is the slot count. */
+  spells?: Record<string, { slots?: number; lower?: number; spells?: unknown }>;
+  /** Groups 5etools itself hides from the rendered list. */
+  hidden?: string[];
+  /** "action" on 2024 stat blocks, which moved Spellcasting out of traits. */
+  displayAs?: string;
+}
+
+const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
+
+// The per-period group keys, in 5etools' own render order.
+const PERIOD_GROUPS: { key: keyof FiveToolsSpellcasting; unit: string }[] = [
+  { key: "rest", unit: "Rest" },
+  { key: "daily", unit: "Day" },
+  { key: "weekly", unit: "Week" },
+  { key: "monthly", unit: "Month" },
+  { key: "yearly", unit: "Year" },
+];
+
+/** "3e" → "3/Day Each", "1" → "1/Day". A trailing "e" is 5etools' marker for
+ *  "that many uses of EACH spell listed" rather than shared uses. */
+function periodLabel(rawKey: string, unit: string): string {
+  const each = rawKey.endsWith("e");
+  const n = each ? rawKey.slice(0, -1) : rawKey;
+  return `${n}/${unit}${each ? " Each" : ""}`;
+}
+
+/** "0" → "Cantrips (at will)", "1" + 4 slots → "1st level (4 slots)". */
+function levelLabel(rawLevel: string, slots: number | undefined): string {
+  const level = Number(rawLevel);
+  if (!Number.isInteger(level) || level < 0 || level > 9) return rawLevel;
+  if (level === 0) return "Cantrips (at will)";
+  if (slots === undefined || slots <= 0) return `${ORDINALS[level]} level`;
+  return `${ORDINALS[level]} level (${slots} ${slots === 1 ? "slot" : "slots"})`;
+}
+
+/**
+ * Render one `spellcasting` block to `{ name, desc, displayAs }`.
+ *
+ * `renderList` is injected rather than imported so this file stays free of
+ * lib.ts's filesystem-touching module (it resolves the sibling clone paths at
+ * import time). generate-monsters.ts passes `renderEntries`, which is what
+ * turns `{@spell fire bolt|XPHB}` into "fire bolt".
+ *
+ * Returns null when the block carries no groups AND no header text — there is
+ * nothing for the app to show, and an empty "Spellcasting" heading in a stat
+ * block reads as a data bug.
+ */
+export function renderSpellcasting(
+  block: FiveToolsSpellcasting,
+  renderList: (entries: unknown) => string,
+): { name: string; desc: string; displayAs: "action" | "trait" } | null {
+  const hidden = new Set(block.hidden ?? []);
+  const lines: string[] = [];
+
+  const joinSpells = (entries: unknown): string =>
+    renderList(entries).split("\n").map((s) => s.trim()).filter(Boolean).join(", ");
+
+  const pushGroup = (label: string, entries: unknown): void => {
+    const spells = joinSpells(entries);
+    if (spells) lines.push(`${label}: ${spells}`);
+  };
+
+  if (block.constant && !hidden.has("constant")) pushGroup("Constant", block.constant);
+  if (block.will && !hidden.has("will")) pushGroup("At Will", block.will);
+
+  for (const { key, unit } of PERIOD_GROUPS) {
+    if (hidden.has(key)) continue;
+    const group = block[key] as Record<string, unknown> | undefined;
+    if (!group || typeof group !== "object") continue;
+    // Sort by use count so "1/Day" precedes "3/Day"; the JSON key order is
+    // whatever the source file happened to use.
+    for (const rawKey of Object.keys(group).sort(
+      (a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0),
+    )) {
+      pushGroup(periodLabel(rawKey, unit), group[rawKey]);
+    }
+  }
+
+  if (block.spells && !hidden.has("spells")) {
+    for (const rawLevel of Object.keys(block.spells).sort(
+      (a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0),
+    )) {
+      const slot = block.spells[rawLevel];
+      if (!slot || typeof slot !== "object") continue;
+      pushGroup(levelLabel(rawLevel, slot.slots), slot.spells);
+    }
+  }
+
+  if (block.ritual && !hidden.has("ritual")) pushGroup("Rituals", block.ritual);
+
+  const header = renderList(block.headerEntries);
+  const footer = renderList(block.footerEntries);
+  if (lines.length === 0 && !header) return null;
+
+  return {
+    // 5etools omits `name` on most blocks; the renderer's default is
+    // "Spellcasting", and the app's parser keys spellcasting off that word.
+    name: (block.name ?? "").trim() || "Spellcasting",
+    desc: [header, lines.join("\n"), footer].filter(Boolean).join("\n\n"),
+    displayAs: block.displayAs === "action" ? "action" : "trait",
+  };
+}
