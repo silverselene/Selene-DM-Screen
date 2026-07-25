@@ -403,7 +403,7 @@ export type InitiativeMode = (typeof INITIATIVE_MODES)[number];
 // reason as INITIATIVE_MODES: the import path below and each widget's
 // read path must validate against the SAME list, and the widgets already
 // import from this module.
-export const ORACLE_TABS = ["names", "loot", "items", "places"] as const;
+export const ORACLE_TABS = ["names", "loot", "items", "places", "wares"] as const;
 export type OracleTab = (typeof ORACLE_TABS)[number];
 export const BESTIARY_SORT_MODES = ["alpha", "cr"] as const;
 export type BestiarySortMode = (typeof BESTIARY_SORT_MODES)[number];
@@ -506,6 +506,13 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
   "dm-oracle-race-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
   "dm-oracle-cr-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
   "dm-oracle-settlement-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
+  // Wares dropdown ("Tavern"/"Blacksmith"/...). Matches the race/CR/settlement
+  // pattern above: a capped string, not a strict enum — `generateWares`
+  // already falls back to "Tavern" for an unrecognized value (a hand-edited
+  // key, or a shop name a future edit to waresByShop renamed/removed), so a
+  // stricter enum here would only add a second place to keep in sync with the
+  // data module's keys for no safety benefit.
+  "dm-oracle-shop-v1": lift(validateStringMax(WIDGET_QUERY_MAX)),
   "dm-oracle-history-v2": lift(validateOracleHistory),
 
   // Portal widget's saved embed link (raw pasted URL, not the derived

@@ -81,24 +81,24 @@ function PortalBody() {
               onKeyDown={(e) => e.key === "Enter" && !isImeComposing(e) && submit()}
               placeholder="Paste a YouTube, Spotify, SoundCloud, or Vimeo link…"
               maxLength={PORTAL_URL_MAX}
-              className="flex-1 min-w-0 bg-gray-900/80 border border-purple-800/30 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60"
+              className="flex-1 min-w-0 bg-gray-900/80 border border-purple-800/30 rounded px-2 py-1 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60"
               autoFocus
             />
             <button
               onClick={submit}
-              className="px-2 py-1 text-xs rounded bg-purple-800/40 border border-purple-700/50 text-purple-200 hover:bg-purple-700/50 transition-colors shrink-0"
+              className="px-2 py-1 text-sm rounded bg-purple-800/40 border border-purple-700/50 text-purple-200 hover:bg-purple-700/50 transition-colors shrink-0"
             >
               Load
             </button>
           </div>
-          {error && <div className="text-xs text-red-400 text-center max-w-xs">{error}</div>}
+          {error && <div className="text-sm text-red-400 text-center max-w-xs">{error}</div>}
           {savedUrl && (
             <button
               onClick={() => {
                 setEditing(false);
                 setError(null);
               }}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+              className="text-sm text-gray-600 hover:text-gray-400 transition-colors"
             >
               Cancel
             </button>
@@ -107,7 +107,7 @@ function PortalBody() {
       ) : (
         <>
           <div className="flex items-center justify-between shrink-0 gap-1">
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 min-w-0">
+            <div className="flex items-center gap-1.5 text-sm text-gray-500 min-w-0">
               <Link2 className="w-3 h-3 text-purple-400 shrink-0" />
               <span className="truncate">{savedUrl}</span>
             </div>
@@ -159,7 +159,7 @@ function PortalBody() {
                 referrerPolicy="strict-origin-when-cross-origin"
               />
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-red-400 text-center px-4">
+              <div className="h-full flex items-center justify-center text-sm text-red-400 text-center px-4">
                 This link is no longer supported. Click the pencil to change it.
               </div>
             )}

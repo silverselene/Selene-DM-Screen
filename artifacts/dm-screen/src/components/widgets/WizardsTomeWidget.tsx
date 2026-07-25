@@ -30,7 +30,7 @@ function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
     <div className="h-full min-h-0 flex flex-col">
       <button
         onClick={onBack}
-        className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mb-2 shrink-0"
+        className="flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300 mb-2 shrink-0"
       >
         <ChevronLeft className="w-3 h-3" /> Back
       </button>
@@ -133,7 +133,7 @@ function WizardsTomeBody() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search spells…"
-          className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-cyan-900/50 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-600"
+          className="w-full pl-6 pr-2 py-1 bg-gray-900 border border-cyan-900/50 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-600"
         />
       </div>
 
@@ -142,7 +142,7 @@ function WizardsTomeBody() {
         <select
           value={filterLevel}
           onChange={(e) => setFilterLevel(Number(e.target.value))}
-          className="text-xs bg-gray-900 border border-cyan-900/50 rounded px-1.5 py-1 text-gray-300 focus:outline-none focus:border-cyan-600 flex-1 min-w-0"
+          className="text-sm bg-gray-900 border border-cyan-900/50 rounded px-1.5 py-1 text-gray-300 focus:outline-none focus:border-cyan-600 flex-1 min-w-0"
         >
           <option value={-1}>All Levels</option>
           {spellLevelLabels.map((l, i) => (
@@ -171,17 +171,17 @@ function WizardsTomeBody() {
 
       {/* Result count */}
       <div className="flex items-center justify-between shrink-0">
-        <span className="text-[10px] text-gray-600">{filtered.length} spell{filtered.length !== 1 ? "s" : ""}</span>
+        <span className="text-[12px] text-gray-600">{filtered.length} spell{filtered.length !== 1 ? "s" : ""}</span>
         <div className="flex gap-0.5">
-          <span className="text-[10px] px-1 py-0.5 bg-blue-900/30 text-blue-400 rounded">C=Conc.</span>
-          <span className="text-[10px] px-1 py-0.5 bg-yellow-900/30 text-yellow-400 rounded">R=Ritual</span>
+          <span className="text-[12px] px-1 py-0.5 bg-blue-900/30 text-blue-400 rounded">C=Conc.</span>
+          <span className="text-[12px] px-1 py-0.5 bg-yellow-900/30 text-yellow-400 rounded">R=Ritual</span>
         </div>
       </div>
 
       {/* Spell list */}
       <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
         {filtered.length === 0 && (
-          <div className="text-center py-4 text-gray-600 text-xs flex flex-col items-center gap-2">
+          <div className="text-center py-4 text-gray-600 text-sm flex flex-col items-center gap-2">
             <BookMarked className="w-6 h-6 opacity-30" />
             No spells found
           </div>
@@ -194,27 +194,27 @@ function WizardsTomeBody() {
               onClick={() => setSelected(s)}
               className="w-full text-left flex items-center gap-2 px-2 py-1.5 bg-gray-900/50 hover:bg-cyan-950/30 border border-gray-800/50 hover:border-cyan-800/50 rounded transition-all group"
             >
-              <span className="text-[10px] font-bold text-gray-600 w-5 text-center shrink-0">
+              <span className="text-[12px] font-bold text-gray-600 w-5 text-center shrink-0">
                 {s.level === 0 ? "C" : s.level}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-gray-200 group-hover:text-white truncate">{s.name}</span>
-                  {s.concentration && <span className="text-[9px] text-blue-500 shrink-0">●C</span>}
-                  {s.ritual && <span className="text-[9px] text-yellow-500 shrink-0">●R</span>}
+                  <span className="text-sm font-medium text-gray-200 group-hover:text-white truncate">{s.name}</span>
+                  {s.concentration && <span className="text-[11px] text-blue-500 shrink-0">●C</span>}
+                  {s.ritual && <span className="text-[11px] text-yellow-500 shrink-0">●R</span>}
                 </div>
               </div>
-              <span className={`text-[10px] shrink-0 ${schoolColor}`}>{s.school.slice(0, 4)}</span>
+              <span className={`text-[12px] shrink-0 ${schoolColor}`}>{s.school.slice(0, 4)}</span>
             </button>
           );
         })}
         {!isFiltered && filtered.length > UNFILTERED_PREVIEW && (
-          <div className="text-center py-2 text-[10px] text-gray-600">
+          <div className="text-center py-2 text-[12px] text-gray-600">
             Showing {UNFILTERED_PREVIEW} of {filtered.length} — search to filter
           </div>
         )}
         {isFiltered && filtered.length > MAX_RESULTS && (
-          <div className="text-center py-2 text-[10px] text-gray-600">
+          <div className="text-center py-2 text-[12px] text-gray-600">
             Showing first {MAX_RESULTS} of {filtered.length.toLocaleString()} — refine your search
           </div>
         )}

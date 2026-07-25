@@ -39,7 +39,7 @@ vi.mock("@/data/monsters", () => {
   };
 });
 
-import { searchMonsters, findRichMonster } from "./monsterSearch";
+import { searchMonsters, findRichMonster, findCombatantMonster } from "./monsterSearch";
 
 describe("searchMonsters — empty query browse", () => {
   it("returns the first {limit} rich monsters in ALPHABETICAL order", () => {
@@ -94,5 +94,56 @@ describe("findRichMonster", () => {
 
   it("returns null for an unknown name", () => {
     expect(findRichMonster("Tarrasque")).toBeNull();
+  });
+});
+
+// Resolving an Initiative row back to its stat block, which is what decides
+// whether the tracker can show that combatant's attacks and spells. DMs rename
+// rows constantly to tell three goblins apart, so the display name alone is not
+// a reliable key — hence the stored `monsterName` and, for rows that predate it,
+// the suffix-stripping fallback.
+describe("findCombatantMonster", () => {
+  it("prefers the stored monsterName over the display name", () => {
+    expect(findCombatantMonster("Grix the Sneak", "Goblin")?.name).toBe("Goblin");
+  });
+
+  it("falls back to the display name when no monsterName is stored", () => {
+    expect(findCombatantMonster("Goblin")?.name).toBe("Goblin");
+  });
+
+  it("falls back to the display name when the stored monsterName is unknown", () => {
+    // A monsterName written by a card for a monster outside the dataset must not
+    // shadow a display name that DOES resolve.
+    expect(findCombatantMonster("Goblin", "Goblin of the Deep Wyrd")?.name).toBe("Goblin");
+  });
+
+  it.each([
+    ["Goblin #2", "a numbered duplicate"],
+    ["Goblin 2", "a bare trailing number"],
+    ["Goblin (wounded)", "a parenthetical note"],
+    ["Goblin - archer", "a dash-separated role"],
+    ["Goblin A", "a single-letter tag"],
+    ["  Goblin  ", "surrounding whitespace"],
+  ])("resolves %s through %s", (displayName) => {
+    expect(findCombatantMonster(displayName)?.name).toBe("Goblin");
+  });
+
+  it("strips stacked decorations", () => {
+    expect(findCombatantMonster("Goblin #3 (bloodied)")?.name).toBe("Goblin");
+  });
+
+  it("returns null for a thin entry with no stat block to show", () => {
+    expect(findCombatantMonster("Kobold Warren")).toBeNull();
+  });
+
+  it("returns null rather than guessing at a name it cannot resolve", () => {
+    expect(findCombatantMonster("Cult Enforcer")).toBeNull();
+    expect(findCombatantMonster("")).toBeNull();
+  });
+
+  it("does not match a different monster by stripping into a shorter name", () => {
+    // "Owlbear" must not degrade to "Owl" or "bear" — only trailing
+    // decorations come off, never a word boundary inside the name itself.
+    expect(findCombatantMonster("Dire Owlbear")).toBeNull();
   });
 });

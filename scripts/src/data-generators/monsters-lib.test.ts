@@ -5,10 +5,12 @@ import {
   cleanOpen5e,
   crValue,
   parseCSV,
+  renderSpellcasting,
   requireColumns,
   resolveFiveToolsKey,
   richMatchesCsv,
 } from "./monsters-lib";
+import { renderEntries } from "./lib";
 
 describe("parseCSV", () => {
   test("splits rows and columns", () => {
@@ -195,5 +197,120 @@ describe("canonicalPrefersOpen5e", () => {
     expect(canonicalPrefersOpen5e("5e SRD")).toBe(false);
     expect(canonicalPrefersOpen5e("")).toBe(false);
     expect(canonicalPrefersOpen5e(undefined)).toBe(false);
+  });
+});
+
+// The 5etools `spellcasting` array was silently dropped by the generator until
+// this helper existed, so every WotC caster shipped with no spells. These
+// fixtures mirror the schema's real shapes (structured group keys, the "e"
+// = "each" suffix, `displayAs`, `hidden`) and assert the output lands in the
+// prose format `src/lib/statblockCombat.ts` parses in the app — the two are a
+// producer/consumer pair, so a format change here must be made in both.
+describe("renderSpellcasting", () => {
+  const render = (block: Parameters<typeof renderSpellcasting>[0]) =>
+    renderSpellcasting(block, renderEntries);
+
+  test("renders a prepared-caster slot list as labelled lines", () => {
+    const out = render({
+      headerEntries: [
+        "The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, {@hit 6} to hit with spell attacks). The mage has the following wizard spells prepared:",
+      ],
+      spells: {
+        "0": { spells: ["{@spell fire bolt}", "{@spell light}"] },
+        "1": { slots: 4, spells: ["{@spell mage armor}", "{@spell magic missile}"] },
+        "3": { slots: 3, spells: ["{@spell counterspell}", "{@spell fireball}"] },
+      },
+      ability: "int",
+    });
+    expect(out).not.toBeNull();
+    expect(out!.name).toBe("Spellcasting");
+    expect(out!.displayAs).toBe("trait");
+    // `{@hit 6}` → "+6", which is what the app reads as the spell attack bonus.
+    expect(out!.desc).toContain("+6 to hit with spell attacks");
+    expect(out!.desc).toContain("Cantrips (at will): fire bolt, light");
+    expect(out!.desc).toContain("1st level (4 slots): mage armor, magic missile");
+    expect(out!.desc).toContain("3rd level (3 slots): counterspell, fireball");
+  });
+
+  test("expands the 'e' use-suffix to 'Each' and orders groups by use count", () => {
+    const out = render({
+      will: ["{@spell tongues}"],
+      daily: {
+        "3e": ["{@spell dispel magic}", "{@spell enhance ability}"],
+        "1": ["{@spell dominate person}"],
+      },
+    });
+    const lines = out!.desc.split("\n").filter(Boolean);
+    expect(lines).toEqual([
+      "At Will: tongues",
+      "1/Day: dominate person",
+      "3/Day Each: dispel magic, enhance ability",
+    ]);
+  });
+
+  test("uses the singular slot label for a single slot", () => {
+    const out = render({ spells: { "6": { slots: 1, spells: ["{@spell disintegrate}"] } } });
+    expect(out!.desc).toBe("6th level (1 slot): disintegrate");
+  });
+
+  test("omits the slot count when the source gives none", () => {
+    const out = render({ spells: { "2": { spells: ["{@spell invisibility}"] } } });
+    expect(out!.desc).toBe("2nd level: invisibility");
+  });
+
+  test("routes a 2024 block into the actions section", () => {
+    const out = render({
+      name: "Spellcasting",
+      displayAs: "action",
+      headerEntries: ["The lich casts one of the following spells, using Intelligence as the spellcasting ability (spell save DC 20):"],
+      will: ["{@spell detect magic}"],
+    });
+    expect(out!.displayAs).toBe("action");
+  });
+
+  test("keeps the source's own block name", () => {
+    const out = render({ name: "Innate Spellcasting (Psionics)", will: ["{@spell detect thoughts}"] });
+    expect(out!.name).toBe("Innate Spellcasting (Psionics)");
+  });
+
+  test("skips a group 5etools marks hidden", () => {
+    // `hidden` marks spells consumed by another feature; 5etools does not list
+    // them, and listing them here would invent options the monster lacks.
+    const out = render({
+      headerEntries: ["It can innately cast the following spells:"],
+      will: ["{@spell mage hand}"],
+      daily: { "1e": ["{@spell plane shift}"] },
+      hidden: ["daily"],
+    });
+    expect(out!.desc).toContain("At Will: mage hand");
+    expect(out!.desc).not.toContain("plane shift");
+  });
+
+  test("renders constant and ritual groups", () => {
+    const out = render({
+      constant: ["{@spell mage armor}"],
+      ritual: ["{@spell detect magic}"],
+    });
+    // Group lines share one block, separated by single newlines; only the
+    // header/footer prose is set off by a blank line.
+    expect(out!.desc).toBe("Constant: mage armor\nRituals: detect magic");
+  });
+
+  test("appends footer entries after the groups", () => {
+    const out = render({
+      will: ["{@spell darkness}"],
+      footerEntries: ["*The demon casts these spells innately."],
+    });
+    expect(out!.desc).toBe("At Will: darkness\n\n*The demon casts these spells innately.");
+  });
+
+  test("returns null for a block with neither groups nor header text", () => {
+    expect(render({})).toBeNull();
+    expect(render({ spells: {} })).toBeNull();
+  });
+
+  test("keeps a header-only block, which still tells the DM the save DC", () => {
+    const out = render({ headerEntries: ["Its spellcasting ability is Charisma (spell save DC 17)."] });
+    expect(out!.desc).toContain("spell save DC 17");
   });
 });

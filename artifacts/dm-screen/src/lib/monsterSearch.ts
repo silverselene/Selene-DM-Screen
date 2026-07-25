@@ -52,6 +52,58 @@ export function findRichMonster(name: string): MonsterEntry | null {
   return m && m.actions !== undefined ? m : null;
 }
 
+// Table-name decorations a DM adds when several of the same monster are in one
+// fight. Stripped one layer at a time (never mid-word) so "Goblin #2",
+// "Goblin 2", "Goblin (wounded)" and "Goblin - archer" all still resolve to the
+// Goblin stat block.
+const COMBATANT_SUFFIXES: RegExp[] = [
+  /\s*\([^)]*\)\s*$/, // "Goblin (wounded)"
+  /\s*[#№]\s*\d+\s*$/, // "Goblin #2"
+  /\s*[-–—:]\s*\S.*$/, // "Goblin - archer"
+  /\s+\d+\s*$/, // "Goblin 2"
+  /\s+[A-Za-z]\s*$/, // "Goblin A"
+];
+
+/**
+ * Resolve an Initiative combatant to the stat block behind it.
+ *
+ * Combatants added from the monster search carry `monsterName`, which is the
+ * reliable path and is tried first. `displayName` is the fallback for rows that
+ * predate that field (an in-progress encounter persisted before this feature) or
+ * were typed in by hand: exact match, then progressively stripping the
+ * "#2"/"(wounded)" decorations a DM adds to tell two goblins apart.
+ *
+ * Returns null rather than guessing when nothing matches — the widget then shows
+ * no combat panel for that row, which is the honest outcome for a homebrew
+ * "Cult Enforcer" that isn't in the dataset.
+ */
+export function findCombatantMonster(
+  displayName: string,
+  monsterName?: string,
+): MonsterEntry | null {
+  if (monsterName) {
+    const exact = findRichMonster(monsterName);
+    if (exact) return exact;
+  }
+  let name = displayName.trim();
+  const direct = findRichMonster(name);
+  if (direct) return direct;
+
+  // Bounded loop: each pass must shorten the name, and a name that stops
+  // shrinking ends it — so a pathological input can't spin here.
+  for (let i = 0; i < COMBATANT_SUFFIXES.length && name.length > 0; i++) {
+    let stripped = name;
+    for (const suffix of COMBATANT_SUFFIXES) {
+      stripped = stripped.replace(suffix, "").trim();
+    }
+    if (stripped === name || stripped.length === 0) break;
+    const hit = findRichMonster(stripped);
+    if (hit) return hit;
+    name = stripped;
+  }
+  return null;
+}
+
 const RESULT_LIMIT = 60;
 
 // The empty-query "browse" list — full-stat-block monsters, alphabetized —

@@ -1,3 +1,130 @@
+// ── Shop wares generator ────────────────────────────────────────────────────
+// Unlike the other tables above (a flavor sentence per roll), a "wares" roll
+// needs several DISTINCT items at once, each with its own price — so this
+// gets its own entry shape and generator function rather than reusing
+// `pickRandom` over a flat string list.
+
+export interface WareEntry {
+  name: string;
+  /** Inclusive price range, rolled fresh on every generate — a flat `min ===
+   *  max` entry (e.g. a torch always costing 1 cp) still rolls, it just
+   *  always lands on the same number. */
+  min: number;
+  max: number;
+  unit: "cp" | "sp" | "gp";
+}
+
+export const waresByShop: Record<string, WareEntry[]> = {
+  Tavern: [
+    { name: "Tankard of Ale", min: 3, max: 5, unit: "sp" },
+    { name: "Mug of Dwarven Stout", min: 6, max: 8, unit: "sp" },
+    { name: "Bottle of Common Wine", min: 2, max: 2, unit: "gp" },
+    { name: "Bottle of Fine Wine", min: 10, max: 15, unit: "gp" },
+    { name: "Bowl of Stew", min: 2, max: 3, unit: "sp" },
+    { name: "Meat Pie", min: 3, max: 4, unit: "sp" },
+    { name: "Loaf of Bread and Cheese", min: 1, max: 2, unit: "sp" },
+    { name: "Roast Chicken Dinner", min: 6, max: 8, unit: "sp" },
+    { name: "Room for the Night (Common)", min: 5, max: 5, unit: "sp" },
+    { name: "Private Room (Comfortable)", min: 2, max: 3, unit: "gp" },
+    { name: "Stabling for Your Horse (Overnight)", min: 4, max: 5, unit: "sp" },
+    { name: "Hot Bath and a Shave", min: 4, max: 6, unit: "sp" },
+    { name: "Round of Drinks for the Table", min: 1, max: 2, unit: "gp" },
+    { name: "Bard's Song Request", min: 1, max: 2, unit: "gp" },
+    { name: "Deck of Playing Cards", min: 5, max: 5, unit: "sp" },
+  ],
+  Blacksmith: [
+    { name: "Dagger", min: 2, max: 2, unit: "gp" },
+    { name: "Handaxe", min: 5, max: 5, unit: "gp" },
+    { name: "Shortsword", min: 10, max: 10, unit: "gp" },
+    { name: "Battleaxe", min: 10, max: 10, unit: "gp" },
+    { name: "Warhammer", min: 15, max: 15, unit: "gp" },
+    { name: "Shield", min: 10, max: 10, unit: "gp" },
+    { name: "Studded Leather Armor", min: 45, max: 45, unit: "gp" },
+    { name: "Chain Shirt", min: 50, max: 50, unit: "gp" },
+    { name: "Iron Horseshoes (Set)", min: 2, max: 2, unit: "gp" },
+    { name: "Chain (10 feet)", min: 5, max: 5, unit: "gp" },
+    { name: "Crowbar", min: 2, max: 2, unit: "gp" },
+    { name: "Manacles", min: 2, max: 2, unit: "gp" },
+    { name: "Hunting Trap", min: 5, max: 5, unit: "gp" },
+    { name: "Weapon Sharpening", min: 1, max: 3, unit: "sp" },
+    { name: "Armor Repair", min: 5, max: 10, unit: "sp" },
+    { name: "Bag of Caltrops (20)", min: 1, max: 1, unit: "gp" },
+  ],
+  Trader: [
+    { name: "Bedroll", min: 1, max: 1, unit: "gp" },
+    { name: "Backpack", min: 2, max: 2, unit: "gp" },
+    { name: "Hempen Rope (50 ft)", min: 1, max: 1, unit: "gp" },
+    { name: "Rations (1 day)", min: 4, max: 5, unit: "sp" },
+    { name: "Waterskin", min: 2, max: 2, unit: "sp" },
+    { name: "Torch", min: 1, max: 1, unit: "cp" },
+    { name: "Tinderbox", min: 5, max: 5, unit: "sp" },
+    { name: "Bullseye Lantern", min: 10, max: 10, unit: "gp" },
+    { name: "Flask of Oil", min: 1, max: 1, unit: "sp" },
+    { name: "Traveler's Clothes", min: 2, max: 2, unit: "gp" },
+    { name: "Fine Clothes", min: 12, max: 15, unit: "gp" },
+    { name: "Grappling Hook", min: 2, max: 2, unit: "gp" },
+    { name: "Signal Whistle", min: 5, max: 5, unit: "cp" },
+    { name: "Pouch of Exotic Spices", min: 3, max: 6, unit: "gp" },
+    { name: "Map of the Region", min: 8, max: 12, unit: "gp" },
+    { name: "Sack", min: 1, max: 1, unit: "cp" },
+  ],
+  Alchemist: [
+    { name: "Potion of Healing", min: 50, max: 50, unit: "gp" },
+    { name: "Vial of Antitoxin", min: 50, max: 50, unit: "gp" },
+    { name: "Flask of Alchemist's Fire", min: 50, max: 50, unit: "gp" },
+    { name: "Vial of Acid", min: 25, max: 25, unit: "gp" },
+    { name: "Flask of Holy Water", min: 25, max: 25, unit: "gp" },
+    { name: "Component Pouch", min: 25, max: 25, unit: "gp" },
+    { name: "Smokestick", min: 20, max: 20, unit: "gp" },
+    { name: "Vial of Perfume", min: 4, max: 6, unit: "gp" },
+    { name: "1 oz Vial of Ink", min: 8, max: 10, unit: "gp" },
+    { name: "Herbalism Kit", min: 5, max: 5, unit: "gp" },
+    { name: "Pouch of Powdered Silver", min: 5, max: 10, unit: "gp" },
+    { name: "Pouch of Dried Newt Eyes", min: 2, max: 4, unit: "gp" },
+    { name: "Tindertwig", min: 1, max: 1, unit: "sp" },
+    { name: "Strange Glowing Mushroom", min: 3, max: 6, unit: "gp" },
+    { name: "Basic Poison (vial)", min: 90, max: 110, unit: "gp" },
+  ],
+};
+
+const WARES_MIN_ITEMS = 3;
+const WARES_MAX_ITEMS = 5;
+
+/** Exported (rather than kept module-private like `pickRandom`) so the price
+ *  clamp/roll logic gets a direct unit test instead of only being exercised
+ *  indirectly through `generateWares`, where the shuffle's own randomness
+ *  would make asserting on a specific roll's bounds unreliable. */
+export function rollWarePrice(entry: WareEntry): string {
+  const amount =
+    entry.min === entry.max
+      ? entry.min
+      : entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1));
+  return `${amount} ${entry.unit}`;
+}
+
+/**
+ * Roll a shop's stock: 3-5 DISTINCT wares (never the same item twice in one
+ * roll — a real shop's shelf doesn't repeat), each with a freshly rolled
+ * price. Returned as `"Name — price"` lines joined by `\n`; the widget
+ * splits on both separators to render each as its own row and to fold a
+ * previous roll into one line for the history list.
+ */
+export function generateWares(shop: string): string {
+  const table = waresByShop[shop] || waresByShop["Tavern"];
+  const count = Math.min(
+    table.length,
+    WARES_MIN_ITEMS + Math.floor(Math.random() * (WARES_MAX_ITEMS - WARES_MIN_ITEMS + 1)),
+  );
+  const pool = [...table];
+  const picks: WareEntry[] = [];
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    picks.push(pool[idx]);
+    pool.splice(idx, 1);
+  }
+  return picks.map((w) => `${w.name} — ${rollWarePrice(w)}`).join("\n");
+}
+
 export const namesByRace: Record<string, string[]> = {
   Human: [
     "Aldric Vane", "Mira Thorne", "Cassius Drell", "Lysa Farrow", "Dorian Ashwell",

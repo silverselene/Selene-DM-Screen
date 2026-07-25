@@ -1,7 +1,7 @@
-import { Wand2, RefreshCw, User, Gem, Sword, MapPin } from "lucide-react";
+import { Wand2, RefreshCw, User, Gem, Sword, MapPin, Store } from "lucide-react";
 import {
-  generateName, generateLoot, generateItem, generatePlaceName,
-  namesByRace, lootByCR, settlementTypes,
+  generateName, generateLoot, generateItem, generatePlaceName, generateWares,
+  namesByRace, lootByCR, settlementTypes, waresByShop,
 } from "@/data/generators";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { createSingletonSlot } from "@/lib/singletonWidget";
@@ -16,8 +16,20 @@ import {
 } from "@/lib/backup";
 
 const EMPTY_HISTORY: Record<OracleTab, string[]> = {
-  names: [], loot: [], items: [], places: [],
+  names: [], loot: [], items: [], places: [], wares: [],
 };
+
+/** A wares roll is stored as `"Name — price"` lines joined by `\n` (see
+ *  `generateWares`). Parsed once here so both the result card (one row per
+ *  item) and the history list (folded to one line) read off the same shape. */
+function parseWareLines(result: string): { name: string; price: string }[] {
+  return result
+    .split("\n")
+    .map((line) => {
+      const [name, price] = line.split(" — ");
+      return { name: name ?? line, price: price ?? "" };
+    });
+}
 
 const ORACLE_MOUNT_SLOT = createSingletonSlot();
 
@@ -56,6 +68,11 @@ function OracleBody() {
     "Town",
     validateStringMax(WIDGET_QUERY_MAX),
   );
+  const [selectedShop, setSelectedShop] = useLocalStorage<string>(
+    "dm-oracle-shop-v1",
+    "Tavern",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
   // History is kept per-tab (v2 shape) so peeking at Loot no longer wipes your
   // recent Names. The active tab's most recent roll is the displayed result, so
   // switching tabs restores each tab's last result instead of clearing it.
@@ -72,6 +89,7 @@ function OracleBody() {
     if (tab === "names") res = generateName(selectedRace);
     else if (tab === "loot") res = generateLoot(selectedCR);
     else if (tab === "places") res = generatePlaceName(selectedSettlement);
+    else if (tab === "wares") res = generateWares(selectedShop);
     else res = generateItem();
     setHistory((h) => ({ ...h, [tab]: [res, ...(h[tab] ?? []).slice(0, 4)] }));
   };
@@ -81,6 +99,7 @@ function OracleBody() {
     { id: "places", label: "Places", icon: <MapPin  className="w-3 h-3" /> },
     { id: "loot",   label: "Loot",   icon: <Gem    className="w-3 h-3" /> },
     { id: "items",  label: "Items",  icon: <Sword  className="w-3 h-3" /> },
+    { id: "wares",  label: "Wares",  icon: <Store  className="w-3 h-3" /> },
   ];
 
   // Split the result on the em-dash so we can style name vs descriptor separately
@@ -89,14 +108,23 @@ function OracleBody() {
     : [result, ""];
 
   return (
+    // Same bug the Bestiary stat block had: DMTile wraps every widget in an
+    // `overflow-hidden` body, so anything here that isn't inside ITS OWN
+    // scroll region just gets clipped in a short tile with no way to reach
+    // it. Only the tabs + controls + Generate button stay pinned outside the
+    // scroll region below — they're compact and Generate is the one control
+    // the DM reaches for on every roll, so it must never scroll out of
+    // reach. Everything that can grow (the result card, and — worse, since
+    // it accumulates — the history list) lives in ONE scrollable region
+    // together, the same fix as the Bestiary stat block's header+tab-body.
     <div className="h-full min-h-0 flex flex-col">
       {/* Tabs */}
-      <div className="flex gap-1 mb-2 flex-wrap">
+      <div className="flex gap-1 mb-2 flex-wrap shrink-0">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 rounded text-sm font-semibold transition-all ${
               tab === t.id
                 ? "bg-purple-700 text-white shadow-[0_0_6px_rgba(139,43,226,0.4)]"
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
@@ -109,12 +137,12 @@ function OracleBody() {
       </div>
 
       {/* Controls */}
-      <div className="mb-3">
+      <div className="mb-3 shrink-0">
         {tab === "names" && (
           <select
             value={selectedRace}
             onChange={(e) => setSelectedRace(e.target.value)}
-            className="w-full text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
           >
             {Object.keys(namesByRace).map((r) => (
               <option key={r}>{r}</option>
@@ -125,7 +153,7 @@ function OracleBody() {
           <select
             value={selectedCR}
             onChange={(e) => setSelectedCR(e.target.value)}
-            className="w-full text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
           >
             {Object.keys(lootByCR).map((cr) => (
               <option key={cr}>{cr}</option>
@@ -133,7 +161,7 @@ function OracleBody() {
           </select>
         )}
         {tab === "items" && (
-          <div className="text-xs text-gray-500 italic px-1">
+          <div className="text-sm text-gray-500 italic px-1">
             Generates mundane items or common magic items at random.
           </div>
         )}
@@ -141,10 +169,21 @@ function OracleBody() {
           <select
             value={selectedSettlement}
             onChange={(e) => setSelectedSettlement(e.target.value)}
-            className="w-full text-xs bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
           >
             {Object.entries(settlementTypes).map(([key, { label }]) => (
               <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        )}
+        {tab === "wares" && (
+          <select
+            value={selectedShop}
+            onChange={(e) => setSelectedShop(e.target.value)}
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+          >
+            {Object.keys(waresByShop).map((shop) => (
+              <option key={shop}>{shop}</option>
             ))}
           </select>
         )}
@@ -153,49 +192,77 @@ function OracleBody() {
       {/* Generate button */}
       <button
         onClick={generate}
-        className="flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-purple-800 to-purple-600 hover:from-purple-700 hover:to-purple-500 rounded text-white text-xs font-bold transition-all shadow-[0_0_10px_rgba(139,43,226,0.3)] hover:shadow-[0_0_14px_rgba(139,43,226,0.5)]"
+        className="shrink-0 flex items-center justify-center gap-2 w-full py-2 bg-gradient-to-r from-purple-800 to-purple-600 hover:from-purple-700 hover:to-purple-500 rounded text-white text-sm font-bold transition-all shadow-[0_0_10px_rgba(139,43,226,0.3)] hover:shadow-[0_0_14px_rgba(139,43,226,0.5)]"
       >
         <Wand2 className="w-4 h-4" />
         Generate
         <RefreshCw className="w-3 h-3 opacity-60" />
       </button>
 
-      {/* Result */}
-      {result && (
-        <div className="mt-3 p-3 bg-gray-900/80 border border-white/20 rounded">
-          {tab === "places" && placeDesc ? (
-            <>
-              <div className="flex items-center gap-1.5 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                <span className="text-sm text-white font-bold tracking-wide">{placeName}</span>
-              </div>
-              <div className="text-xs text-gray-400 italic leading-relaxed">{placeDesc}</div>
-            </>
-          ) : (
-            <div className="text-sm text-white font-semibold leading-relaxed">{result}</div>
-          )}
-        </div>
-      )}
-
-      {/* History */}
-      {tabHistory.length > 1 && (
-        <div className="mt-3 flex-1 min-h-0 overflow-y-auto">
-          <div className="text-xs text-gray-600 mb-1">Previous Results</div>
-          <div className="space-y-1">
-            {tabHistory.slice(1).map((h, i) => {
-              const [pn, pd] = tab === "places" ? h.split(" — ") : [h, ""];
-              return (
-                <div key={i} className="text-xs text-gray-500 px-2 py-1 bg-gray-900/40 rounded border border-gray-800">
-                  {tab === "places" && pd ? (
-                    <><span className="text-gray-300 font-semibold">{pn}</span>
-                    <span className="text-gray-600"> — {pd}</span></>
-                  ) : h}
+      {/* Result + History share ONE scroll region (see the comment above) so
+          a long wares list, or a tile too short for the result plus a few
+          history lines, is reachable by scrolling instead of being clipped. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {result && (
+          <div className="mt-3 p-3 bg-gray-900/80 border border-white/20 rounded">
+            {tab === "wares" ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Store className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="text-base text-white font-bold tracking-wide">{selectedShop}</span>
                 </div>
-              );
-            })}
+                <div className="space-y-1">
+                  {parseWareLines(result).map((item, i) => (
+                    <div key={i} className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm text-gray-200">{item.name}</span>
+                      <span className="text-sm font-mono font-semibold text-amber-300 whitespace-nowrap">{item.price}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : tab === "places" && placeDesc ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="text-base text-white font-bold tracking-wide">{placeName}</span>
+                </div>
+                <div className="text-sm text-gray-400 italic leading-relaxed">{placeDesc}</div>
+              </>
+            ) : (
+              <div className="text-base text-white font-semibold leading-relaxed">{result}</div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* History */}
+        {tabHistory.length > 1 && (
+          <div className="mt-3">
+            <div className="text-sm text-gray-600 mb-1">Previous Results</div>
+            <div className="space-y-1">
+              {tabHistory.slice(1).map((h, i) => {
+                const [pn, pd] = tab === "places" ? h.split(" — ") : [h, ""];
+                const wareItems = tab === "wares" ? parseWareLines(h) : null;
+                return (
+                  <div key={i} className="text-sm text-gray-500 px-2 py-1 bg-gray-900/40 rounded border border-gray-800">
+                    {wareItems ? (
+                      wareItems.map((item, j) => (
+                        <span key={j}>
+                          {j > 0 && <span className="text-gray-700"> · </span>}
+                          <span className="text-gray-400">{item.name}</span>
+                          <span className="text-gray-600"> ({item.price})</span>
+                        </span>
+                      ))
+                    ) : tab === "places" && pd ? (
+                      <><span className="text-gray-300 font-semibold">{pn}</span>
+                      <span className="text-gray-600"> — {pd}</span></>
+                    ) : h}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

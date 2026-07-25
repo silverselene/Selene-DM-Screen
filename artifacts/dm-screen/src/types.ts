@@ -62,6 +62,21 @@ export interface Combatant {
   maxHp: number;
   ac?: number;
   isPlayer: boolean;
+  /**
+   * The bestiary entry this combatant was added from, when it came from the
+   * monster search. Lets the tracker show the creature's attacks and spells
+   * inline even after the DM renames the row to "Goblin #2 (archer)" — the
+   * display name alone only resolves through the suffix-stripping fallback in
+   * `findCombatantMonster`.
+   *
+   * Purely additive and optional, so `dm-initiative-v1` did NOT need a version
+   * bump: an older build reading a newer list drops the field in
+   * `validateCombatants`' whitelist rebuild (the panel just doesn't appear), and
+   * a newer build reading an older list sees `undefined` and falls back to the
+   * name. Neither direction can produce the corrupt-state crash a version bump
+   * exists to prevent.
+   */
+  monsterName?: string;
 }
 
 export interface PlayerCharacter {

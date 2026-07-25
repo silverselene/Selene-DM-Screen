@@ -24,7 +24,7 @@ import { sameName } from "@/lib/names";
 import { addCharacter, loadParty, updateCharacter } from "@/lib/partyStore";
 
 const btn =
-  "px-2 py-1 rounded text-[10px] font-medium border transition-colors disabled:opacity-40";
+  "px-2 py-1 rounded text-[12px] font-medium border transition-colors disabled:opacity-40";
 
 export function ChatCardActions({ card }: { card: ToolResultCard }) {
   const [flash, setFlash] = useState<string | null>(null);
@@ -135,7 +135,7 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
     const identical = diffPlayer(existing, form).length === 0;
     return (
       <div className="mt-2 pt-2 border-t" style={{ borderColor: "var(--dm-border)" }}>
-        <div className="text-[10px] mb-1.5" style={{ color: "var(--dm-t2)" }}>
+        <div className="text-[12px] mb-1.5" style={{ color: "var(--dm-t2)" }}>
           <span className="font-semibold" style={{ color: "var(--dm-t1)" }}>{existing.name}</span>{" "}
           is already in your party.
           {identical && " No changes — the sheets are identical."}
@@ -146,7 +146,7 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
             const was = existing[field];
             const changed = String(current ?? "") !== String(was ?? "");
             return (
-              <label key={field} className="flex items-center gap-1.5 text-[10px]">
+              <label key={field} className="flex items-center gap-1.5 text-[12px]">
                 <span className="w-10 uppercase tracking-wide text-amber-300/70">{label}</span>
                 <input
                   type={type}
@@ -222,7 +222,7 @@ export function ChatCardActions({ card }: { card: ToolResultCard }) {
           <UserPlus className="w-3 h-3" /> Add to Party
         </button>
       )}
-      {flash && <span className="text-[10px] text-emerald-400/90">{flash}</span>}
+      {flash && <span className="text-[12px] text-emerald-400/90">{flash}</span>}
     </div>
   );
 }

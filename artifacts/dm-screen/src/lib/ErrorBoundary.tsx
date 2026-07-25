@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.error) {
       return (
-        <div className="h-full flex flex-col items-center justify-center gap-2 text-center text-xs text-gray-400 p-3">
+        <div className="h-full flex flex-col items-center justify-center gap-2 text-center text-sm text-gray-400 p-3">
           <span>
             {this.props.label ?? "This widget"} failed to load.
           </span>

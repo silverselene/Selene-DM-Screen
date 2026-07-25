@@ -343,7 +343,7 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
     .filter(isPlainObject)
     .map((c) => {
       const o = c as Partial<Combatant>;
-      return {
+      const combatant: Combatant = {
         id:
           typeof o.id === "string" && o.id.length > 0 && o.id.length <= 64
             ? o.id
@@ -358,6 +358,14 @@ export function validateCombatants(parsed: unknown): Combatant[] | undefined {
             : undefined,
         isPlayer: typeof o.isPlayer === "boolean" ? o.isPlayer : false,
       };
+      // Optional, and only set when it holds a usable value — the field is a
+      // lookup key into the bestiary, so an empty string would be a
+      // never-matching key that reads as "this row HAS a stat block". Length is
+      // capped like `name` for the same hostile-input reason.
+      if (typeof o.monsterName === "string" && o.monsterName.trim().length > 0) {
+        combatant.monsterName = o.monsterName.slice(0, 200);
+      }
+      return combatant;
     });
   // Dedupe pass: renumber any id collisions with fresh ids. The fresh-mint
   // loop guards against the (astronomically unlikely) case of a random id

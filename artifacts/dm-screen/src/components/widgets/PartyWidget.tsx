@@ -84,7 +84,7 @@ function WeaponTagInput({
 
   const remove = (name: string) => onChange(selected.filter(s => s !== name));
 
-  const inputCls = "flex-1 min-w-[120px] bg-transparent text-xs text-gray-200 placeholder-gray-500 outline-none py-0.5";
+  const inputCls = "flex-1 min-w-[120px] bg-transparent text-sm text-gray-200 placeholder-gray-500 outline-none py-0.5";
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -97,7 +97,7 @@ function WeaponTagInput({
         onClick={() => inputRef.current?.focus()}
       >
         {selected.map(name => (
-          <span key={name} className="flex items-center gap-1 text-[10px] bg-amber-900/40 border border-amber-700/40 text-amber-300 rounded px-1.5 py-0.5">
+          <span key={name} className="flex items-center gap-1 text-[12px] bg-amber-900/40 border border-amber-700/40 text-amber-300 rounded px-1.5 py-0.5">
             <Sword className="w-2.5 h-2.5 shrink-0" />
             {name}
             <button type="button" onClick={e => { e.stopPropagation(); remove(name); }} className="text-amber-500 hover:text-red-400 transition-colors">
@@ -138,16 +138,16 @@ function WeaponTagInput({
             className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-amber-900/30 text-left transition-colors"
           >
             <div className="flex-1 min-w-0">
-              <span className="text-xs text-gray-200">{w.name}</span>
-              {w.category && <span className="text-[9px] text-gray-600 ml-1 capitalize">{w.category}</span>}
+              <span className="text-sm text-gray-200">{w.name}</span>
+              {w.category && <span className="text-[11px] text-gray-600 ml-1 capitalize">{w.category}</span>}
             </div>
             {w.damage && (
-              <span className="text-[10px] text-amber-400 shrink-0 font-mono">
+              <span className="text-[12px] text-amber-400 shrink-0 font-mono">
                 {w.damage}{w.damage_type ? ` ${w.damage_type[0]}` : ""}
               </span>
             )}
             {(w.properties || []).slice(0, 3).map(p => (
-              <span key={p} className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">{p.slice(0, 3)}</span>
+              <span key={p} className="text-[11px] text-gray-600 shrink-0 hidden sm:inline">{p.slice(0, 3)}</span>
             ))}
           </button>
         ))}
@@ -155,7 +155,7 @@ function WeaponTagInput({
           <button
             type="button"
             onMouseDown={e => { e.preventDefault(); add(query); }}
-            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
+            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-sm"
           >
             <Plus className="w-3 h-3" />Add "{query}" as custom weapon
           </button>
@@ -169,7 +169,7 @@ function WeaponTagInput({
 function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, WeaponInfo> }) {
   const info = statsMap.get(name.toLowerCase());
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] bg-amber-900/25 border border-amber-800/30 rounded px-1.5 py-0.5 text-amber-300">
+    <span className="inline-flex items-center gap-1 text-[12px] bg-amber-900/25 border border-amber-800/30 rounded px-1.5 py-0.5 text-amber-300">
       <Sword className="w-2.5 h-2.5 shrink-0" />
       <span>{name}</span>
       {info?.damage && (
@@ -197,7 +197,7 @@ function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, Spe
   const levelLabel =
     info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300">
+    <span className="inline-flex items-center gap-1 text-[12px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300">
       <BookOpen className="w-2.5 h-2.5 shrink-0" />
       <span>{name}</span>
       {info?.damage ? (
@@ -273,7 +273,7 @@ function SpellTagInput({
 
   const remove = (name: string) => onChange(selected.filter(s => s !== name));
 
-  const inputCls = "flex-1 min-w-[120px] bg-transparent text-xs text-gray-200 placeholder-gray-500 outline-none py-0.5";
+  const inputCls = "flex-1 min-w-[120px] bg-transparent text-sm text-gray-200 placeholder-gray-500 outline-none py-0.5";
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -285,7 +285,7 @@ function SpellTagInput({
         onClick={() => inputRef.current?.focus()}
       >
         {selected.map(name => (
-          <span key={name} className="flex items-center gap-1 text-[10px] bg-cyan-900/40 border border-cyan-700/40 text-cyan-300 rounded px-1.5 py-0.5">
+          <span key={name} className="flex items-center gap-1 text-[12px] bg-cyan-900/40 border border-cyan-700/40 text-cyan-300 rounded px-1.5 py-0.5">
             <BookOpen className="w-2.5 h-2.5 shrink-0" />
             {name}
             <button type="button" onClick={e => { e.stopPropagation(); remove(name); }} className="text-cyan-500 hover:text-red-400 transition-colors">
@@ -324,13 +324,13 @@ function SpellTagInput({
             className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-cyan-900/30 text-left transition-colors"
           >
             <div className="flex-1 min-w-0">
-              <span className="text-xs text-gray-200">{s.name}</span>
-              <span className="text-[9px] text-gray-600 ml-1">
+              <span className="text-sm text-gray-200">{s.name}</span>
+              <span className="text-[11px] text-gray-600 ml-1">
                 {s.level === 0 ? "Cantrip" : `Lvl ${s.level}`} · {s.school}
               </span>
             </div>
             {s.classes && s.classes.length > 0 && (
-              <span className="text-[9px] text-gray-600 shrink-0 hidden sm:inline">
+              <span className="text-[11px] text-gray-600 shrink-0 hidden sm:inline">
                 {s.classes.slice(0, 3).map(c => c.slice(0, 3)).join("/")}
               </span>
             )}
@@ -340,7 +340,7 @@ function SpellTagInput({
           <button
             type="button"
             onMouseDown={e => { e.preventDefault(); add(query); }}
-            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-xs"
+            className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-gray-800 border-t border-gray-800 text-gray-500 text-sm"
           >
             <Plus className="w-3 h-3" />Add "{query}" as custom spell
           </button>
@@ -361,7 +361,7 @@ const emptyForm = () => ({
 type CharacterForm = ReturnType<typeof emptyForm>;
 
 const INPUT_CLS =
-  "w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
+  "w-full px-2 py-1 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500";
 
 // Module-scope (not nested inside PartyWidget) so React keeps the same
 // component identity across renders — otherwise every keystroke unmounts
@@ -397,24 +397,24 @@ function FormFields({
       </div>
       <div className="flex gap-1">
         <div className="w-16 shrink-0">
-          <label className="text-[10px] text-gray-500 block mb-0.5">Level</label>
+          <label className="text-[12px] text-gray-500 block mb-0.5">Level</label>
           <input type="number" min="1" max="20" value={f.level}
             onChange={e => setF({ ...f, level: e.target.value })} className={INPUT_CLS} />
         </div>
         <div className="flex-1">
-          <label className="text-[10px] text-gray-500 block mb-0.5">AC</label>
+          <label className="text-[12px] text-gray-500 block mb-0.5">AC</label>
           <input type="number" value={f.ac}
             onChange={e => setF({ ...f, ac: e.target.value })} className={INPUT_CLS} />
         </div>
         <div className="flex-1">
-          <label className="text-[10px] text-gray-500 block mb-0.5">Max HP</label>
+          <label className="text-[12px] text-gray-500 block mb-0.5">Max HP</label>
           <input type="number" value={f.hp}
             onChange={e => setF({ ...f, hp: e.target.value })} className={INPUT_CLS} />
         </div>
       </div>
       {/* Weapons — searchable tag input */}
       <div>
-        <label className="text-[10px] text-gray-500 block mb-0.5">Weapons</label>
+        <label className="text-[12px] text-gray-500 block mb-0.5">Weapons</label>
         <WeaponTagInput
           selected={f.weapons}
           onChange={weapons => setF({ ...f, weapons })}
@@ -422,7 +422,7 @@ function FormFields({
       </div>
       {/* Spells — searchable tag input */}
       <div>
-        <label className="text-[10px] text-gray-500 block mb-0.5">Spells</label>
+        <label className="text-[12px] text-gray-500 block mb-0.5">Spells</label>
         <SpellTagInput
           selected={f.spells}
           onChange={spells => setF({ ...f, spells })}
@@ -607,7 +607,7 @@ export function PartyWidget() {
     <div className="h-full min-h-0 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-2 shrink-0">
-        <span className="text-xs text-gray-400">
+        <span className="text-sm text-gray-400">
           {characters.length} character{characters.length !== 1 ? "s" : ""}
         </span>
         <div className="flex items-center gap-1">
@@ -628,7 +628,7 @@ export function PartyWidget() {
           </button>
           <button
             onClick={() => setShowAdd(v => !v)}
-            className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
+            className="flex items-center gap-1 text-sm px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
           >
             <Plus className="w-3 h-3" />Add Character
           </button>
@@ -636,13 +636,13 @@ export function PartyWidget() {
       </div>
 
       {error && (
-        <div className="text-xs text-red-400 bg-red-900/20 border border-red-800/40 rounded px-2 py-1 mb-2 shrink-0">
+        <div className="text-sm text-red-400 bg-red-900/20 border border-red-800/40 rounded px-2 py-1 mb-2 shrink-0">
           {error}
         </div>
       )}
 
       {notice && (
-        <div className="text-xs text-emerald-300 bg-emerald-900/20 border border-emerald-800/40 rounded px-2 py-1 mb-2 shrink-0">
+        <div className="text-sm text-emerald-300 bg-emerald-900/20 border border-emerald-800/40 rounded px-2 py-1 mb-2 shrink-0">
           {notice}
         </div>
       )}
@@ -650,15 +650,15 @@ export function PartyWidget() {
       {/* Add form */}
       {showAdd && (
         <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded shrink-0">
-          <p className="text-xs font-semibold text-emerald-400 mb-2">New character</p>
+          <p className="text-sm font-semibold text-emerald-400 mb-2">New character</p>
           <FormFields f={form} setF={setForm} />
           <div className="flex gap-1 mt-2">
             <button onClick={save} disabled={!form.name.trim()}
-              className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold transition-colors">
+              className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-sm text-white font-semibold transition-colors">
               Save Character
             </button>
             <button onClick={() => { setShowAdd(false); setForm(emptyForm()); }}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400 transition-colors">
+              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm text-gray-400 transition-colors">
               Cancel
             </button>
           </div>
@@ -670,8 +670,8 @@ export function PartyWidget() {
         {characters.length === 0 && !showAdd && (
           <div className="text-center py-6 flex flex-col items-center gap-2">
             <Users className="w-8 h-8 text-gray-700" />
-            <p className="text-xs text-gray-500">No characters yet</p>
-            <p className="text-[10px] text-gray-600">Click "Add Character" to create one</p>
+            <p className="text-sm text-gray-500">No characters yet</p>
+            <p className="text-[12px] text-gray-600">Click "Add Character" to create one</p>
           </div>
         )}
 
@@ -682,11 +682,11 @@ export function PartyWidget() {
                 <FormFields f={editForm} setF={setEditForm} />
                 <div className="flex gap-1 mt-2">
                   <button onClick={saveEdit}
-                    className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-xs text-white font-semibold">
+                    className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-sm text-white font-semibold">
                     Save
                   </button>
                   <button onClick={() => setEditingId(null)}
-                    className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-400">
+                    className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm text-gray-400">
                     Cancel
                   </button>
                 </div>
@@ -697,26 +697,26 @@ export function PartyWidget() {
                 <div className="flex items-center gap-2 px-2 py-1.5">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white truncate">{c.name}</span>
+                      <span className="text-sm font-bold text-white truncate">{c.name}</span>
                       {c.level && (
-                        <span className="text-[10px] text-amber-400 shrink-0 flex items-center gap-0.5">
+                        <span className="text-[12px] text-amber-400 shrink-0 flex items-center gap-0.5">
                           <Star className="w-2.5 h-2.5" />Lv {c.level}
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-gray-500 truncate">
+                    <div className="text-[12px] text-gray-500 truncate">
                       {[c.race, c.class].filter(Boolean).join(" · ") || "—"}
                     </div>
                   </div>
                   {/* Stats badges */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     {c.ac != null && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-blue-400 bg-blue-900/30 border border-blue-800/30 rounded px-1 py-0.5">
+                      <span className="flex items-center gap-0.5 text-[12px] text-blue-400 bg-blue-900/30 border border-blue-800/30 rounded px-1 py-0.5">
                         <Shield className="w-2.5 h-2.5" />{c.ac}
                       </span>
                     )}
                     {c.hp != null && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-red-400 bg-red-900/30 border border-red-800/30 rounded px-1 py-0.5">
+                      <span className="flex items-center gap-0.5 text-[12px] text-red-400 bg-red-900/30 border border-red-800/30 rounded px-1 py-0.5">
                         <Heart className="w-2.5 h-2.5" />{c.hp}
                       </span>
                     )}
@@ -745,14 +745,14 @@ export function PartyWidget() {
                 {/* Initiative quick-add */}
                 {initiativeFor === c.id && (
                   <div className="flex items-center gap-1.5 px-2 py-1.5 bg-purple-900/20 border-t border-purple-800/30">
-                    <span className="text-[10px] text-purple-400 shrink-0">Initiative roll:</span>
+                    <span className="text-[12px] text-purple-400 shrink-0">Initiative roll:</span>
                     <input type="number" autoFocus value={initiativeVal}
                       onChange={e => setInitiativeVal(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter" && !isImeComposing(e)) addToInitiative(c); }}
                       placeholder="e.g. 14"
-                      className="w-16 px-1.5 py-0.5 bg-gray-900 border border-purple-700 rounded text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500" />
+                      className="w-16 px-1.5 py-0.5 bg-gray-900 border border-purple-700 rounded text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500" />
                     <button onClick={() => addToInitiative(c)}
-                      className="flex items-center gap-0.5 px-2 py-0.5 bg-purple-700 hover:bg-purple-600 rounded text-[10px] text-white font-semibold transition-colors">
+                      className="flex items-center gap-0.5 px-2 py-0.5 bg-purple-700 hover:bg-purple-600 rounded text-[12px] text-white font-semibold transition-colors">
                       <Check className="w-3 h-3" />Add
                     </button>
                     <button onClick={() => setInitiativeFor(null)} className="text-gray-600 hover:text-gray-400">

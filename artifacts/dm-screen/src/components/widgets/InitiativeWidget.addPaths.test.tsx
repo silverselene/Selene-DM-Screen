@@ -28,7 +28,12 @@ import type { Combatant, PlayerCharacter } from "@/types";
 // that the monster form's add goes through the same rule as every other path.
 // So mock the module down to one fixture hit rather than make every run in this
 // file pay to transform the dataset.
+// `findCombatantMonster` decides whether a combatant row gets the
+// attacks/spells toggle. Stubbed to "nothing resolves" so these tests keep
+// asserting the add rules against the plain row markup; the resolution itself is
+// covered in monsterSearch.test.ts.
 vi.mock("@/lib/monsterSearch", () => ({
+  findCombatantMonster: () => null,
   searchMonsters: () => [
     {
       id: "index:Goblin:MM",
@@ -121,6 +126,14 @@ async function openAddForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTitle("Add a combatant"));
 }
 
+/** Open the add form on the Custom tab. Monster is the default tab (most
+ *  mid-encounter adds are monsters), so the player-form tests below switch
+ *  to it explicitly rather than relying on where the form happens to land. */
+async function openCustomForm(user: ReturnType<typeof userEvent.setup>) {
+  await openAddForm(user);
+  await user.click(screen.getByRole("button", { name: "Custom" }));
+}
+
 /** Drive the monster tab as far as a selected Goblin, ready to commit. The
  *  result list is debounced 80ms behind the query, hence the find*. */
 async function selectGoblin(user: ReturnType<typeof userEvent.setup>) {
@@ -142,13 +155,29 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("the add form's mode tabs", () => {
+  it("are ordered Monster, Party, Custom and default to Monster", async () => {
+    const user = userEvent.setup();
+    render(<InitiativeWidget />);
+
+    await openAddForm(user);
+
+    const tabs = screen.getAllByRole("button", { name: /^(Monster|Party|Custom)$/ });
+    expect(tabs.map((t) => t.textContent)).toEqual(["Monster", "Party", "Custom"]);
+    // Monster mid-encounter is the common case; the form should land there
+    // without an extra click.
+    expect(screen.getByPlaceholderText("Search monsters…")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("Name")).toBeNull();
+  });
+});
+
 describe("11a · the duplicate-PC confirm fires from every add path", () => {
   it("manual form, with the Player Character box ticked", async () => {
     const user = userEvent.setup();
     seedInitiativeWithAragorn();
     render(<InitiativeWidget />);
 
-    await openAddForm(user);
+    await openCustomForm(user);
     await user.type(nameInput(), "Aragorn");
     // The form defaults to isPlayer: false (freshForm) — an unticked box is a
     // custom monster/NPC and must NOT warn, so ticking it is the point here.
@@ -170,7 +199,7 @@ describe("11a · the duplicate-PC confirm fires from every add path", () => {
     seedInitiativeWithAragorn();
     render(<InitiativeWidget />);
 
-    await openAddForm(user);
+    await openCustomForm(user);
     await user.type(nameInput(), "Aragorn");
     await user.click(screen.getByRole("button", { name: "Add to Initiative" }));
 
@@ -270,7 +299,7 @@ describe("11b · declining loses nothing, accepting adds the row", () => {
     seedInitiativeWithAragorn();
     render(<InitiativeWidget />);
 
-    await openAddForm(user);
+    await openCustomForm(user);
     await user.type(nameInput(), "Aragorn");
     await user.click(playerCheckbox());
     await user.clear(playerFormNumbers().initiative);
@@ -293,7 +322,7 @@ describe("11b · declining loses nothing, accepting adds the row", () => {
     seedInitiativeWithAragorn();
     render(<InitiativeWidget />);
 
-    await openAddForm(user);
+    await openCustomForm(user);
     await user.type(nameInput(), "Aragorn");
     await user.click(playerCheckbox());
     await user.clear(playerFormNumbers().initiative);
