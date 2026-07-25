@@ -1,7 +1,7 @@
-import { Wand2, RefreshCw, User, Gem, Sword, MapPin } from "lucide-react";
+import { Wand2, RefreshCw, User, Gem, Sword, MapPin, Store } from "lucide-react";
 import {
-  generateName, generateLoot, generateItem, generatePlaceName,
-  namesByRace, lootByCR, settlementTypes,
+  generateName, generateLoot, generateItem, generatePlaceName, generateWares,
+  namesByRace, lootByCR, settlementTypes, waresByShop,
 } from "@/data/generators";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { createSingletonSlot } from "@/lib/singletonWidget";
@@ -16,8 +16,20 @@ import {
 } from "@/lib/backup";
 
 const EMPTY_HISTORY: Record<OracleTab, string[]> = {
-  names: [], loot: [], items: [], places: [],
+  names: [], loot: [], items: [], places: [], wares: [],
 };
+
+/** A wares roll is stored as `"Name — price"` lines joined by `\n` (see
+ *  `generateWares`). Parsed once here so both the result card (one row per
+ *  item) and the history list (folded to one line) read off the same shape. */
+function parseWareLines(result: string): { name: string; price: string }[] {
+  return result
+    .split("\n")
+    .map((line) => {
+      const [name, price] = line.split(" — ");
+      return { name: name ?? line, price: price ?? "" };
+    });
+}
 
 const ORACLE_MOUNT_SLOT = createSingletonSlot();
 
@@ -56,6 +68,11 @@ function OracleBody() {
     "Town",
     validateStringMax(WIDGET_QUERY_MAX),
   );
+  const [selectedShop, setSelectedShop] = useLocalStorage<string>(
+    "dm-oracle-shop-v1",
+    "Tavern",
+    validateStringMax(WIDGET_QUERY_MAX),
+  );
   // History is kept per-tab (v2 shape) so peeking at Loot no longer wipes your
   // recent Names. The active tab's most recent roll is the displayed result, so
   // switching tabs restores each tab's last result instead of clearing it.
@@ -72,6 +89,7 @@ function OracleBody() {
     if (tab === "names") res = generateName(selectedRace);
     else if (tab === "loot") res = generateLoot(selectedCR);
     else if (tab === "places") res = generatePlaceName(selectedSettlement);
+    else if (tab === "wares") res = generateWares(selectedShop);
     else res = generateItem();
     setHistory((h) => ({ ...h, [tab]: [res, ...(h[tab] ?? []).slice(0, 4)] }));
   };
@@ -81,6 +99,7 @@ function OracleBody() {
     { id: "places", label: "Places", icon: <MapPin  className="w-3 h-3" /> },
     { id: "loot",   label: "Loot",   icon: <Gem    className="w-3 h-3" /> },
     { id: "items",  label: "Items",  icon: <Sword  className="w-3 h-3" /> },
+    { id: "wares",  label: "Wares",  icon: <Store  className="w-3 h-3" /> },
   ];
 
   // Split the result on the em-dash so we can style name vs descriptor separately
@@ -148,6 +167,17 @@ function OracleBody() {
             ))}
           </select>
         )}
+        {tab === "wares" && (
+          <select
+            value={selectedShop}
+            onChange={(e) => setSelectedShop(e.target.value)}
+            className="w-full text-sm bg-gray-900 border border-purple-800/50 rounded px-2 py-1.5 text-gray-300 focus:outline-none focus:border-purple-500"
+          >
+            {Object.keys(waresByShop).map((shop) => (
+              <option key={shop}>{shop}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Generate button */}
@@ -163,7 +193,22 @@ function OracleBody() {
       {/* Result */}
       {result && (
         <div className="mt-3 p-3 bg-gray-900/80 border border-white/20 rounded">
-          {tab === "places" && placeDesc ? (
+          {tab === "wares" ? (
+            <>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Store className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="text-base text-white font-bold tracking-wide">{selectedShop}</span>
+              </div>
+              <div className="space-y-1">
+                {parseWareLines(result).map((item, i) => (
+                  <div key={i} className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm text-gray-200">{item.name}</span>
+                    <span className="text-sm font-mono font-semibold text-amber-300 whitespace-nowrap">{item.price}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : tab === "places" && placeDesc ? (
             <>
               <div className="flex items-center gap-1.5 mb-1">
                 <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
@@ -184,9 +229,18 @@ function OracleBody() {
           <div className="space-y-1">
             {tabHistory.slice(1).map((h, i) => {
               const [pn, pd] = tab === "places" ? h.split(" — ") : [h, ""];
+              const wareItems = tab === "wares" ? parseWareLines(h) : null;
               return (
                 <div key={i} className="text-sm text-gray-500 px-2 py-1 bg-gray-900/40 rounded border border-gray-800">
-                  {tab === "places" && pd ? (
+                  {wareItems ? (
+                    wareItems.map((item, j) => (
+                      <span key={j}>
+                        {j > 0 && <span className="text-gray-700"> · </span>}
+                        <span className="text-gray-400">{item.name}</span>
+                        <span className="text-gray-600"> ({item.price})</span>
+                      </span>
+                    ))
+                  ) : tab === "places" && pd ? (
                     <><span className="text-gray-300 font-semibold">{pn}</span>
                     <span className="text-gray-600"> — {pd}</span></>
                   ) : h}
