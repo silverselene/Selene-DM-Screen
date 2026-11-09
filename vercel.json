@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pnpm install --frozen-lockfile --filter @workspace/dm-screen --filter @workspace/scripts",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "artifacts/dm-screen/dist/public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
