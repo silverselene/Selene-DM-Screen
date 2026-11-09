@@ -29,6 +29,7 @@ import { AnchoredDropdown } from "@/lib/AnchoredDropdown";
 import { Combobox } from "@/lib/Combobox";
 import { isImeComposing } from "@/lib/keyboard";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
+import { CharacterSheetModal } from "./CharacterSheetModal";
 
 // ── Weapon summary used by the tag-input and pill components ─────────────
 type WeaponInfo = Pick<
@@ -184,7 +185,8 @@ function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, We
 // ── Spell tag-input (mirror of WeaponTagInput against the 557-spell dataset)
 type SpellInfo = Pick<
   Spell,
-  "name" | "level" | "school" | "classes" | "damage" | "healing"
+  | "name" | "level" | "school" | "classes" | "damage" | "healing"
+  | "castingTime" | "range" | "duration" | "concentration" | "ritual" | "upcast"
 >;
 
 // Inline pill rendered on a saved character. Mirrors WeaponPill: a "stats at
@@ -468,6 +470,13 @@ export function PartyWidget() {
   const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
   const [initiativeVal, setInitiativeVal] = useState("");
 
+  // Mini character sheet (AC/HP/spells/weapons at a glance). Tracked by id,
+  // not the object itself, so the sheet stays live if the character is
+  // edited while open; it auto-closes if the character is deleted.
+  const [sheetForId, setSheetForId] = useState<number | null>(null);
+  const sheetChar =
+    sheetForId != null ? characters.find((c) => c.id === sheetForId) ?? null : null;
+
   // ── Save new character ───────────────────────────────────────────────────
   const save = () => {
     if (!form.name.trim()) return;
@@ -693,8 +702,12 @@ export function PartyWidget() {
               </div>
             ) : (
               <>
-                {/* Character header row */}
-                <div className="flex items-center gap-2 px-2 py-1.5">
+                {/* Character header row — click opens the mini character sheet */}
+                <div
+                  className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-white/[0.04] transition-colors"
+                  onClick={() => setSheetForId(c.id)}
+                  title="View character sheet"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-bold text-white truncate">{c.name}</span>
@@ -721,8 +734,11 @@ export function PartyWidget() {
                       </span>
                     )}
                   </div>
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-0.5 shrink-0">
+                  {/* Action buttons — stop propagation so these don't also open the sheet */}
+                  <div
+                    className="flex items-center gap-0.5 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       onClick={() => { setInitiativeFor(initiativeFor === c.id ? null : c.id); setInitiativeVal(""); }}
                       title="Add to Initiative" className="w-6 h-6 flex items-center justify-center text-purple-500 hover:text-purple-300 hover:bg-purple-900/30 rounded transition-colors">
@@ -785,6 +801,15 @@ export function PartyWidget() {
           </div>
         ))}
       </div>
+
+      {sheetChar && (
+        <CharacterSheetModal
+          character={sheetChar}
+          weaponStats={weaponStats}
+          spellStats={spellStats}
+          onClose={() => setSheetForId(null)}
+        />
+      )}
     </div>
   );
 }
