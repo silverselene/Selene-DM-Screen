@@ -36,7 +36,7 @@ import type { DdbImportResult } from "@/lib/ddbImport";
 // ── Weapon summary used by the tag-input and pill components ─────────────
 type WeaponInfo = Pick<
   Weapon,
-  "id" | "name" | "category" | "damage" | "damage_type" | "properties" | "cost" | "weight"
+  "id" | "name" | "category" | "damage" | "damage_type" | "properties" | "cost" | "weight" | "mastery"
 >;
 
 // ── Weapon tag-input component ─────────────────────────────────────────────
@@ -169,10 +169,21 @@ function WeaponTagInput({
 }
 
 // ── Inline weapon pill showing DB stats ───────────────────────────────────
+// Clicking a weapon pill opens its card in the Compendium (`dm-open-weapon`,
+// routed by App.tsx — it places a Compendium tile if there isn't one).
+function openWeaponInCompendium(name: string): void {
+  window.dispatchEvent(new CustomEvent("dm-open-weapon", { detail: { name } }));
+}
+
 function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, WeaponInfo> }) {
   const info = statsMap.get(name.toLowerCase());
   return (
-    <span className="inline-flex items-center gap-1 text-[12px] bg-amber-900/25 border border-amber-800/30 rounded px-1.5 py-0.5 text-amber-300">
+    <button
+      type="button"
+      onClick={() => openWeaponInCompendium(name)}
+      title={`Open ${name} in the Compendium`}
+      aria-label={`Open ${name} in the Compendium`}
+      className="inline-flex items-center gap-1 text-[12px] bg-amber-900/25 border border-amber-800/30 rounded px-1.5 py-0.5 text-amber-300 hover:bg-amber-800/40 hover:border-amber-600/60 hover:text-amber-100 transition-colors cursor-pointer">
       <Sword className="w-2.5 h-2.5 shrink-0" />
       <span>{name}</span>
       {info?.damage && (
@@ -180,7 +191,7 @@ function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, We
           {info.damage}{info.damage_type ? ` ${info.damage_type.slice(0, 1)}` : ""}
         </span>
       )}
-    </span>
+    </button>
   );
 }
 
@@ -924,6 +935,10 @@ export function PartyWidget() {
             // The sheet is a full-screen modal; close it so the Tome is visible.
             setSheetForId(null);
             openSpellInTome(name);
+          }}
+          onOpenWeapon={(name) => {
+            setSheetForId(null);
+            openWeaponInCompendium(name);
           }}
         />
       )}

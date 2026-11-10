@@ -2,14 +2,14 @@
 // member — AC, HP, and the actions they can actually take (weapons equipped,
 // spells known) with their combat-relevant stats pulled from the bundled
 // weapon/spell datasets. Opened by clicking a roster row in PartyWidget.
-import { X, Shield, Heart, Star, Sword, BookOpen } from "lucide-react";
+import { X, Shield, Heart, Star, Sword, BookOpen, Sparkles } from "lucide-react";
 import type { PlayerCharacter } from "@/types";
 import type { Weapon } from "@/data/weapons";
 import type { Spell } from "@/data/spells";
 
 type WeaponInfo = Pick<
   Weapon,
-  "name" | "category" | "damage" | "damage_type" | "properties"
+  "name" | "category" | "damage" | "damage_type" | "properties" | "mastery"
 >;
 type SpellInfo = Pick<
   Spell,
@@ -24,12 +24,34 @@ interface Props {
   onClose: () => void;
   /** Open a spell in the Wizard's Tome. When set, spell rows are clickable. */
   onOpenSpell?: (name: string) => void;
+  /** Open a weapon's card in the Compendium. When set, weapon rows are clickable. */
+  onOpenWeapon?: (name: string) => void;
 }
 
-function WeaponRow({ name, info }: { name: string; info?: WeaponInfo }) {
+function WeaponRow({
+  name,
+  info,
+  onOpen,
+}: {
+  name: string;
+  info?: WeaponInfo;
+  onOpen?: () => void;
+}) {
+  const Tag = onOpen ? "button" : "div";
+  const mastery = info?.mastery ?? [];
   return (
-    <div
-      className="px-2.5 py-1.5 rounded border"
+    <Tag
+      {...(onOpen
+        ? {
+            type: "button" as const,
+            onClick: onOpen,
+            title: `Open ${name} in the Compendium`,
+            "aria-label": `Open ${name} in the Compendium`,
+          }
+        : {})}
+      className={`block w-full text-left px-2.5 py-1.5 rounded border ${
+        onOpen ? "cursor-pointer hover:brightness-125 transition-[filter]" : ""
+      }`}
       style={{ background: "var(--dm-bg-item)", borderColor: "var(--dm-border)" }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -41,13 +63,22 @@ function WeaponRow({ name, info }: { name: string; info?: WeaponInfo }) {
         )}
       </div>
       {info ? (
-        ((info.damage ?? null) !== null || info.properties.length > 0) && (
+        ((info.damage ?? null) !== null || info.properties.length > 0 || mastery.length > 0) && (
           <div className="flex items-center gap-1.5 flex-wrap mt-1">
             {info.damage && (
               <span className="text-xs font-mono font-semibold text-amber-400">
                 {info.damage}{info.damage_type ? ` ${info.damage_type}` : ""}
               </span>
             )}
+            {mastery.map((m) => (
+              <span
+                key={`m-${m}`}
+                className="inline-flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded bg-purple-900/40 text-purple-300"
+                title="Weapon Mastery"
+              >
+                <Sparkles className="w-2.5 h-2.5" />{m}
+              </span>
+            ))}
             {info.properties.map((p) => (
               <span
                 key={p}
@@ -64,7 +95,7 @@ function WeaponRow({ name, info }: { name: string; info?: WeaponInfo }) {
           Custom weapon — no stats on file.
         </p>
       )}
-    </div>
+    </Tag>
   );
 }
 
@@ -146,7 +177,14 @@ function SpellRow({
   );
 }
 
-export function CharacterSheetModal({ character, weaponStats, spellStats, onClose, onOpenSpell }: Props) {
+export function CharacterSheetModal({
+  character,
+  weaponStats,
+  spellStats,
+  onClose,
+  onOpenSpell,
+  onOpenWeapon,
+}: Props) {
   const weapons = character.weapons ?? [];
   const spells = character.spells ?? [];
   const sortedSpells = [...spells].sort((a, b) => {
@@ -214,7 +252,12 @@ export function CharacterSheetModal({ character, weaponStats, spellStats, onClos
           ) : (
             <div className="space-y-1.5">
               {weapons.map((w) => (
-                <WeaponRow key={w} name={w} info={weaponStats.get(w.toLowerCase())} />
+                <WeaponRow
+                  key={w}
+                  name={w}
+                  info={weaponStats.get(w.toLowerCase())}
+                  onOpen={onOpenWeapon ? () => onOpenWeapon(w) : undefined}
+                />
               ))}
             </div>
           )}

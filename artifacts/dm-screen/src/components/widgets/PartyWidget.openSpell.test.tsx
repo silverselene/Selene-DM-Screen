@@ -7,7 +7,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 
-vi.mock("@/data/weapons", () => ({ weaponsData: [] }));
+vi.mock("@/data/weapons", () => ({
+  weaponsData: [
+    { id: 1, name: "Dagger", category: "simple", damage: "1d4", damage_type: "Piercing", properties: ["Finesse"], mastery: ["Nick"] },
+  ],
+}));
 vi.mock("@/data/spells", () => ({
   spellData: [{ name: "Fireball", level: 3, school: "Evocation", classes: ["Wizard"], description: "boom" }],
   spellSchools: ["Evocation"],
@@ -27,18 +31,24 @@ globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObse
 describe("PartyWidget — open a spell in the Wizard's Tome", () => {
   const opened: string[] = [];
   const onOpen = (e: Event) => opened.push((e as CustomEvent<{ name: string }>).detail.name);
+  const weaponsOpened: string[] = [];
+  const onOpenWeapon = (e: Event) =>
+    weaponsOpened.push((e as CustomEvent<{ name: string }>).detail.name);
 
   beforeEach(() => {
     window.localStorage.clear();
     opened.length = 0;
+    weaponsOpened.length = 0;
     window.addEventListener("dm-open-spell", onOpen);
+    window.addEventListener("dm-open-weapon", onOpenWeapon);
     addCharacter({
       name: "Selene", race: "Elf", class: "Wizard", level: 5, ac: 12, hp: 30,
-      spells: ["Fireball", "Homebrew Bolt"], weapons: [],
+      spells: ["Fireball", "Homebrew Bolt"], weapons: ["Dagger"],
     });
   });
   afterEach(() => {
     window.removeEventListener("dm-open-spell", onOpen);
+    window.removeEventListener("dm-open-weapon", onOpenWeapon);
     cleanup();
   });
 
@@ -59,6 +69,21 @@ describe("PartyWidget — open a spell in the Wizard's Tome", () => {
     const buttons = screen.getAllByRole("button", { name: "Open Fireball in the Wizard's Tome" });
     fireEvent.click(buttons[buttons.length - 1]);
     expect(opened).toEqual(["Fireball"]);
+    expect(screen.queryByRole("heading", { name: "Selene" })).toBeNull();
+  });
+
+  it("dispatches dm-open-weapon from a roster weapon pill and from the sheet", () => {
+    render(<PartyWidget />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Dagger in the Compendium" }));
+    expect(weaponsOpened).toEqual(["Dagger"]);
+
+    fireEvent.click(screen.getByTitle("View character sheet"));
+    // The sheet shows the weapon's mastery…
+    expect(screen.getByTitle("Weapon Mastery").textContent).toBe("Nick");
+    // …and its row opens the Compendium, closing the sheet.
+    const buttons = screen.getAllByRole("button", { name: "Open Dagger in the Compendium" });
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(weaponsOpened).toEqual(["Dagger", "Dagger"]);
     expect(screen.queryByRole("heading", { name: "Selene" })).toBeNull();
   });
 });

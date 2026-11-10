@@ -153,8 +153,9 @@ function AppContent() {
   );
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [bestiaryTarget, setBestiaryTarget] = useState<string | null>(null);
-  const [tomeTarget, setTomeTarget] = useState<string | null>(null);
+  // Pending one-shot "open this name" signals, keyed by destination widget
+  // (see the dm-open-* routing below). The widget clears its own entry.
+  const [openTargets, setOpenTargets] = useState<Partial<Record<WidgetType, string>>>({});
 
   // Drag-to-reorder + drag-to-resize UI state. Neither is persisted — both
   // reset to nothing on reload, same as any other in-flight gesture.
@@ -202,15 +203,15 @@ function AppContent() {
   );
 
   // Cross-widget "open this in <widget>" hand-offs: `dm-open-bestiary`
-  // (Initiative → Bestiary) and `dm-open-spell` (Party → Wizard's Tome). The
+  // (Initiative → Bestiary), `dm-open-spell` (Party → Wizard's Tome) and
+  // `dm-open-weapon` (Party → Compendium weapon card). The
   // name is passed down as a one-shot `target` prop the widget consumes and
   // clears. If the destination widget isn't on the board it's placed in the
   // first empty tile; if there's no room, say so rather than dead-clicking.
   useEffect(() => {
     const route = (
-      widget: "bestiary" | "wizard-tome",
+      widget: "bestiary" | "wizard-tome" | "compendium",
       label: string,
-      setTarget: (name: string) => void,
     ) => (e: Event) => {
       const name = (e as CustomEvent<{ name?: unknown }>).detail?.name;
       if (typeof name !== "string" || !name) return;
@@ -223,16 +224,17 @@ function AppContent() {
         );
         return;
       }
-      setTarget(name);
+      setOpenTargets((prev) => ({ ...prev, [widget]: name }));
       if (plan.kind === "place") setTiles(plan.next);
     };
-    const onBestiary = route("bestiary", "Bestiary", setBestiaryTarget);
-    const onSpell = route("wizard-tome", "Wizard's Tome", setTomeTarget);
-    window.addEventListener("dm-open-bestiary", onBestiary);
-    window.addEventListener("dm-open-spell", onSpell);
+    const routes: Array<[string, (e: Event) => void]> = [
+      ["dm-open-bestiary", route("bestiary", "Bestiary")],
+      ["dm-open-spell", route("wizard-tome", "Wizard's Tome")],
+      ["dm-open-weapon", route("compendium", "Compendium")],
+    ];
+    for (const [type, fn] of routes) window.addEventListener(type, fn);
     return () => {
-      window.removeEventListener("dm-open-bestiary", onBestiary);
-      window.removeEventListener("dm-open-spell", onSpell);
+      for (const [type, fn] of routes) window.removeEventListener(type, fn);
     };
   }, [setTiles]);
 
@@ -508,10 +510,15 @@ function AppContent() {
                     onDragStart={() => setDragSrc(i)}
                     onDragEnd={() => { setDragSrc(null); setDragOverIdx(null); }}
                     onResizeStart={(e) => startResize(e, i)}
-                    bestiaryTarget={entry.widget === "bestiary" ? bestiaryTarget : null}
-                    onBestiaryTargetClear={() => setBestiaryTarget(null)}
-                    tomeTarget={entry.widget === "wizard-tome" ? tomeTarget : null}
-                    onTomeTargetClear={() => setTomeTarget(null)}
+                    target={entry.widget !== "empty" ? openTargets[entry.widget] ?? null : null}
+                    onTargetClear={() =>
+                      setOpenTargets((prev) => {
+                        if (!(entry.widget in prev)) return prev;
+                        const next = { ...prev };
+                        delete next[entry.widget];
+                        return next;
+                      })
+                    }
                   />
                 </div>
               );

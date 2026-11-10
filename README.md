@@ -24,7 +24,9 @@ saved in the sidebar for quick restore. Layout persists across sessions via
 
 - **Compendium** — search and browse D&D 5.5e rules entries: hand-curated DM
   summaries plus a bulk set of feats, combat actions, skills, senses, and
-  DMG/PHB-style variant rules.
+  DMG/PHB-style variant rules. Also every bundled weapon (251): a weapon card
+  shows damage, range, properties and its 2024 Weapon Mastery, and clicking
+  any property or mastery explains it inline.
 - **Initiative Tracker** — add players and monsters, roll initiative, track HP
   and AC round by round. Clicking a monster name jumps straight to its
   Bestiary entry. Combatants, turn order, current round, and per-combatant HP
@@ -49,7 +51,8 @@ saved in the sidebar for quick restore. Layout persists across sessions via
   can't reach D&D Beyond, paste (or load) the character JSON instead. A
   same-named character is refreshed rather than duplicated.
   Click any spell on a character (roster pill or character sheet) to open it
-  in the Wizard's Tome — the Tome is placed in a free tile if needed.
+  in the Wizard's Tome, or any weapon to open its card in the Compendium —
+  the destination widget is placed in a free tile if needed.
 - **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
   player for table music or ambience. The link is remembered across
   sessions, and the embed resizes with the tile.

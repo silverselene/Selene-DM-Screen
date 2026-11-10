@@ -52,10 +52,10 @@ interface Props {
   // expand/contract buttons. App.tsx owns the pointer-move geometry (it has
   // the grid's bounding rect and occupancy); this just forwards the gesture.
   onResizeStart: (e: React.PointerEvent) => void;
-  bestiaryTarget?: string | null;
-  onBestiaryTargetClear?: () => void;
-  tomeTarget?: string | null;
-  onTomeTargetClear?: () => void;
+  /** One-shot "open this name" signal for widgets that accept one (Bestiary,
+   *  Wizard's Tome, Compendium) — routed by App from the dm-open-* events. */
+  target?: string | null;
+  onTargetClear?: () => void;
 }
 
 const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: React.ReactNode; accent: string }> = {
@@ -108,16 +108,12 @@ const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: Re
 
 function WidgetContent({
   widget,
-  bestiaryTarget,
-  onBestiaryTargetClear,
-  tomeTarget,
-  onTomeTargetClear,
+  target,
+  onTargetClear,
 }: {
   widget: WidgetType;
-  bestiaryTarget?: string | null;
-  onBestiaryTargetClear?: () => void;
-  tomeTarget?: string | null;
-  onTomeTargetClear?: () => void;
+  target?: string | null;
+  onTargetClear?: () => void;
 }) {
   // ErrorBoundary catches a rejected lazy import (Suspense only covers the
   // pending case) so a failed chunk fetch degrades to a per-tile error instead
@@ -126,15 +122,15 @@ function WidgetContent({
   return (
     <ErrorBoundary key={widget} label="This widget">
       <Suspense fallback={<WidgetLoading />}>
-        {widget === "compendium" && <CompendiumWidget />}
+        {widget === "compendium" && <CompendiumWidget target={target} onTargetClear={onTargetClear} />}
         {widget === "initiative" && <InitiativeWidget />}
         {widget === "notepad" && <NotepadWidget />}
         {widget === "oracle" && <OracleWidget />}
         {widget === "bestiary" && (
-          <BestiaryWidget target={bestiaryTarget} onTargetClear={onBestiaryTargetClear} />
+          <BestiaryWidget target={target} onTargetClear={onTargetClear} />
         )}
         {widget === "wizard-tome" && (
-          <WizardsTomeWidget target={tomeTarget} onTargetClear={onTomeTargetClear} />
+          <WizardsTomeWidget target={target} onTargetClear={onTargetClear} />
         )}
         {widget === "party" && <PartyWidget />}
         {widget === "portal" && <PortalWidget />}
@@ -167,8 +163,7 @@ function ResizeHandle({ onResizeStart }: { onResizeStart: (e: React.PointerEvent
 export function DMTile({
   entry, onAdd, onClear,
   canDrag, isDragging, onDragStart, onDragEnd, onResizeStart,
-  bestiaryTarget, onBestiaryTargetClear,
-  tomeTarget, onTomeTargetClear,
+  target, onTargetClear,
 }: Props) {
   const { isDark } = useTheme();
   if (!entry) return null;
@@ -255,10 +250,8 @@ export function DMTile({
       <div data-tile-content className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2.5">
         <WidgetContent
           widget={widget}
-          bestiaryTarget={bestiaryTarget}
-          onBestiaryTargetClear={onBestiaryTargetClear}
-          tomeTarget={tomeTarget}
-          onTomeTargetClear={onTomeTargetClear}
+          target={target}
+          onTargetClear={onTargetClear}
         />
       </div>
 
