@@ -22,7 +22,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@workspace/bridge-protocol": "workspace:*",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
