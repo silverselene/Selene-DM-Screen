@@ -501,6 +501,13 @@ function InitiativeSession() {
   // reliable signal for whether a real `blur` event will fire first.
   const cancelingHpEdit = useRef(false);
 
+  // Scrolling body (add form + list). Opening the form while scrolled down a
+  // long encounter would otherwise leave it out of view.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showForm) bodyRef.current?.scrollTo?.({ top: 0 });
+  }, [showForm]);
+
   const startEditHp = (c: Combatant) => {
     setEditingHpId(c.id);
     setHpDraft(String(c.hp));
@@ -586,9 +593,14 @@ function InitiativeSession() {
         </div>
       </div>
 
+      {/* ── Body: ONE scroll region for the add form + the combatant list ──
+          The form used to be a fixed (shrink-0) block above a separately
+          scrolling list, so in a short tile its lower half — including the
+          "Add to Initiative" button — was clipped out of reach. */}
+      <div ref={bodyRef} className="flex-1 min-h-16 overflow-y-auto">
       {/* ── Add form ── */}
       {showForm && (
-        <div className="mb-2 p-2 bg-gray-900/80 border border-purple-700/40 rounded shrink-0">
+        <div className="mb-2 p-2 bg-gray-900/80 border border-purple-700/40 rounded">
           {/* Mode tabs. Monster leads — most adds mid-encounter are monsters —
               then Party, then Custom for the rare hand-typed NPC/PC. */}
           <div className="flex gap-1 mb-2">
@@ -769,7 +781,7 @@ function InitiativeSession() {
       )}
 
       {/* ── Combatant list ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
+      <div className="space-y-1">
         {sorted.length === 0 && (
           <div className="text-center py-4 text-gray-500 text-sm flex flex-col items-center gap-2">
             <Swords className="w-6 h-6 opacity-30" />
@@ -878,6 +890,7 @@ function InitiativeSession() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

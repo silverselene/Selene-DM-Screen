@@ -105,7 +105,7 @@ export function DdbImportPanel({
   };
 
   return (
-    <div className="mb-2 p-2 bg-gray-900/80 border border-sky-700/40 rounded min-h-0 overflow-y-auto space-y-1.5">
+    <div className="mb-2 p-2 bg-gray-900/80 border border-sky-700/40 rounded space-y-1.5">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-sky-400">Import from D&amp;D Beyond</p>
         <button

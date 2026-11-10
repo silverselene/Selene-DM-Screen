@@ -48,6 +48,8 @@ saved in the sidebar for quick restore. Layout persists across sessions via
   modifiers, and prefills the form for review before saving. If the browser
   can't reach D&D Beyond, paste (or load) the character JSON instead. A
   same-named character is refreshed rather than duplicated.
+  Click any spell on a character (roster pill or character sheet) to open it
+  in the Wizard's Tome — the Tome is placed in a free tile if needed.
 - **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
   player for table music or ambience. The link is remembered across
   sessions, and the embed resizes with the tile.

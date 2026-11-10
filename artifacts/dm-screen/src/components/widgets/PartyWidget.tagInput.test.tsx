@@ -41,7 +41,7 @@ describe("PartyWidget weapon tag input — refocus reopens suggestions", () => {
     render(<PartyWidget />);
 
     // Open the add-character form, then type into the weapon field.
-    fireEvent.click(screen.getByText("Add Character"));
+    fireEvent.click(screen.getByRole("button", { name: "Add Character" }));
     const input = screen.getByPlaceholderText(WEAPON_PLACEHOLDER);
     fireEvent.change(input, { target: { value: "long" } });
 

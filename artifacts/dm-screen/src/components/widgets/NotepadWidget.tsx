@@ -81,7 +81,7 @@ function NotepadBody() {
         maxLength={NOTEPAD_MAX_CHARS}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Jot down anything — monster HP, NPC names, plot hooks, treasure deals…"
-        className="flex-1 resize-none bg-gray-900/80 border border-purple-800/30 rounded p-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60 leading-relaxed font-mono"
+        className="flex-1 min-h-16 resize-none bg-gray-900/80 border border-purple-800/30 rounded p-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60 leading-relaxed font-mono"
         style={{
           backgroundImage: "repeating-linear-gradient(transparent, transparent 19px, rgba(139, 43, 226, 0.06) 19px, rgba(139, 43, 226, 0.06) 20px)",
           backgroundAttachment: "local",

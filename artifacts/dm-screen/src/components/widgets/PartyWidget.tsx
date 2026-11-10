@@ -196,12 +196,24 @@ type SpellInfo = Pick<
 // the healing dice (+ heart icon) when it heals, or level + school for
 // utility spells like Mage Hand. A spell can do both — `damage` takes
 // priority for the badge slot.
+//
+// Clicking a pill opens the spell in the Wizard's Tome (`dm-open-spell`,
+// routed by App.tsx — it places a Tome tile if there isn't one).
+function openSpellInTome(name: string): void {
+  window.dispatchEvent(new CustomEvent("dm-open-spell", { detail: { name } }));
+}
+
 function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, SpellInfo> }) {
   const info = statsMap.get(name.toLowerCase());
   const levelLabel =
     info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
   return (
-    <span className="inline-flex items-center gap-1 text-[12px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300">
+    <button
+      type="button"
+      onClick={() => openSpellInTome(name)}
+      title={`Open ${name} in the Wizard's Tome`}
+      aria-label={`Open ${name} in the Wizard's Tome`}
+      className="inline-flex items-center gap-1 text-[12px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300 hover:bg-cyan-800/40 hover:border-cyan-600/60 hover:text-cyan-100 transition-colors cursor-pointer">
       <BookOpen className="w-2.5 h-2.5 shrink-0" />
       <span>{name}</span>
       {info?.damage ? (
@@ -227,7 +239,7 @@ function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, Spe
       {info?.school && (
         <span className="text-cyan-700">{info.school.slice(0, 3)}</span>
       )}
-    </span>
+    </button>
   );
 }
 
@@ -495,6 +507,19 @@ export function PartyWidget() {
     { target: "new" | number; warnings: string[] } | null
   >(null);
 
+  // The scrolling body. Opening a form (or landing an import) while the DM
+  // is scrolled down the roster would otherwise put it out of view.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showAdd || showDdb) bodyRef.current?.scrollTo?.({ top: 0 });
+  }, [showAdd, showDdb]);
+  useEffect(() => {
+    if (editingId == null) return;
+    bodyRef.current
+      ?.querySelector(`[data-pc-id="${editingId}"]`)
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, [editingId]);
+
   const weaponStats = useMemo(() => WEAPON_STATS_BY_NAME, []);
   const spellStats = useMemo(() => SPELL_STATS_BY_NAME, []);
 
@@ -677,13 +702,13 @@ export function PartyWidget() {
   };
 
   return (
-    <div className="h-full min-h-0 flex flex-col">
+    <div className="@container h-full min-h-0 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 shrink-0">
-        <span className="text-sm text-gray-400">
+      <div className="flex items-center justify-between gap-1 mb-2 shrink-0">
+        <span className="text-sm text-gray-400 truncate min-w-0">
           {characters.length} character{characters.length !== 1 ? "s" : ""}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={exportParty}
             disabled={characters.length === 0}
@@ -710,21 +735,28 @@ export function PartyWidget() {
           </button>
           <button
             onClick={() => setShowAdd(v => !v)}
-            className="flex items-center gap-1 text-sm px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
+            title="Add a character"
+            aria-label="Add Character"
+            className="flex items-center gap-1 text-sm px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors whitespace-nowrap"
           >
-            <Plus className="w-3 h-3" />Add Character
+            <Plus className="w-3 h-3" />Add<span className="hidden @[17rem]:inline"> Character</span>
           </button>
         </div>
       </div>
 
+      {/* Body — ONE scroll region for everything that can grow: banners, the
+          D&D Beyond panel, the add form and the roster. The forms used to be
+          fixed (shrink-0) blocks above a separately-scrolling list, so a form
+          taller than the tile was clipped with its Save button unreachable. */}
+      <div ref={bodyRef} className="flex-1 min-h-16 overflow-y-auto">
       {error && (
-        <div className="text-sm text-red-400 bg-red-900/20 border border-red-800/40 rounded px-2 py-1 mb-2 shrink-0">
+        <div className="text-sm text-red-400 bg-red-900/20 border border-red-800/40 rounded px-2 py-1 mb-2">
           {error}
         </div>
       )}
 
       {notice && (
-        <div className="text-sm text-emerald-300 bg-emerald-900/20 border border-emerald-800/40 rounded px-2 py-1 mb-2 shrink-0">
+        <div className="text-sm text-emerald-300 bg-emerald-900/20 border border-emerald-800/40 rounded px-2 py-1 mb-2">
           {notice}
         </div>
       )}
@@ -735,7 +767,7 @@ export function PartyWidget() {
 
       {/* Add form */}
       {showAdd && (
-        <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded shrink-0">
+        <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded">
           <p className="text-sm font-semibold text-emerald-400 mb-2">New character</p>
           {importNote?.target === "new" && <ImportReviewNote warnings={importNote.warnings} />}
           <FormFields f={form} setF={setForm} />
@@ -753,7 +785,7 @@ export function PartyWidget() {
       )}
 
       {/* Character list */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+      <div className="space-y-1.5">
         {characters.length === 0 && !showAdd && (
           <div className="text-center py-6 flex flex-col items-center gap-2">
             <Users className="w-8 h-8 text-gray-700" />
@@ -763,7 +795,7 @@ export function PartyWidget() {
         )}
 
         {characters.map(c => (
-          <div key={c.id} className="bg-gray-900/60 border border-gray-800/60 rounded overflow-hidden">
+          <div key={c.id} data-pc-id={c.id} className="bg-gray-900/60 border border-gray-800/60 rounded overflow-hidden">
             {editingId === c.id ? (
               <div className="p-2">
                 {importNote?.target === c.id && <ImportReviewNote warnings={importNote.warnings} />}
@@ -880,6 +912,7 @@ export function PartyWidget() {
           </div>
         ))}
       </div>
+      </div>
 
       {sheetChar && (
         <CharacterSheetModal
@@ -887,6 +920,11 @@ export function PartyWidget() {
           weaponStats={weaponStats}
           spellStats={spellStats}
           onClose={() => setSheetForId(null)}
+          onOpenSpell={(name) => {
+            // The sheet is a full-screen modal; close it so the Tome is visible.
+            setSheetForId(null);
+            openSpellInTome(name);
+          }}
         />
       )}
     </div>

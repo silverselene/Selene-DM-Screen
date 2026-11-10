@@ -271,7 +271,7 @@ function StatBlock({ monster }: { monster: UnifiedMonster }) {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-16 overflow-y-auto">
         <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
           <span className="italic text-gray-400">{[monster.size, monster.type, monster.alignment].filter(Boolean).join(", ")}</span>
           <div className="flex items-center gap-1.5">
@@ -509,7 +509,7 @@ function BestiaryBody({ target, onTargetClear }: Props) {
         >
           ← Back to list
         </button>
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-gray-900/80 border border-red-900/40 rounded p-2.5">
+        <div className="flex-1 min-h-36 overflow-hidden flex flex-col bg-gray-900/80 border border-red-900/40 rounded p-2.5">
           <h3 className="text-base font-bold text-white mb-1 shrink-0">{selected.name}</h3>
           <StatBlock monster={selected} />
         </div>
@@ -548,7 +548,7 @@ function BestiaryBody({ target, onTargetClear }: Props) {
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
+      <div className="flex-1 min-h-16 overflow-y-auto space-y-0.5">
         {totalResults === 0 && (
           <div className="text-sm text-gray-600 text-center py-4">No monsters found</div>
         )}

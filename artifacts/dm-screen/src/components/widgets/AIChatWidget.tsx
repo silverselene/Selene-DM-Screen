@@ -904,7 +904,7 @@ function AIChatSession() {
         </div>
       )}
       {/* Messages */}
-      <div ref={scrollRef} onScroll={onTranscriptScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
+      <div ref={scrollRef} onScroll={onTranscriptScroll} className="flex-1 min-h-10 overflow-y-auto pr-1 space-y-3">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-center px-4">
             <Sparkles className="w-6 h-6 text-amber-400/70" />

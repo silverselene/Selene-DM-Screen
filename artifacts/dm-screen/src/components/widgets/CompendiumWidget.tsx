@@ -111,7 +111,7 @@ function CompendiumBody() {
       </div>
 
       {entry ? (
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-16 overflow-y-auto">
           <button
             onClick={() => setSelectedEntry(null)}
             className="text-sm text-purple-400 hover:text-purple-300 mb-2 flex items-center gap-1"
@@ -136,7 +136,7 @@ function CompendiumBody() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
+        <div className="flex-1 min-h-16 overflow-y-auto space-y-1">
           {filtered.length === 0 && (
             <div className="text-center py-4 text-gray-500 text-sm flex flex-col items-center gap-2">
               <BookOpen className="w-6 h-6 opacity-30" />

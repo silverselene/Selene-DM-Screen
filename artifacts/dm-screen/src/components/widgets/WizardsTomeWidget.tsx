@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useEffect, useMemo } from "react";
 import { Search, BookMarked, ChevronLeft } from "lucide-react";
 import { spellData, spellSchools, spellClasses, type Spell } from "@/data/spells";
 import { SpellCardBody, spellSchoolColors, spellLevelLabels } from "@/components/SpellCardBody";
@@ -34,7 +34,7 @@ function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
       >
         <ChevronLeft className="w-3 h-3" /> Back
       </button>
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-16 overflow-y-auto">
         <SpellCardBody spell={spell} />
       </div>
     </div>
@@ -43,21 +43,34 @@ function SpellDetail({ spell, onBack }: { spell: Spell; onBack: () => void }) {
 
 const TOME_MOUNT_SLOT = createSingletonSlot();
 
+// Case-insensitive name → spell, for the `target` hand-off (Party spell
+// pills carry D&D Beyond / hand-typed casing, not necessarily the dataset's).
+const SPELL_BY_LOWER_NAME = new Map<string, Spell>(
+  spellData.map((s) => [s.name.toLowerCase(), s]),
+);
+
+interface Props {
+  /** One-shot "open this spell" signal (`dm-open-spell`, routed by App). */
+  target?: string | null;
+  onTargetClear?: () => void;
+}
+
 // Wizard's Tome persists its query/filters/selected-spell on shared keys, so a
-// second live tile would clobber them — guard it as a singleton.
-export function WizardsTomeWidget() {
+// second live tile would clobber them — guard it as a singleton. Props (the
+// `dm-open-spell` target hand-off) forward to the owning instance.
+export function WizardsTomeWidget(props: Props) {
   return (
     <SingletonGate
       slot={TOME_MOUNT_SLOT}
       name="The Wizard's Tome"
       icon={<BookMarked className="w-6 h-6 text-amber-400/70" />}
     >
-      <WizardsTomeBody />
+      <WizardsTomeBody {...props} />
     </SingletonGate>
   );
 }
 
-function WizardsTomeBody() {
+function WizardsTomeBody({ target, onTargetClear }: Props) {
   // Persisted state. The selected spell is stored by name and re-resolved
   // against the live dataset on mount, so regenerating spells.ts later
   // doesn't strand a stale entry.
@@ -95,6 +108,28 @@ function WizardsTomeBody() {
     [selectedName],
   );
   const setSelected = (s: Spell | null) => setSelectedName(s?.name ?? null);
+
+  // ── When a spell name arrives from the Party widget ─────────────────────
+  // Same one-shot contract as the Bestiary's `target`: consume, then clear
+  // it in App so clicking the SAME spell again re-fires this effect. An exact
+  // (case-insensitive) match opens the spell card; a miss (homebrew, or a
+  // D&D Beyond name that differs from the dataset) falls back to searching
+  // the name with the filters cleared, so the click never looks dead.
+  useEffect(() => {
+    if (!target) return;
+    const match = SPELL_BY_LOWER_NAME.get(target.trim().toLowerCase());
+    if (match) {
+      setSelected(match);
+    } else {
+      setSelected(null);
+      setQuery(target);
+      setFilterLevel(-1);
+      setFilterClass("");
+      setFilterSchool("");
+    }
+    onTargetClear?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
 
   // The input stays driven by `query` (instant echo); the scan + sort runs
   // off the deferred value. This is the largest per-keystroke search in the
@@ -179,7 +214,7 @@ function WizardsTomeBody() {
       </div>
 
       {/* Spell list */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-0.5">
+      <div className="flex-1 min-h-16 overflow-y-auto space-y-0.5">
         {filtered.length === 0 && (
           <div className="text-center py-4 text-gray-600 text-sm flex flex-col items-center gap-2">
             <BookMarked className="w-6 h-6 opacity-30" />

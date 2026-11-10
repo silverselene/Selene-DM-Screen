@@ -54,6 +54,8 @@ interface Props {
   onResizeStart: (e: React.PointerEvent) => void;
   bestiaryTarget?: string | null;
   onBestiaryTargetClear?: () => void;
+  tomeTarget?: string | null;
+  onTomeTargetClear?: () => void;
 }
 
 const widgetMeta: Record<Exclude<WidgetType, "empty">, { label: string; icon: React.ReactNode; accent: string }> = {
@@ -108,10 +110,14 @@ function WidgetContent({
   widget,
   bestiaryTarget,
   onBestiaryTargetClear,
+  tomeTarget,
+  onTomeTargetClear,
 }: {
   widget: WidgetType;
   bestiaryTarget?: string | null;
   onBestiaryTargetClear?: () => void;
+  tomeTarget?: string | null;
+  onTomeTargetClear?: () => void;
 }) {
   // ErrorBoundary catches a rejected lazy import (Suspense only covers the
   // pending case) so a failed chunk fetch degrades to a per-tile error instead
@@ -127,7 +133,9 @@ function WidgetContent({
         {widget === "bestiary" && (
           <BestiaryWidget target={bestiaryTarget} onTargetClear={onBestiaryTargetClear} />
         )}
-        {widget === "wizard-tome" && <WizardsTomeWidget />}
+        {widget === "wizard-tome" && (
+          <WizardsTomeWidget target={tomeTarget} onTargetClear={onTomeTargetClear} />
+        )}
         {widget === "party" && <PartyWidget />}
         {widget === "portal" && <PortalWidget />}
         {widget === "ai-chat" && <AIChatWidget />}
@@ -160,6 +168,7 @@ export function DMTile({
   entry, onAdd, onClear,
   canDrag, isDragging, onDragStart, onDragEnd, onResizeStart,
   bestiaryTarget, onBestiaryTargetClear,
+  tomeTarget, onTomeTargetClear,
 }: Props) {
   const { isDark } = useTheme();
   if (!entry) return null;
@@ -236,9 +245,21 @@ export function DMTile({
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-hidden p-2.5">
-        <WidgetContent widget={widget} bestiaryTarget={bestiaryTarget} onBestiaryTargetClear={onBestiaryTargetClear} />
+      {/* Content. Widgets lay themselves out to fill this box (h-full root,
+          fixed controls + an inner flex-1 scroller). `overflow-y-auto` is the
+          safety net for a tile too small for a widget's fixed controls: the
+          overflow spills out of the widget's h-full root and the TILE scrolls,
+          so nothing is ever clipped out of reach. When the widget fits — the
+          normal case — there's no overflow and no scrollbar. Horizontal
+          overflow stays hidden; widgets wrap/truncate instead. */}
+      <div data-tile-content className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2.5">
+        <WidgetContent
+          widget={widget}
+          bestiaryTarget={bestiaryTarget}
+          onBestiaryTargetClear={onBestiaryTargetClear}
+          tomeTarget={tomeTarget}
+          onTomeTargetClear={onTomeTargetClear}
+        />
       </div>
 
       <ResizeHandle onResizeStart={onResizeStart} />

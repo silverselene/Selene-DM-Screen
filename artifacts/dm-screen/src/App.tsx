@@ -4,6 +4,7 @@ import { DMTile } from "@/components/DMTile";
 import { WidgetSelectorModal } from "@/components/WidgetSelectorModal";
 import { Sidebar } from "@/components/Sidebar";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { planOpenInWidget } from "@/lib/openInWidget";
 import {
   MAX_TILES,
   footprintCells,
@@ -153,6 +154,7 @@ function AppContent() {
   const [selectingTile, setSelectingTile] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [bestiaryTarget, setBestiaryTarget] = useState<string | null>(null);
+  const [tomeTarget, setTomeTarget] = useState<string | null>(null);
 
   // Drag-to-reorder + drag-to-resize UI state. Neither is persisted — both
   // reset to nothing on reload, same as any other in-flight gesture.
@@ -182,6 +184,9 @@ function AppContent() {
   useEffect(() => {
     if (gridTiles !== tiles) setTiles(gridTiles);
   }, [gridTiles, tiles, setTiles]);
+  // Latest rendered layout, for event handlers registered once below.
+  const tilesRef = useRef(gridTiles);
+  tilesRef.current = gridTiles;
 
   // Widget types currently on the dashboard — used to refuse a second copy of
   // a singleton widget (AI Chat: two mounted copies clobber the shared saved
@@ -196,24 +201,39 @@ function AppContent() {
     [gridTiles],
   );
 
+  // Cross-widget "open this in <widget>" hand-offs: `dm-open-bestiary`
+  // (Initiative → Bestiary) and `dm-open-spell` (Party → Wizard's Tome). The
+  // name is passed down as a one-shot `target` prop the widget consumes and
+  // clears. If the destination widget isn't on the board it's placed in the
+  // first empty tile; if there's no room, say so rather than dead-clicking.
   useEffect(() => {
-    const handler = (e: Event) => {
-      const name = (e as CustomEvent<{ name: string }>).detail?.name;
-      if (!name) return;
-      setBestiaryTarget(name);
-      setTiles((prev) => {
-        const hasBestiary = prev.some((t) => t !== null && t.widget === "bestiary");
-        if (hasBestiary) return prev;
-        const next = [...prev];
-        const firstEmpty = next.findIndex((t) => t !== null && t.widget === "empty");
-        if (firstEmpty !== -1) {
-          next[firstEmpty] = { widget: "bestiary", colSpan: 1, rowSpan: 1 };
-        }
-        return next;
-      });
+    const route = (
+      widget: "bestiary" | "wizard-tome",
+      label: string,
+      setTarget: (name: string) => void,
+    ) => (e: Event) => {
+      const name = (e as CustomEvent<{ name?: unknown }>).detail?.name;
+      if (typeof name !== "string" || !name) return;
+      // Decide placement from the latest rendered tiles synchronously (not
+      // inside a setTiles updater) so the "no room" alert fires exactly once.
+      const plan = planOpenInWidget(tilesRef.current, widget);
+      if (plan.kind === "no-room") {
+        window.alert(
+          `There's no free tile for the ${label}. Clear a tile (or add the ${label}) to open "${name}".`,
+        );
+        return;
+      }
+      setTarget(name);
+      if (plan.kind === "place") setTiles(plan.next);
     };
-    window.addEventListener("dm-open-bestiary", handler);
-    return () => window.removeEventListener("dm-open-bestiary", handler);
+    const onBestiary = route("bestiary", "Bestiary", setBestiaryTarget);
+    const onSpell = route("wizard-tome", "Wizard's Tome", setTomeTarget);
+    window.addEventListener("dm-open-bestiary", onBestiary);
+    window.addEventListener("dm-open-spell", onSpell);
+    return () => {
+      window.removeEventListener("dm-open-bestiary", onBestiary);
+      window.removeEventListener("dm-open-spell", onSpell);
+    };
   }, [setTiles]);
 
   const update = (fn: (draft: TileEntry[]) => TileEntry[]) =>
@@ -490,6 +510,8 @@ function AppContent() {
                     onResizeStart={(e) => startResize(e, i)}
                     bestiaryTarget={entry.widget === "bestiary" ? bestiaryTarget : null}
                     onBestiaryTargetClear={() => setBestiaryTarget(null)}
+                    tomeTarget={entry.widget === "wizard-tome" ? tomeTarget : null}
+                    onTomeTargetClear={() => setTomeTarget(null)}
                   />
                 </div>
               );

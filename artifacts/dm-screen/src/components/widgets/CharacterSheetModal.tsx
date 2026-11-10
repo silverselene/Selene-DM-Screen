@@ -22,6 +22,8 @@ interface Props {
   weaponStats: Map<string, WeaponInfo>;
   spellStats: Map<string, SpellInfo>;
   onClose: () => void;
+  /** Open a spell in the Wizard's Tome. When set, spell rows are clickable. */
+  onOpenSpell?: (name: string) => void;
 }
 
 function WeaponRow({ name, info }: { name: string; info?: WeaponInfo }) {
@@ -66,11 +68,30 @@ function WeaponRow({ name, info }: { name: string; info?: WeaponInfo }) {
   );
 }
 
-function SpellRow({ name, info }: { name: string; info?: SpellInfo }) {
+function SpellRow({
+  name,
+  info,
+  onOpen,
+}: {
+  name: string;
+  info?: SpellInfo;
+  onOpen?: () => void;
+}) {
   const levelLabel = info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
+  const Tag = onOpen ? "button" : "div";
   return (
-    <div
-      className="px-2.5 py-1.5 rounded border"
+    <Tag
+      {...(onOpen
+        ? {
+            type: "button" as const,
+            onClick: onOpen,
+            title: `Open ${name} in the Wizard's Tome`,
+            "aria-label": `Open ${name} in the Wizard's Tome`,
+          }
+        : {})}
+      className={`block w-full text-left px-2.5 py-1.5 rounded border ${
+        onOpen ? "cursor-pointer hover:brightness-125 transition-[filter]" : ""
+      }`}
       style={{ background: "var(--dm-bg-item)", borderColor: "var(--dm-border)" }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -121,11 +142,11 @@ function SpellRow({ name, info }: { name: string; info?: SpellInfo }) {
           Custom spell — no stats on file.
         </p>
       )}
-    </div>
+    </Tag>
   );
 }
 
-export function CharacterSheetModal({ character, weaponStats, spellStats, onClose }: Props) {
+export function CharacterSheetModal({ character, weaponStats, spellStats, onClose, onOpenSpell }: Props) {
   const weapons = character.weapons ?? [];
   const spells = character.spells ?? [];
   const sortedSpells = [...spells].sort((a, b) => {
@@ -212,7 +233,12 @@ export function CharacterSheetModal({ character, weaponStats, spellStats, onClos
           ) : (
             <div className="space-y-1.5">
               {sortedSpells.map((s) => (
-                <SpellRow key={s} name={s} info={spellStats.get(s.toLowerCase())} />
+                <SpellRow
+                  key={s}
+                  name={s}
+                  info={spellStats.get(s.toLowerCase())}
+                  onOpen={onOpenSpell ? () => onOpenSpell(s) : undefined}
+                />
               ))}
             </div>
           )}

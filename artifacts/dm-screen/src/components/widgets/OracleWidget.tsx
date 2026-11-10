@@ -202,7 +202,7 @@ function OracleBody() {
       {/* Result + History share ONE scroll region (see the comment above) so
           a long wares list, or a tile too short for the result plus a few
           history lines, is reachable by scrolling instead of being clipped. */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-16 overflow-y-auto">
         {result && (
           <div className="mt-3 p-3 bg-gray-900/80 border border-white/20 rounded">
             {tab === "wares" ? (
