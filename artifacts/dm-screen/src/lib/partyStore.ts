@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { PlayerCharacter } from "@/types";
+import { ABILITY_KEYS, type AbilityScores, type PlayerCharacter } from "@/types";
 import { parseEnvelopeHead } from "@/lib/envelope";
 
 const STORAGE_KEY = "dm-party-v1";
@@ -143,7 +143,31 @@ function normalize(c: unknown): PlayerCharacter {
     spells,
     prepared: normalizePrepared(obj.prepared, spells),
     weapons: Array.isArray(obj.weapons) ? filterStrings(obj.weapons) : [],
+    abilities: normalizeAbilities(obj.abilities),
   };
+}
+
+// 1–30 is the full 5e range (a 30 is the hard cap even for gods).
+const ABILITY_MIN = 1;
+const ABILITY_MAX = 30;
+
+/** Optional + additive, like `prepared`: a record without scores reads as
+ *  `null`. Each score is clamped to 1–30 or dropped to null; a block with
+ *  no valid score at all collapses to null. */
+function normalizeAbilities(v: unknown): AbilityScores | null {
+  if (!isPlainObject(v)) return null;
+  const out = {} as AbilityScores;
+  let any = false;
+  for (const k of ABILITY_KEYS) {
+    const n = v[k];
+    if (typeof n === "number" && Number.isFinite(n)) {
+      out[k] = Math.max(ABILITY_MIN, Math.min(ABILITY_MAX, Math.trunc(n)));
+      any = true;
+    } else {
+      out[k] = null;
+    }
+  }
+  return any ? out : null;
 }
 
 /** `prepared` is optional and additive: a record written before it existed

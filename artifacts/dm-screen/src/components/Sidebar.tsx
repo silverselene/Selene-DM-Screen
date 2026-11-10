@@ -27,6 +27,7 @@ const KEY_LABELS: Record<string, string> = {
   "dm-theme": "Theme",
   "dm-notepad": "Notes",
   "dm-party-v1": "Party",
+  "dm-party-collapsed-v1": "Party",
   "dm-initiative-v1": "Initiative",
   "dm-initiative-turn-v1": "Initiative",
   "dm-initiative-active-id-v1": "Initiative",

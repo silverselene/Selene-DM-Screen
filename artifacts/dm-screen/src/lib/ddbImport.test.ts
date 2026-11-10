@@ -90,6 +90,15 @@ describe("parseDdbCharacterId", () => {
 });
 
 describe("ddbCharacterToPlayer — identity fields", () => {
+  it("reads the six ability scores, including bonuses", () => {
+    const { character } = ddbCharacterToPlayer(
+      sheet({
+        modifiers: { race: [{ type: "bonus", subType: "intelligence-score", value: 2 }] },
+      }),
+    );
+    expect(character.abilities).toEqual({ str: 8, dex: 14, con: 14, int: 18, wis: 12, cha: 10 });
+  });
+
   it("reads name / race / class / level from the v5 envelope", () => {
     const { character, ddbId } = ddbCharacterToPlayer(wrap(sheet()));
     expect(character).toMatchObject({ name: "Selene", race: "High Elf", class: "Wizard", level: 5 });

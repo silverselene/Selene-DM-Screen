@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
   Heart, Star, BookOpen, Sword, Download, Upload, CloudDownload,
-  CircleCheck, Circle,
+  CircleCheck, Circle, ChevronUp, ChevronDown,
 } from "lucide-react";
-import type { PlayerCharacter, Combatant } from "@/types";
+import { ABILITY_KEYS, type AbilityScores, type PlayerCharacter, type Combatant } from "@/types";
+import { ABILITY_LABELS } from "@/lib/abilities";
 import { weaponsData, type Weapon } from "@/data/weapons";
 import { UNARMED_STRIKE, withUnarmedStrike } from "@/data/unarmedStrike";
 import { spellData, type Spell } from "@/data/spells";
@@ -20,7 +21,9 @@ import {
   downloadJsonFile,
   mintCombatantId,
   promptForJsonFile,
+  validatePartyCollapsed,
 } from "@/lib/backup";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   addCombatantToInitiative,
   clampInitiative,
@@ -423,6 +426,21 @@ function SpellTagInput({
   );
 }
 
+// Ability scores as form strings ("" = not recorded) and back.
+type AbilityForm = Record<(typeof ABILITY_KEYS)[number], string>;
+const abilitiesToForm = (a: AbilityScores | null | undefined): AbilityForm =>
+  Object.fromEntries(ABILITY_KEYS.map(k => [k, a?.[k] != null ? String(a[k]) : ""])) as AbilityForm;
+function formToAbilities(f: AbilityForm): AbilityScores | null {
+  const out = {} as AbilityScores;
+  let any = false;
+  for (const k of ABILITY_KEYS) {
+    const n = parseInt(f[k], 10);
+    out[k] = Number.isFinite(n) ? n : null;
+    if (out[k] != null) any = true;
+  }
+  return any ? out : null; // the store clamps each to 1–30
+}
+
 // ── emptyForm with weapons as array ───────────────────────────────────────
 const emptyForm = () => ({
   name: "", race: "", class: "", level: "1",
@@ -431,6 +449,7 @@ const emptyForm = () => ({
   // null = every spell prepared (see lib/preparedSpells.ts).
   prepared: null as string[] | null,
   weapons: [] as string[],
+  abilities: abilitiesToForm(null),
 });
 
 type CharacterForm = ReturnType<typeof emptyForm>;
@@ -485,6 +504,25 @@ function FormFields({
           <label className="text-[12px] text-gray-500 block mb-0.5">Max HP</label>
           <input type="number" value={f.hp}
             onChange={e => setF({ ...f, hp: e.target.value })} className={INPUT_CLS} />
+        </div>
+      </div>
+      {/* Ability scores — optional; shown on the character sheet */}
+      <div>
+        <label className="text-[12px] text-gray-500 block mb-0.5">Ability scores</label>
+        <div className="grid grid-cols-6 gap-1">
+          {ABILITY_KEYS.map(k => (
+            <div key={k} className="min-w-0">
+              <span className="block text-center text-[10px] font-semibold text-gray-500">{ABILITY_LABELS[k].short}</span>
+              <input
+                type="number" min="1" max="30" inputMode="numeric"
+                aria-label={ABILITY_LABELS[k].long}
+                value={f.abilities[k]}
+                onChange={e => setF({ ...f, abilities: { ...f.abilities, [k]: e.target.value } })}
+                placeholder="—"
+                className={`${INPUT_CLS} text-center px-0.5`}
+              />
+            </div>
+          ))}
         </div>
       </div>
       {/* Weapons — searchable tag input */}
@@ -555,6 +593,7 @@ function importToForm(r: DdbImportResult): CharacterForm {
     weapons: canonicalNames(c.weapons, WEAPON_STATS_BY_NAME),
     spells: canonicalNames(c.spells, SPELL_STATS_BY_NAME),
     prepared: c.prepared ? canonicalNames(c.prepared, SPELL_STATS_BY_NAME) : null,
+    abilities: abilitiesToForm(c.abilities),
   };
 }
 
@@ -610,6 +649,20 @@ export function PartyWidget() {
     return () => clearTimeout(t);
   }, [notice]);
 
+  // Rows collapsed to a single line (weapons + spells hidden). Persisted so a
+  // reload keeps the DM's tidy roster; ids of deleted characters are pruned.
+  const [collapsed, setCollapsed] = useLocalStorage<number[]>(
+    "dm-party-collapsed-v1",
+    [],
+    validatePartyCollapsed,
+  );
+  const toggleCollapsed = (id: number) =>
+    setCollapsed(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  useEffect(() => {
+    const live = new Set(characters.map(c => c.id));
+    if (collapsed.some(id => !live.has(id))) setCollapsed(collapsed.filter(id => live.has(id)));
+  }, [characters, collapsed, setCollapsed]);
+
   // Rows whose known-but-not-prepared spells are expanded (view state only).
   const [knownOpenFor, setKnownOpenFor] = useState<Set<number>>(() => new Set());
   const toggleKnownFor = (id: number) =>
@@ -643,6 +696,7 @@ export function PartyWidget() {
         hp: form.hp ? parseInt(form.hp) : null,
         spells: form.spells,
         prepared: form.prepared,
+        abilities: formToAbilities(form.abilities),
         weapons: form.weapons,
       });
       setForm(emptyForm()); setShowAdd(false); setError(null); setImportNote(null);
@@ -662,6 +716,7 @@ export function PartyWidget() {
         hp: editForm.hp ? parseInt(editForm.hp) : null,
         spells: editForm.spells,
         prepared: editForm.prepared,
+        abilities: formToAbilities(editForm.abilities),
         weapons: editForm.weapons,
       });
       setEditingId(null); setError(null); setImportNote(null);
@@ -685,6 +740,7 @@ export function PartyWidget() {
       hp: c.hp != null ? String(c.hp) : "",
       spells: c.spells || [],
       prepared: c.prepared ?? null,
+      abilities: abilitiesToForm(c.abilities),
       weapons: c.weapons || [],
     });
   };
@@ -886,7 +942,7 @@ export function PartyWidget() {
           </div>
         )}
 
-        {characters.map(c => (
+        {characters.map(c => { const isCollapsed = collapsed.includes(c.id); return (
           <div key={c.id} data-pc-id={c.id} className="bg-gray-900/60 border border-gray-800/60 rounded overflow-hidden">
             {editingId === c.id ? (
               <div className="p-2">
@@ -905,9 +961,11 @@ export function PartyWidget() {
               </div>
             ) : (
               <>
-                {/* Character header row — click opens the mini character sheet */}
+                {/* Character header row — click opens the character sheet.
+                    Collapsed: a single line (no race/class subline, and the
+                    weapons + spells row below is hidden). */}
                 <div
-                  className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-white/[0.04] transition-colors"
+                  className={`flex items-center gap-2 px-2 cursor-pointer hover:bg-white/[0.04] transition-colors ${isCollapsed ? "py-1" : "py-1.5"}`}
                   onClick={() => setSheetForId(c.id)}
                   title="View character sheet"
                 >
@@ -920,9 +978,11 @@ export function PartyWidget() {
                         </span>
                       )}
                     </div>
-                    <div className="text-[12px] text-gray-500 truncate">
-                      {[c.race, c.class].filter(Boolean).join(" · ") || "—"}
-                    </div>
+                    {!isCollapsed && (
+                      <div className="text-[12px] text-gray-500 truncate">
+                        {[c.race, c.class].filter(Boolean).join(" · ") || "—"}
+                      </div>
+                    )}
                   </div>
                   {/* Stats badges */}
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -942,6 +1002,14 @@ export function PartyWidget() {
                     className="flex items-center gap-0.5 shrink-0"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <button
+                      onClick={() => toggleCollapsed(c.id)}
+                      aria-expanded={!isCollapsed}
+                      aria-label={isCollapsed ? `Expand ${c.name}` : `Collapse ${c.name} to one line`}
+                      title={isCollapsed ? "Show weapons and spells" : "Collapse to one line"}
+                      className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 hover:bg-gray-700/40 rounded transition-colors">
+                      {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                    </button>
                     <button
                       onClick={() => { setInitiativeFor(initiativeFor === c.id ? null : c.id); setInitiativeVal(""); }}
                       title="Add to Initiative" className="w-6 h-6 flex items-center justify-center text-purple-500 hover:text-purple-300 hover:bg-purple-900/30 rounded transition-colors">
@@ -980,7 +1048,9 @@ export function PartyWidget() {
                   </div>
                 )}
 
-                {/* Weapons + spells detail row. Always shown: every character
+                {!isCollapsed && (
+                <>
+                {/* Weapons + spells detail row. Shown unless the row is collapsed; every character
                     can make an Unarmed Strike, listed first (display-only —
                     it isn't added to the stored weapons). */}
                 <div className="px-2 py-1.5 border-t border-gray-800/40 space-y-1">
@@ -1018,10 +1088,12 @@ export function PartyWidget() {
                       );
                     })()}
                 </div>
+                </>
+                )}
               </>
             )}
           </div>
-        ))}
+        ); })}
       </div>
       </div>
 

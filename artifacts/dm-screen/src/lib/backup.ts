@@ -339,6 +339,15 @@ export function tilesLayoutConsistent(
   return true;
 }
 
+/** Collapsed Party rows: an array of character ids, capped at the roster
+ *  size. Junk entries are dropped rather than failing the whole value. */
+export function validatePartyCollapsed(parsed: unknown): number[] | undefined {
+  if (!Array.isArray(parsed)) return undefined;
+  return parsed
+    .filter((n): n is number => typeof n === "number" && Number.isSafeInteger(n) && n > 0)
+    .slice(0, MAX_PARTY);
+}
+
 export function validateParty(parsed: unknown): PlayerCharacter[] | undefined {
   if (!Array.isArray(parsed)) return undefined;
   if (parsed.length > MAX_PARTY) {
@@ -466,6 +475,8 @@ const KEY_VALIDATORS: Record<string, KeyValidator> = {
 
   // Party + Initiative (the keys whose contents flow into stat-block math)
   "dm-party-v1": lift(validateParty),
+  // Party rows the DM collapsed to one line (character ids; view state only).
+  "dm-party-collapsed-v1": lift(validatePartyCollapsed),
   "dm-initiative-v1": lift(validateCombatants),
   // Legacy turn-index key — kept in the registry so backups written by
   // older builds still shape-check on import. The runtime no longer

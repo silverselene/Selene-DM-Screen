@@ -79,6 +79,20 @@ export interface Combatant {
   monsterName?: string;
 }
 
+/** The six ability scores. Each is null when unknown (e.g. a hand-entered
+ *  character whose sheet the DM hasn't filled in). */
+export interface AbilityScores {
+  str: number | null;
+  dex: number | null;
+  con: number | null;
+  int: number | null;
+  wis: number | null;
+  cha: number | null;
+}
+
+export const ABILITY_KEYS = ["str", "dex", "con", "int", "wis", "cha"] as const;
+export type AbilityKey = (typeof ABILITY_KEYS)[number];
+
 export interface PlayerCharacter {
   id: number;
   name: string;
@@ -96,4 +110,7 @@ export interface PlayerCharacter {
    *  the stored key didn't need a version bump — see partyStore.normalize. */
   prepared?: string[] | null;
   weapons: string[];
+  /** Ability scores for the character sheet. Optional and additive like
+   *  `prepared`: absent/null = not recorded. Filled by the D&D Beyond import. */
+  abilities?: AbilityScores | null;
 }

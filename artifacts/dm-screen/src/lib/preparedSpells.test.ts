@@ -65,6 +65,14 @@ describe("partyStore keeps `prepared` consistent", () => {
     expect(loadParty()[0].prepared).toEqual(["Fire Bolt"]);
   });
 
+  it("keeps ability scores, clamped to 1–30, and reads a record without them as null", () => {
+    install();
+    addCharacter({ ...pc, spells: [], abilities: { str: 8, dex: 99, con: null, int: 16, wis: 0, cha: 10 } });
+    expect(loadParty()[0].abilities).toEqual({ str: 8, dex: 30, con: null, int: 16, wis: 1, cha: 10 });
+    install().set("dm-party-v1", JSON.stringify([{ ...pc, id: 3, spells: [] }]));
+    expect(loadParty()[0].abilities).toBeNull();
+  });
+
   it("round-trips through the party export / import", () => {
     install();
     addCharacter({ ...pc, ...claude });

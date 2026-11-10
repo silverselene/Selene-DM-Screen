@@ -293,6 +293,16 @@
 .light-mode [class~="text-emerald-400/90"],
 .light-mode [class~="text-emerald-500"] { color: #047857; }
 
+/* Character sheet combat-number boxes (AC / HP / Initiative / Proficiency).
+ * They use the pale 300-level tone text the dark theme wants, which washes
+ * out on the light page; scoped by data attribute so the global 300-level
+ * rules above (kept dark for chips that stay dark) are untouched. AA shades:
+ * Tailwind blue-800 / red-700 / amber-800, and the theme accent. */
+.light-mode [data-combat-stat="blue"]   { color: #1e40af; }
+.light-mode [data-combat-stat="red"]    { color: #b91c1c; }
+.light-mode [data-combat-stat="amber"]  { color: #92400e; }
+.light-mode [data-combat-stat="purple"] { color: var(--dm-accent); }
+
 /* Placeholder */
 .light-mode [class~="placeholder-gray-500"]::placeholder,
 .light-mode [class~="placeholder-gray-600"]::placeholder { color: var(--dm-placeholder); }

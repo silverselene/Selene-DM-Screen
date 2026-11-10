@@ -82,7 +82,10 @@ export function characterCardToCombatant(card: ToolResultCard, d20: number): Com
  *  hand-editable in the form — they ride along from the card via
  *  `cardSpellWeaponLists`). Doubles as the edit-form state shape in
  *  ChatCardActions. */
-export type PlayerDraft = Omit<PlayerCharacter, "id" | "spells" | "weapons" | "prepared">;
+export type PlayerDraft = Omit<
+  PlayerCharacter,
+  "id" | "spells" | "weapons" | "prepared" | "abilities"
+>;
 
 /** Sanitize a card's `spells`/`weapons` into clean roster lists: trim, drop
  *  empties, de-dup case-insensitively (first spelling wins). A card without the

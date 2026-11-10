@@ -1,12 +1,16 @@
-// Mini character sheet: a read-only, at-a-glance popup for a single party
-// member — AC, HP, and the actions they can actually take (weapons equipped,
-// spells known) with their combat-relevant stats pulled from the bundled
-// weapon/spell datasets. Opened by clicking a roster row in PartyWidget.
-import { X, Shield, Heart, Star, Sword, BookOpen, Sparkles } from "lucide-react";
-import type { PlayerCharacter } from "@/types";
+// Character sheet: a read-only popup for a single party member, laid out like
+// a printed sheet — header and combat numbers (AC, HP, initiative,
+// proficiency) across the top, ability scores down the left, and what they
+// can do (weapons, then prepared and known spells, with stats from the
+// bundled datasets) on the right. Stacks to one column on a narrow screen.
+// Opened by clicking a roster row in PartyWidget.
+import type { ReactNode } from "react";
+import { X, Shield, Heart, Star, Sword, BookOpen, Sparkles, Zap, Award } from "lucide-react";
+import { ABILITY_KEYS, type PlayerCharacter } from "@/types";
+import { ABILITY_LABELS, abilityMod, formatMod, proficiencyBonus } from "@/lib/abilities";
 import type { Weapon } from "@/data/weapons";
 import type { Spell } from "@/data/spells";
-import { withUnarmedStrike } from "@/data/unarmedStrike";
+import { UNARMED_STRIKE_NAME, withUnarmedStrike } from "@/data/unarmedStrike";
 import { splitSpells } from "@/lib/preparedSpells";
 
 type WeaponInfo = Pick<
@@ -33,10 +37,13 @@ interface Props {
 function WeaponRow({
   name,
   info,
+  attack,
   onOpen,
 }: {
   name: string;
   info?: WeaponInfo;
+  /** Worked-out attack line, when the sheet can compute one. */
+  attack?: string;
   onOpen?: () => void;
 }) {
   const Tag = onOpen ? "button" : "div";
@@ -64,10 +71,13 @@ function WeaponRow({
           </span>
         )}
       </div>
+      {attack && (
+        <p className="text-xs font-mono font-semibold mt-0.5 text-amber-300">{attack}</p>
+      )}
       {info ? (
-        ((info.damage ?? null) !== null || info.properties.length > 0 || mastery.length > 0) && (
+        (((info.damage ?? null) !== null && !attack) || info.properties.length > 0 || mastery.length > 0) && (
           <div className="flex items-center gap-1.5 flex-wrap mt-1">
-            {info.damage && (
+            {info.damage && !attack && (
               <span className="text-xs font-mono font-semibold text-amber-400">
                 {info.damage}{info.damage_type ? ` ${info.damage_type}` : ""}
               </span>
@@ -213,24 +223,38 @@ export function CharacterSheetModal({
     />
   );
 
+  const ab = character.abilities ?? null;
+  const pb = proficiencyBonus(character.level);
+  const dexMod = ab?.dex != null ? abilityMod(ab.dex) : null;
+  const strMod = ab?.str != null ? abilityMod(ab.str) : null;
+  // Unarmed Strike is fully defined by the rules (everyone is proficient), so
+  // with a Strength score the sheet can show the real numbers.
+  const unarmedAttack =
+    strMod != null
+      ? `${formatMod(strMod + pb)} to hit · ${Math.max(0, 1 + strMod)} Bludgeoning`
+      : undefined;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative z-10 border rounded-xl p-5 w-full max-w-md max-h-[85vh] overflow-y-auto"
+        role="dialog"
+        aria-label={`${character.name} — character sheet`}
+        className="relative z-10 border rounded-xl p-4 sm:p-5 w-full max-w-3xl max-h-[90vh] overflow-y-auto"
         style={{ background: "var(--dm-bg-card)", borderColor: "var(--dm-border-card)" }}
       >
-        <div className="flex items-start justify-between gap-2 mb-3">
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-2 mb-3 pb-3 border-b" style={{ borderColor: "var(--dm-border)" }}>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h2 className="text-lg font-bold truncate" style={{ color: "var(--dm-thead)" }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold truncate" style={{ color: "var(--dm-thead)" }}>
                 {character.name}
               </h2>
-              <span className="text-xs flex items-center gap-0.5 shrink-0" style={{ color: "var(--dm-accent)" }}>
-                <Star className="w-3 h-3" />Lv {character.level}
+              <span className="text-sm flex items-center gap-0.5 shrink-0" style={{ color: "var(--dm-accent)" }}>
+                <Star className="w-3.5 h-3.5" />Level {character.level}
               </span>
             </div>
-            <div className="text-xs truncate" style={{ color: "var(--dm-t2)" }}>
+            <div className="text-sm truncate" style={{ color: "var(--dm-t2)" }}>
               {[character.race, character.class].filter(Boolean).join(" · ") || "—"}
             </div>
           </div>
@@ -244,71 +268,144 @@ export function CharacterSheetModal({
           </button>
         </div>
 
-        {/* AC / HP — the two numbers a DM needs first */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded border border-blue-800/40 bg-blue-900/20">
-            <Shield className="w-4 h-4 text-blue-400" />
-            <span className="text-sm text-blue-300">AC</span>
-            <span className="text-lg font-bold text-blue-200">{character.ac ?? "—"}</span>
-          </div>
-          <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded border border-red-800/40 bg-red-900/20">
-            <Heart className="w-4 h-4 text-red-400" />
-            <span className="text-sm text-red-300">HP</span>
-            <span className="text-lg font-bold text-red-200">{character.hp ?? "—"}</span>
-          </div>
+        {/* ── Combat numbers ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <CombatStat icon={<Shield className="w-4 h-4" />} label="Armor Class" value={character.ac ?? "—"} tone="blue" />
+          <CombatStat icon={<Heart className="w-4 h-4" />} label="Hit Points" value={character.hp ?? "—"} tone="red" />
+          <CombatStat icon={<Zap className="w-4 h-4" />} label="Initiative" value={dexMod != null ? formatMod(dexMod) : "—"} tone="amber" />
+          <CombatStat icon={<Award className="w-4 h-4" />} label="Proficiency" value={formatMod(pb)} tone="purple" />
         </div>
 
-        {/* Weapons */}
-        <div className="mb-3">
-          <div
-            className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wide"
-            style={{ color: "var(--dm-t2)" }}
-          >
-            <Sword className="w-3.5 h-3.5" />Weapons
-          </div>
-          <div className="space-y-1.5">
-            {weapons.map((w) => (
-              <WeaponRow
-                key={w}
-                name={w}
-                info={weaponStats.get(w.toLowerCase())}
-                onOpen={onOpenWeapon ? () => onOpenWeapon(w) : undefined}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Spells */}
-        <div>
-          <div
-            className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wide"
-            style={{ color: "var(--dm-t2)" }}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            {knownSpells.length > 0 ? "Prepared spells" : "Spells"}
-          </div>
-          {preparedSpells.length === 0 && knownSpells.length === 0 ? (
-            <p className="text-xs" style={{ color: "var(--dm-t3)" }}>No spells known.</p>
-          ) : preparedSpells.length === 0 ? (
-            <p className="text-xs" style={{ color: "var(--dm-t3)" }}>None prepared.</p>
-          ) : (
-            <div className="space-y-1.5">{preparedSpells.map((s) => spellRow(s))}</div>
-          )}
-        </div>
-
-        {/* Known but not prepared (only when there are any) */}
-        {knownSpells.length > 0 && (
-          <div className="mt-3">
-            <div
-              className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wide"
-              style={{ color: "var(--dm-t3)" }}
-            >
-              <BookOpen className="w-3.5 h-3.5" />Known — not prepared
+        <div className="grid gap-4 md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+          {/* ── Left: ability scores ── */}
+          <section aria-label="Ability scores">
+            <SectionTitle>Abilities</SectionTitle>
+            <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-2 gap-2">
+              {ABILITY_KEYS.map((k) => {
+                const score = ab?.[k] ?? null;
+                return (
+                  <div
+                    key={k}
+                    title={ABILITY_LABELS[k].long}
+                    className="flex flex-col items-center rounded-lg border py-1.5"
+                    style={{ background: "var(--dm-bg-item)", borderColor: "var(--dm-border)" }}
+                  >
+                    <span className="text-[10px] font-bold tracking-wider" style={{ color: "var(--dm-t3)" }}>
+                      {ABILITY_LABELS[k].short}
+                    </span>
+                    <span className="text-xl font-bold leading-tight" style={{ color: "var(--dm-t1)" }}>
+                      {score != null ? formatMod(abilityMod(score)) : "—"}
+                    </span>
+                    <span
+                      className="text-[11px] px-1.5 rounded-full border mt-0.5"
+                      style={{ color: "var(--dm-t2)", borderColor: "var(--dm-border)" }}
+                    >
+                      {score ?? "–"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-            <div className="space-y-1.5">{knownSpells.map((s) => spellRow(s, true))}</div>
+            {!ab && (
+              <p className="text-[11px] mt-2" style={{ color: "var(--dm-t3)" }}>
+                No ability scores yet — add them with Edit, or re-import from D&amp;D Beyond.
+              </p>
+            )}
+          </section>
+
+          {/* ── Right: weapons, then spells ── */}
+          <div className="min-w-0 space-y-4">
+            <section aria-label="Weapons">
+              <SectionTitle icon={<Sword className="w-3.5 h-3.5" />}>Weapons</SectionTitle>
+              <div className="space-y-1.5">
+                {weapons.map((w) => (
+                  <WeaponRow
+                    key={w}
+                    name={w}
+                    info={weaponStats.get(w.toLowerCase())}
+                    attack={w === UNARMED_STRIKE_NAME ? unarmedAttack : undefined}
+                    onOpen={onOpenWeapon ? () => onOpenWeapon(w) : undefined}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section aria-label="Spells">
+              <SectionTitle icon={<BookOpen className="w-3.5 h-3.5" />}>
+                {knownSpells.length > 0 ? "Prepared spells" : "Spells"}
+              </SectionTitle>
+              {preparedSpells.length === 0 && knownSpells.length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--dm-t3)" }}>No spells known.</p>
+              ) : preparedSpells.length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--dm-t3)" }}>None prepared.</p>
+              ) : (
+                <div className="space-y-1.5">{preparedSpells.map((s) => spellRow(s))}</div>
+              )}
+            </section>
+
+            {knownSpells.length > 0 && (
+              <section aria-label="Known spells">
+                <SectionTitle icon={<BookOpen className="w-3.5 h-3.5" />} muted>
+                  Known — not prepared
+                </SectionTitle>
+                <div className="space-y-1.5">{knownSpells.map((s) => spellRow(s, true))}</div>
+              </section>
+            )}
           </div>
-        )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function SectionTitle({
+  icon,
+  muted,
+  children,
+}: {
+  icon?: ReactNode;
+  muted?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <h3
+      className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wide"
+      style={{ color: muted ? "var(--dm-t3)" : "var(--dm-t2)" }}
+    >
+      {icon}
+      {children}
+    </h3>
+  );
+}
+
+const TONES = {
+  blue: "border-blue-800/40 bg-blue-900/20 text-blue-300",
+  red: "border-red-800/40 bg-red-900/20 text-red-300",
+  amber: "border-amber-800/40 bg-amber-900/20 text-amber-300",
+  purple: "border-purple-800/40 bg-purple-900/20 text-purple-300",
+} as const;
+
+function CombatStat({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  tone: keyof typeof TONES;
+}) {
+  return (
+    <div
+      data-combat-stat={tone}
+      className={`flex flex-col items-center justify-center py-2 rounded border ${TONES[tone]}`}
+    >
+      <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide opacity-90">
+        {icon}
+        {label}
+      </span>
+      <span className="text-xl font-bold leading-tight">{value}</span>
     </div>
   );
 }

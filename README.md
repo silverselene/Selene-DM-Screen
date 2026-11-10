@@ -63,9 +63,16 @@ scrolls — nothing is ever cut off out of reach.
 - **Party** — full CRUD for player characters. Tracks name, race, class,
   level, AC, HP, weapons (with live autocomplete against 251 weapons), and
   spells. One-click dispatch to the Initiative Tracker.
-  - **Character sheet** — click a party member to open a mini sheet: AC, HP,
-    each weapon's damage, properties and mastery, and each spell's casting
-    time, range, duration and damage/healing, sorted by level.
+  - **Character sheet** — click a party member's name to open a sheet laid
+    out like a printed one: AC, HP, initiative and proficiency bonus across
+    the top; the six ability scores (with modifiers) on the left; weapons and
+    spells on the right — each weapon's damage, properties and mastery
+    (Unarmed Strike with its real to-hit and damage once Strength is known),
+    and each spell's casting time, range, duration and damage/healing.
+    Ability scores come in with a D&D Beyond import or can be typed into the
+    edit form.
+  - **Collapse a character to one line** — the arrow button on a row hides
+    its weapons and spells (handy for a big party); the choice is remembered.
   - **Prepared vs known spells** — a caster's row shows the spells they have
     prepared (cantrips plus prepared spells); the rest of what they know, such
     as a Wizard's spellbook, sits behind a "+N known" button, and the character
