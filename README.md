@@ -246,15 +246,6 @@ labels:
 
 Leaving `BASE_PATH` unset serves at `/` with no proxy prefix to strip.
 
-### Deploy to Vercel
-
-[artifacts/dm-screen/vercel.json](artifacts/dm-screen/vercel.json) configures
-a static deploy. Import the repository in Vercel and set the project's **Root
-Directory** to `artifacts/dm-screen`; Vercel then installs the SPA's
-dependencies (skipping the optional AI bridge), runs `pnpm run build`,
-serves `dist/public`, and rewrites every path to `index.html` for SPA
-routing. No environment variables are needed.
-
 ### Keeping a local copy up to date
 
 If you run the app locally, pull and rebuild after changes land on `master`,
