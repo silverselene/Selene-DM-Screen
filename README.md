@@ -20,39 +20,64 @@ between 1×1 and 2×2 — direct manipulation, no buttons. Recent widgets are
 saved in the sidebar for quick restore. Layout persists across sessions via
 `localStorage`.
 
+Every widget fits a small tile: forms, results and lists scroll inside the
+widget, and if a tile is too small even for a widget's controls the whole tile
+scrolls — nothing is ever cut off out of reach.
+
 ### Nine widgets
 
 - **Compendium** — search and browse D&D 5.5e rules entries: hand-curated DM
   summaries plus a bulk set of feats, combat actions, skills, senses, and
-  DMG/PHB-style variant rules. Also every bundled weapon (251): a weapon card
-  shows damage, range, properties and its 2024 Weapon Mastery, and clicking
-  any property or mastery explains it inline.
-- **Initiative Tracker** — add players and monsters, roll initiative, track HP
-  and AC round by round. Clicking a monster name jumps straight to its
-  Bestiary entry. Combatants, turn order, current round, and per-combatant HP
-  all persist so you can stop mid-encounter and resume later.
+  DMG/PHB-style variant rules.
+  - **Weapons** — all 251 bundled weapons, each with a weapon card: damage,
+    two-handed (versatile) damage, range, weight, cost, magic-item text, its
+    properties and its **2024 Weapon Mastery** (e.g. Dagger → Nick). Click any
+    property or mastery on the card to read the official rule inline. The
+    weapon list shows damage + mastery at a glance, and weapon properties are
+    searchable rules entries too.
+- **Initiative Tracker** — add monsters, party members, or custom combatants
+  (the add form opens on the Monster tab), roll initiative, and track HP and AC
+  round by round. Click a combatant's HP to type a new value directly (for big
+  heals or hits), or use the +/- buttons. Expand a monster's row to see its
+  attacks (to-hit, reach/range, damage, rider saves) and spells without
+  leaving the tracker; clicking a monster name opens its Bestiary entry.
+  Combatants, turn order, current round, and per-combatant HP all persist so
+  you can stop mid-encounter and resume later.
 - **Notepad** — free-text session notes, persisted in `localStorage`.
-- **Oracle** — random generator with four tabs: Names (by ancestry/race),
+- **Oracle** — random generator with five tabs: Names (by ancestry/race),
   Places (7 settlement types with combinatorial name patterns and
-  descriptors), Loot (by CR tier), and Items (mundane & common magic).
+  descriptors), Loot (by CR tier), Items (mundane & common magic), and Wares
+  (a shop's stock for a Tavern, Blacksmith, Trader, or Alchemist). Results
+  and history scroll together, so Generate is always in reach.
 - **Bestiary** — full-text search over a unified 2,160-monster dataset, 2,144
   of them with a full stat block (traits, actions, reactions, legendary
-  actions) rather than just a thin index entry. CR-coloured badges throughout.
+  actions) rather than just a thin index entry. **Attacks** and **Spells** tabs
+  lead the stat block, pulling "what can it do this round" out of the prose:
+  each attack's to-hit, reach/range, damage and rider save, and its spells
+  matched against the 557 bundled spells. CR-coloured badges throughout.
 - **Wizard's Tome** — searchable spell compendium (557 spells). Filter by
   level, class, or school. Every spell shows a Damage line at a glance —
   dice + type (+ save/attack) for damage-dealers, healing amount for
   healers, a short effect blurb otherwise.
 - **Party** — full CRUD for player characters. Tracks name, race, class,
   level, AC, HP, weapons (with live autocomplete against 251 weapons), and
-  spells. One-click dispatch to the Initiative Tracker. **Import from D&D
-  Beyond** (cloud icon in the header): paste a *public* character's link and
-  the widget fetches its sheet, derives AC / max HP from equipment and
-  modifiers, and prefills the form for review before saving. If the browser
-  can't reach D&D Beyond, paste (or load) the character JSON instead. A
-  same-named character is refreshed rather than duplicated.
-  Click any spell on a character (roster pill or character sheet) to open it
-  in the Wizard's Tome, or any weapon to open its card in the Compendium —
-  the destination widget is placed in a free tile if needed.
+  spells. One-click dispatch to the Initiative Tracker.
+  - **Character sheet** — click a party member to open a mini sheet: AC, HP,
+    each weapon's damage, properties and mastery, and each spell's casting
+    time, range, duration and damage/healing, sorted by level.
+  - **Click to look things up** — click any spell (on the roster row or the
+    sheet) to open it in the Wizard's Tome, or any weapon to open its card in
+    the Compendium. If that widget isn't on the screen it's placed in the first
+    free tile.
+  - **Import from D&D Beyond** (cloud icon in the header) — paste a *public*
+    character's link and the widget fetches the sheet: name, species, class
+    (multiclass as "Fighter 3 / Wizard 2"), level, equipped weapons and
+    castable spells. AC and max HP are worked out from equipment and
+    modifiers, and everything is **prefilled into the form for you to check
+    before saving**. If the browser can't reach D&D Beyond, open the
+    character's JSON link the panel gives you and paste (or load) it instead.
+    Importing a character who's already in the party updates them rather than
+    adding a duplicate.
 - **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
   player for table music or ambience. The link is remembered across
   sessions, and the embed resizes with the tile.
@@ -95,8 +120,11 @@ saved in the sidebar for quick restore. Layout persists across sessions via
 
 - Light / Dark mode toggle — a full light theme using lavender and ink tones.
 - Collapsible sidebar with grid-size controls and recent-widget restore.
-- Cross-widget events — Party → Initiative (add character), Initiative →
-  Bestiary (view monster) via DOM custom events.
+- Cross-widget links — Party → Initiative (add character), Initiative →
+  Bestiary (view monster), Party → Wizard's Tome (view spell), and Party →
+  Compendium (view weapon). A link to a widget that isn't on the screen places
+  it in the first free tile; if every tile is taken you're told so instead of
+  the click doing nothing.
 - **Backup & restore** — sidebar Export/Import buttons download a single JSON
   snapshot of everything (party, notes, layout, in-progress combat) and
   restore it into a fresh browser. Party-only Export/Import lives in the
@@ -120,8 +148,12 @@ saved in the sidebar for quick restore. Layout persists across sessions via
 >   **New chat** to clear it first if you don't want it in the shared file.
 > - **Stay on one origin.** Running in dev (`http://localhost:38080`) and in
 >   Docker (`http://localhost:38080`) on the same port and host shares state.
->   Switching ports starts a fresh, separate store. One side effect of the
->   shared origin: the Docker/preview build registers a service worker, so
+>   Switching ports starts a fresh, separate store — and so does switching
+>   between `localhost` and `127.0.0.1`: the browser treats them as two
+>   different sites, so a party saved on one won't appear on the other. Pick
+>   one address and bookmark it (use Backup → Import to move data across).
+>   One side effect of the shared origin: the Docker/preview build registers
+>   a service worker, so
 >   the first `pnpm dev` load after visiting it can serve the stale cached
 >   production shell — hard-reload once (or unregister the SW in DevTools)
 >   and it self-heals.
@@ -214,6 +246,26 @@ labels:
 
 Leaving `BASE_PATH` unset serves at `/` with no proxy prefix to strip.
 
+### Deploy to Vercel
+
+[artifacts/dm-screen/vercel.json](artifacts/dm-screen/vercel.json) configures
+a static deploy. Import the repository in Vercel and set the project's **Root
+Directory** to `artifacts/dm-screen`; Vercel then installs the SPA's
+dependencies (skipping the optional AI bridge), runs `pnpm run build`,
+serves `dist/public`, and rewrites every path to `index.html` for SPA
+routing. No environment variables are needed.
+
+### Keeping a local copy up to date
+
+If you run the app locally, pull and rebuild after changes land on `master`,
+then hard-reload the browser (Cmd/Ctrl+Shift+R) so the PWA drops its cached
+build:
+
+```bash
+git checkout master && git pull origin master
+docker compose up --build -d     # Docker — or restart `pnpm dev` after `pnpm install`
+```
+
 ## Architecture
 
 pnpm workspace with one deployable, an offline tooling package, and an optional
@@ -244,7 +296,7 @@ Dockerfile, docker-compose.yml, .dockerignore
 |---|---|---|
 | Spells | 557 | 5etools v2.31.0 (`data/spells/*.json` + `sources.json`) |
 | Monsters | 2,160 (2,144 with full stat blocks) | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools v2.31.0 bestiary (2024 XMM preferred) + Open5e (OGL) |
-| Weapons | 251 | 5etools v2.31.0 (`data/items.json` + `items-base.json`) |
+| Weapons | 251 (203 with a 2024 Weapon Mastery) + property & mastery rules text | 5etools v2.31.0 (`data/items.json` + `items-base.json`) |
 | Compendium (hand-curated) | 78 | hand-curated DM summaries |
 | Compendium (bulk rules) | 561 | 5etools v2.31.0 (feats, actions, skills, senses, variant rules) + Open5e (OGL) |
 
