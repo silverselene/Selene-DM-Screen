@@ -66,6 +66,12 @@ scrolls — nothing is ever cut off out of reach.
   - **Character sheet** — click a party member to open a mini sheet: AC, HP,
     each weapon's damage, properties and mastery, and each spell's casting
     time, range, duration and damage/healing, sorted by level.
+  - **Prepared vs known spells** — a caster's row shows the spells they have
+    prepared (cantrips plus prepared spells); the rest of what they know, such
+    as a Wizard's spellbook, sits behind a "+N known" button, and the character
+    sheet lists the two separately. In the edit form, click the circle on a
+    spell to prepare or unprepare it. D&D Beyond imports bring in the whole
+    spellbook with the prepared ones already marked.
   - **Unarmed Strike on everyone** — every character shows an Unarmed Strike
     (1 + Str bludgeoning) alongside their own weapons, since anyone can make
     one. It's added automatically, so there's nothing to type in.

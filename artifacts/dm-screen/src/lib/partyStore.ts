@@ -131,6 +131,7 @@ function normalize(c: unknown): PlayerCharacter {
   const obj = c as Partial<PlayerCharacter>;
   const hasValidId = isAcceptableId(obj.id);
   if (hasValidId) bumpIdCounter(obj.id as number);
+  const spells = Array.isArray(obj.spells) ? filterStrings(obj.spells) : [];
   return {
     id: hasValidId ? (obj.id as number) : mintId(),
     name: clampString(obj.name, PC_MAX_STRING),
@@ -139,9 +140,22 @@ function normalize(c: unknown): PlayerCharacter {
     level: clampInt(obj.level, PC_LEVEL_MIN, PC_LEVEL_MAX, PC_LEVEL_MIN),
     ac: nullableNonNegInt(obj.ac, PC_AC_MAX),
     hp: nullableNonNegInt(obj.hp, PC_HP_MAX),
-    spells: Array.isArray(obj.spells) ? filterStrings(obj.spells) : [],
+    spells,
+    prepared: normalizePrepared(obj.prepared, spells),
     weapons: Array.isArray(obj.weapons) ? filterStrings(obj.weapons) : [],
   };
+}
+
+/** `prepared` is optional and additive: a record written before it existed
+ *  (or by an older build) has none, which reads as `null` = "every spell is
+ *  prepared" — exactly the old meaning. So the stored shape stays readable
+ *  in both directions and dm-party-v1 needs no version bump. When present
+ *  it's clamped to a subset of `spells` (case-insensitive), so a removed
+ *  spell can't linger as "prepared", and stored with the spells' spelling. */
+function normalizePrepared(v: unknown, spells: string[]): string[] | null {
+  if (!Array.isArray(v)) return null;
+  const wanted = new Set(filterStrings(v).map((s) => s.toLowerCase()));
+  return spells.filter((s) => wanted.has(s.toLowerCase()));
 }
 
 function isPlainObject(x: unknown): x is Record<string, unknown> {

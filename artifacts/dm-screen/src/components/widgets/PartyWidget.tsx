@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
   Heart, Star, BookOpen, Sword, Download, Upload, CloudDownload,
+  CircleCheck, Circle,
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
 import { weaponsData, type Weapon } from "@/data/weapons";
@@ -31,6 +32,12 @@ import { Combobox } from "@/lib/Combobox";
 import { isImeComposing } from "@/lib/keyboard";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
 import { CharacterSheetModal } from "./CharacterSheetModal";
+import {
+  isPrepared,
+  preparedAfterAdding,
+  splitSpells,
+  togglePrepared,
+} from "@/lib/preparedSpells";
 import { DdbImportPanel } from "./DdbImportPanel";
 import type { DdbImportResult } from "@/lib/ddbImport";
 
@@ -215,7 +222,16 @@ function openSpellInTome(name: string): void {
   window.dispatchEvent(new CustomEvent("dm-open-spell", { detail: { name } }));
 }
 
-function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, SpellInfo> }) {
+function SpellPill({
+  name,
+  statsMap,
+  known = false,
+}: {
+  name: string;
+  statsMap: Map<string, SpellInfo>;
+  /** Known but not prepared — drawn dimmed with a dashed border. */
+  known?: boolean;
+}) {
   const info = statsMap.get(name.toLowerCase());
   const levelLabel =
     info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
@@ -223,9 +239,13 @@ function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, Spe
     <button
       type="button"
       onClick={() => openSpellInTome(name)}
-      title={`Open ${name} in the Wizard's Tome`}
+      title={`Open ${name} in the Wizard's Tome${known ? " (known, not prepared)" : ""}`}
       aria-label={`Open ${name} in the Wizard's Tome`}
-      className="inline-flex items-center gap-1 text-[12px] bg-cyan-900/25 border border-cyan-800/30 rounded px-1.5 py-0.5 text-cyan-300 hover:bg-cyan-800/40 hover:border-cyan-600/60 hover:text-cyan-100 transition-colors cursor-pointer">
+      className={`inline-flex items-center gap-1 text-[12px] rounded px-1.5 py-0.5 transition-colors cursor-pointer ${
+        known
+          ? "border border-dashed border-gray-600 text-gray-400 opacity-80 hover:opacity-100 hover:text-cyan-200"
+          : "bg-cyan-900/25 border border-cyan-800/30 text-cyan-300 hover:bg-cyan-800/40 hover:border-cyan-600/60 hover:text-cyan-100"
+      }`}>
       <BookOpen className="w-2.5 h-2.5 shrink-0" />
       <span>{name}</span>
       {info?.damage ? (
@@ -258,9 +278,14 @@ function SpellPill({ name, statsMap }: { name: string; statsMap: Map<string, Spe
 function SpellTagInput({
   selected,
   onChange,
+  isPrepared: isSpellPrepared,
+  onTogglePrepared,
 }: {
   selected: string[];
   onChange: (names: string[]) => void;
+  /** Prepared-spell toggle (Party edit form). Omit to hide it. */
+  isPrepared?: (name: string) => boolean;
+  onTogglePrepared?: (name: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SpellInfo[]>([]);
@@ -312,15 +337,35 @@ function SpellTagInput({
         className="flex flex-wrap gap-1 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded focus-within:border-purple-500 cursor-text min-h-[30px]"
         onClick={() => inputRef.current?.focus()}
       >
-        {selected.map(name => (
-          <span key={name} className="flex items-center gap-1 text-[12px] bg-cyan-900/40 border border-cyan-700/40 text-cyan-300 rounded px-1.5 py-0.5">
-            <BookOpen className="w-2.5 h-2.5 shrink-0" />
+        {selected.map(name => {
+          const prepared = isSpellPrepared ? isSpellPrepared(name) : true;
+          return (
+          <span key={name} className={`flex items-center gap-1 text-[12px] rounded px-1.5 py-0.5 border ${
+            prepared
+              ? "bg-cyan-900/40 border-cyan-700/40 text-cyan-300"
+              : "bg-gray-800/60 border-dashed border-gray-600 text-gray-400"
+          }`}>
+            {onTogglePrepared ? (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); onTogglePrepared(name); }}
+                aria-pressed={prepared}
+                aria-label={prepared ? `Unprepare ${name}` : `Prepare ${name}`}
+                title={prepared ? "Prepared — click to mark as known only" : "Known, not prepared — click to prepare"}
+                className={`shrink-0 transition-colors ${prepared ? "text-cyan-300 hover:text-white" : "text-gray-500 hover:text-cyan-300"}`}
+              >
+                {prepared ? <CircleCheck className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+              </button>
+            ) : (
+              <BookOpen className="w-2.5 h-2.5 shrink-0" />
+            )}
             {name}
-            <button type="button" onClick={e => { e.stopPropagation(); remove(name); }} className="text-cyan-500 hover:text-red-400 transition-colors">
+            <button type="button" onClick={e => { e.stopPropagation(); remove(name); }} aria-label={`Remove ${name}`} className="text-cyan-500 hover:text-red-400 transition-colors">
               <X className="w-2.5 h-2.5" />
             </button>
           </span>
-        ))}
+          );
+        })}
         <input
           ref={inputRef}
           value={query}
@@ -383,6 +428,8 @@ const emptyForm = () => ({
   name: "", race: "", class: "", level: "1",
   ac: "", hp: "",
   spells: [] as string[],
+  // null = every spell prepared (see lib/preparedSpells.ts).
+  prepared: null as string[] | null,
   weapons: [] as string[],
 });
 
@@ -453,8 +500,27 @@ function FormFields({
         <label className="text-[12px] text-gray-500 block mb-0.5">Spells</label>
         <SpellTagInput
           selected={f.spells}
-          onChange={spells => setF({ ...f, spells })}
+          onChange={spells => {
+            // New spells start prepared; removed ones drop out of `prepared`.
+            let prepared = f.prepared;
+            for (const added of spells.filter(sp => !f.spells.includes(sp))) {
+              prepared = preparedAfterAdding({ spells: f.spells, prepared }, added);
+            }
+            if (prepared) {
+              const keep = new Set(spells.map(sp => sp.toLowerCase()));
+              prepared = prepared.filter(p => keep.has(p.toLowerCase()));
+            }
+            setF({ ...f, spells, prepared });
+          }}
+          isPrepared={name => isPrepared(f, name)}
+          onTogglePrepared={name => setF({ ...f, prepared: togglePrepared(f, name) })}
         />
+        {f.spells.length > 0 && (
+          <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
+            <CircleCheck className="w-3 h-3 text-cyan-400" />prepared
+            <Circle className="w-3 h-3 ml-1.5" />known only — click the circle to switch
+          </p>
+        )}
       </div>
     </div>
   );
@@ -488,6 +554,7 @@ function importToForm(r: DdbImportResult): CharacterForm {
     hp: c.hp != null ? String(c.hp) : "",
     weapons: canonicalNames(c.weapons, WEAPON_STATS_BY_NAME),
     spells: canonicalNames(c.spells, SPELL_STATS_BY_NAME),
+    prepared: c.prepared ? canonicalNames(c.prepared, SPELL_STATS_BY_NAME) : null,
   };
 }
 
@@ -543,6 +610,15 @@ export function PartyWidget() {
     return () => clearTimeout(t);
   }, [notice]);
 
+  // Rows whose known-but-not-prepared spells are expanded (view state only).
+  const [knownOpenFor, setKnownOpenFor] = useState<Set<number>>(() => new Set());
+  const toggleKnownFor = (id: number) =>
+    setKnownOpenFor(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
   // Per-row initiative
   const [initiativeFor, setInitiativeFor] = useState<number | null>(null);
   const [initiativeVal, setInitiativeVal] = useState("");
@@ -566,6 +642,7 @@ export function PartyWidget() {
         ac: form.ac ? parseInt(form.ac) : null,
         hp: form.hp ? parseInt(form.hp) : null,
         spells: form.spells,
+        prepared: form.prepared,
         weapons: form.weapons,
       });
       setForm(emptyForm()); setShowAdd(false); setError(null); setImportNote(null);
@@ -584,6 +661,7 @@ export function PartyWidget() {
         ac: editForm.ac ? parseInt(editForm.ac) : null,
         hp: editForm.hp ? parseInt(editForm.hp) : null,
         spells: editForm.spells,
+        prepared: editForm.prepared,
         weapons: editForm.weapons,
       });
       setEditingId(null); setError(null); setImportNote(null);
@@ -606,6 +684,7 @@ export function PartyWidget() {
       level: String(c.level), ac: c.ac != null ? String(c.ac) : "",
       hp: c.hp != null ? String(c.hp) : "",
       spells: c.spells || [],
+      prepared: c.prepared ?? null,
       weapons: c.weapons || [],
     });
   };
@@ -910,13 +989,34 @@ export function PartyWidget() {
                         <WeaponPill key={w} name={w} statsMap={weaponStats} />
                       ))}
                     </div>
-                    {(c.spells?.length ?? 0) > 0 && (
-                      <div className="flex items-start gap-1 flex-wrap">
-                        {c.spells.map(s => (
-                          <SpellPill key={s} name={s} statsMap={spellStats} />
-                        ))}
-                      </div>
-                    )}
+                    {(c.spells?.length ?? 0) > 0 && (() => {
+                      // Prepared spells as usual; known-only ones (e.g. the
+                      // rest of a Wizard's spellbook) behind a "+N known"
+                      // toggle so they don't flood the row.
+                      const { prepared, known } = splitSpells(c);
+                      const showKnown = knownOpenFor.has(c.id);
+                      return (
+                        <div className="flex items-start gap-1 flex-wrap">
+                          {prepared.map(s => (
+                            <SpellPill key={s} name={s} statsMap={spellStats} />
+                          ))}
+                          {known.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => toggleKnownFor(c.id)}
+                              aria-expanded={showKnown}
+                              title="Spells known but not prepared"
+                              className="text-[12px] px-1.5 py-0.5 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+                            >
+                              {showKnown ? "Hide known" : `+${known.length} known`}
+                            </button>
+                          )}
+                          {showKnown && known.map(s => (
+                            <SpellPill key={s} name={s} statsMap={spellStats} known />
+                          ))}
+                        </div>
+                      );
+                    })()}
                 </div>
               </>
             )}

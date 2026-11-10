@@ -363,39 +363,52 @@ function spellRef(entry: Obj): SpellRef | null {
   return { name, level: num(def.level) ?? 0 };
 }
 
-/** Castable spells: per class list, a "prepare" caster (any spell flagged
- *  `prepared`) contributes only prepared / always-prepared spells and
- *  cantrips — so a Wizard's whole spellbook doesn't flood the roster — while
- *  a "known" caster contributes everything. Race / class-feature / feat /
- *  background spells are always included. Item spells are skipped (they
- *  depend on charges and attunement). Sorted cantrips-first, then by name. */
-function spellNames(c: Obj): string[] {
-  const refs: SpellRef[] = [];
+interface SpellListing extends SpellRef {
+  prepared: boolean;
+}
+
+/** Every spell the character knows, each flagged prepared or not.
+ *  Per class list, a "prepare" caster (any spell flagged `prepared`, e.g. a
+ *  Wizard and their spellbook) has only its prepared / always-prepared spells
+ *  and cantrips marked prepared; a "known" caster (nothing flagged) has all
+ *  of them prepared. Race / class-feature / feat / background spells are
+ *  always prepared. Item spells are skipped (they depend on charges and
+ *  attunement). Sorted cantrips-first, then by name. */
+function spellListings(c: Obj): SpellListing[] {
+  const out: SpellListing[] = [];
   for (const cs of objs(c.classSpells)) {
     const list = objs(cs.spells);
     const preparesSpells = list.some((s) => s.prepared === true);
     for (const s of list) {
       const ref = spellRef(s);
       if (!ref) continue;
-      if (
-        !preparesSpells ||
-        ref.level === 0 ||
-        s.prepared === true ||
-        s.alwaysPrepared === true
-      ) {
-        refs.push(ref);
-      }
+      out.push({
+        ...ref,
+        prepared:
+          !preparesSpells ||
+          ref.level === 0 ||
+          s.prepared === true ||
+          s.alwaysPrepared === true,
+      });
     }
   }
   const granted = isObj(c.spells) ? c.spells : {};
   for (const key of ["race", "class", "feat", "background"]) {
     for (const s of objs(granted[key])) {
       const ref = spellRef(s);
-      if (ref) refs.push(ref);
+      if (ref) out.push({ ...ref, prepared: true });
     }
   }
-  refs.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
-  return dedupe(refs.map((r) => r.name));
+  // Merge duplicates (the same spell from two sources): prepared if any
+  // source has it prepared.
+  const byName = new Map<string, SpellListing>();
+  for (const l of out) {
+    const k = l.name.toLowerCase();
+    const cur = byName.get(k);
+    if (!cur) byName.set(k, { ...l });
+    else cur.prepared ||= l.prepared;
+  }
+  return [...byName.values()].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 
 // ── Public entry points ──────────────────────────────────────────────────
@@ -411,11 +424,17 @@ export function ddbCharacterToPlayer(doc: unknown): DdbImportResult {
     warnings.push(`Only the first ${MAX_LIST} of ${weapons.length} weapons were kept.`);
     weapons = weapons.slice(0, MAX_LIST);
   }
-  let spells = spellNames(c);
-  if (spells.length > MAX_LIST) {
-    warnings.push(`Only the first ${MAX_LIST} of ${spells.length} spells were kept.`);
-    spells = spells.slice(0, MAX_LIST);
+  let listings = spellListings(c);
+  if (listings.length > MAX_LIST) {
+    warnings.push(`Only ${MAX_LIST} of ${listings.length} spells were kept (prepared spells first).`);
+    // Keep every prepared spell before any known-only one, then restore order.
+    const order = new Map(listings.map((l, i) => [l, i]));
+    listings = [...listings.filter((l) => l.prepared), ...listings.filter((l) => !l.prepared)]
+      .slice(0, MAX_LIST)
+      .sort((a, b) => order.get(a)! - order.get(b)!);
   }
+  const spells = listings.map((l) => l.name);
+  const prepared = listings.filter((l) => l.prepared).map((l) => l.name);
 
   const hp = computeMaxHp(c, mods);
   if (hp == null) warnings.push("Max HP couldn't be determined — fill it in by hand.");
@@ -432,6 +451,7 @@ export function ddbCharacterToPlayer(doc: unknown): DdbImportResult {
       ac: computeArmorClass(c, mods),
       hp,
       spells,
+      prepared,
       weapons,
     },
     ddbId: num(c.id),

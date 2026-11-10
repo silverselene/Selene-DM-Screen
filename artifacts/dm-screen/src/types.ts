@@ -88,5 +88,12 @@ export interface PlayerCharacter {
   ac: number | null;
   hp: number | null;
   spells: string[];
+  /** Which of `spells` are prepared (castable now). `null`/absent = no
+   *  explicit choice, so every spell counts as prepared — the meaning the
+   *  roster had before this field existed. When set, it's a subset of
+   *  `spells` (the store enforces that); spells not in it are known but
+   *  not prepared (e.g. a Wizard's spellbook). Additive and optional, so
+   *  the stored key didn't need a version bump — see partyStore.normalize. */
+  prepared?: string[] | null;
   weapons: string[];
 }

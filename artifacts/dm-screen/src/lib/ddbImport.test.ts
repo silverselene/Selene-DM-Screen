@@ -275,7 +275,7 @@ describe("ddbCharacterToPlayer — weapons", () => {
 });
 
 describe("ddbCharacterToPlayer — spells", () => {
-  it("keeps only prepared spells + cantrips for a preparing caster", () => {
+  it("keeps a preparing caster's whole spellbook, marking only prepared spells + cantrips prepared", () => {
     const { character } = ddbCharacterToPlayer(
       sheet({
         classSpells: [
@@ -291,7 +291,8 @@ describe("ddbCharacterToPlayer — spells", () => {
         ],
       }),
     );
-    expect(character.spells).toEqual(["Fire Bolt", "Magic Missile", "Shield"]);
+    expect(character.spells).toEqual(["Fire Bolt", "Feather Fall", "Magic Missile", "Shield"]);
+    expect(character.prepared).toEqual(["Fire Bolt", "Magic Missile", "Shield"]);
   });
 
   it("keeps every spell for a known-spells caster and adds racial / feat spells", () => {
@@ -309,12 +310,28 @@ describe("ddbCharacterToPlayer — spells", () => {
       }),
     );
     expect(character.spells).toEqual(["Dancing Lights", "Vicious Mockery", "Thunderwave", "Misty Step"]);
+    expect(character.prepared).toEqual(character.spells);
+  });
+
+  it("marks a spell prepared if any source prepares it, without listing it twice", () => {
+    const { character } = ddbCharacterToPlayer(
+      sheet({
+        classSpells: [{ spells: [spell("Shield", 1, { prepared: true }), spell("Misty Step", 2)] }],
+        spells: { feat: [{ definition: { name: "Misty Step", level: 2 } }] },
+      }),
+    );
+    expect(character.spells).toEqual(["Shield", "Misty Step"]);
+    expect(character.prepared).toEqual(["Shield", "Misty Step"]);
   });
 
   it("caps the spell list and warns", () => {
-    const many = Array.from({ length: 120 }, (_, i) => spell(`Spell ${String(i).padStart(3, "0")}`, 1));
+    // 120 spellbook spells, only the last 5 prepared: the cap must keep those 5.
+    const many = Array.from({ length: 120 }, (_, i) =>
+      spell(`Spell ${String(i).padStart(3, "0")}`, 1, { prepared: i >= 115 }),
+    );
     const r = ddbCharacterToPlayer(sheet({ classSpells: [{ spells: many }] }));
     expect(r.character.spells).toHaveLength(100);
+    expect(r.character.prepared).toEqual(["Spell 115", "Spell 116", "Spell 117", "Spell 118", "Spell 119"]);
     expect(r.warnings.join(" ")).toMatch(/100 of 120 spells/);
   });
 });

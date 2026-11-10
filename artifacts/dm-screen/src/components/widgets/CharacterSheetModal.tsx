@@ -7,6 +7,7 @@ import type { PlayerCharacter } from "@/types";
 import type { Weapon } from "@/data/weapons";
 import type { Spell } from "@/data/spells";
 import { withUnarmedStrike } from "@/data/unarmedStrike";
+import { splitSpells } from "@/lib/preparedSpells";
 
 type WeaponInfo = Pick<
   Weapon,
@@ -103,10 +104,13 @@ function WeaponRow({
 function SpellRow({
   name,
   info,
+  known = false,
   onOpen,
 }: {
   name: string;
   info?: SpellInfo;
+  /** Known but not prepared — dimmed. */
+  known?: boolean;
   onOpen?: () => void;
 }) {
   const levelLabel = info == null ? null : info.level === 0 ? "Cantrip" : `Lv ${info.level}`;
@@ -123,7 +127,7 @@ function SpellRow({
         : {})}
       className={`block w-full text-left px-2.5 py-1.5 rounded border ${
         onOpen ? "cursor-pointer hover:brightness-125 transition-[filter]" : ""
-      }`}
+      } ${known ? "border-dashed opacity-70" : ""}`}
       style={{ background: "var(--dm-bg-item)", borderColor: "var(--dm-border)" }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -188,13 +192,26 @@ export function CharacterSheetModal({
 }: Props) {
   // Unarmed Strike first — every character can make one (display-only).
   const weapons = withUnarmedStrike(character.weapons);
-  const spells = character.spells ?? [];
-  const sortedSpells = [...spells].sort((a, b) => {
+  // Prepared spells (castable now) first, then known-but-not-prepared ones
+  // (e.g. the rest of a Wizard's spellbook), each sorted by level then name.
+  const byLevel = (a: string, b: string) => {
     const la = spellStats.get(a.toLowerCase())?.level ?? 99;
     const lb = spellStats.get(b.toLowerCase())?.level ?? 99;
     if (la !== lb) return la - lb;
     return a.localeCompare(b);
-  });
+  };
+  const split = splitSpells(character);
+  const preparedSpells = [...split.prepared].sort(byLevel);
+  const knownSpells = [...split.known].sort(byLevel);
+  const spellRow = (s: string, known = false) => (
+    <SpellRow
+      key={s}
+      name={s}
+      info={spellStats.get(s.toLowerCase())}
+      known={known}
+      onOpen={onOpenSpell ? () => onOpenSpell(s) : undefined}
+    />
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -267,23 +284,30 @@ export function CharacterSheetModal({
             className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wide"
             style={{ color: "var(--dm-t2)" }}
           >
-            <BookOpen className="w-3.5 h-3.5" />Spells
+            <BookOpen className="w-3.5 h-3.5" />
+            {knownSpells.length > 0 ? "Prepared spells" : "Spells"}
           </div>
-          {sortedSpells.length === 0 ? (
+          {preparedSpells.length === 0 && knownSpells.length === 0 ? (
             <p className="text-xs" style={{ color: "var(--dm-t3)" }}>No spells known.</p>
+          ) : preparedSpells.length === 0 ? (
+            <p className="text-xs" style={{ color: "var(--dm-t3)" }}>None prepared.</p>
           ) : (
-            <div className="space-y-1.5">
-              {sortedSpells.map((s) => (
-                <SpellRow
-                  key={s}
-                  name={s}
-                  info={spellStats.get(s.toLowerCase())}
-                  onOpen={onOpenSpell ? () => onOpenSpell(s) : undefined}
-                />
-              ))}
-            </div>
+            <div className="space-y-1.5">{preparedSpells.map((s) => spellRow(s))}</div>
           )}
         </div>
+
+        {/* Known but not prepared (only when there are any) */}
+        {knownSpells.length > 0 && (
+          <div className="mt-3">
+            <div
+              className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold uppercase tracking-wide"
+              style={{ color: "var(--dm-t3)" }}
+            >
+              <BookOpen className="w-3.5 h-3.5" />Known — not prepared
+            </div>
+            <div className="space-y-1.5">{knownSpells.map((s) => spellRow(s, true))}</div>
+          </div>
+        )}
       </div>
     </div>
   );
