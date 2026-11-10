@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 
 import { weaponsData, weaponMasteryRules, weaponPropertyRules } from "@/data/weapons";
 import { compendiumData } from "@/data/compendium";
+import { UNARMED_STRIKE, withUnarmedStrike } from "@/data/unarmedStrike";
 import {
   findWeaponEntryId,
+  isSpecialWeapon,
+  SUPERSEDED_ENTRY_IDS,
   masteryRuleFor,
   propertyRuleFor,
   weaponCompendiumEntries,
@@ -51,7 +54,7 @@ describe("generated weapon data", () => {
 describe("weaponCompendiumEntries", () => {
   it("adds every weapon as a Weapons entry, resolvable by name case-insensitively", () => {
     const weaponEntries = weaponCompendiumEntries.filter((e) => e.category === WEAPONS_CATEGORY);
-    expect(weaponEntries).toHaveLength(weaponsData.length);
+    expect(weaponEntries).toHaveLength(weaponsData.length + 1); // + Unarmed Strike
     const id = findWeaponEntryId("dAgGeR")!;
     expect(weaponForEntryId(id)?.name).toBe("Dagger");
     expect(findWeaponEntryId("Not A Weapon")).toBeNull();
@@ -124,5 +127,30 @@ describe("hand-curated Weapon Mastery entries (compendium.ts)", () => {
   it.each(weaponMasteryRules.map((r) => r.name))("lists exactly the %s weapons", (m) => {
     const entry = curated.find((e) => e.title === `Weapon Mastery: ${m}`)!;
     expect(listed(entry.content)).toEqual(baseWithMastery(m));
+  });
+});
+
+describe("Unarmed Strike", () => {
+  it("is a Weapons entry with its own type line and the three 2024 options", () => {
+    const id = findWeaponEntryId("unarmed strike")!;
+    const w = weaponForEntryId(id)!;
+    expect(w).toBe(UNARMED_STRIKE);
+    expect(isSpecialWeapon(w) && w.options.map((o) => o.name)).toEqual(["Damage", "Grapple", "Shove"]);
+    expect(weaponTypeLine(w)).toMatch(/every creature/);
+    // Searchable by its options' text, not just its name.
+    const entry = weaponCompendiumEntries.find((e) => e.id === id)!;
+    expect(entry.content).toMatch(/Grappled condition/);
+  });
+
+  it("replaces the generated variant-rule entry instead of duplicating it", () => {
+    expect(SUPERSEDED_ENTRY_IDS.has("variant-unarmed-strike")).toBe(true);
+  });
+
+  it("is listed first for every character, once, without touching their weapons", () => {
+    expect(withUnarmedStrike([])).toEqual(["Unarmed Strike"]);
+    expect(withUnarmedStrike(undefined)).toEqual(["Unarmed Strike"]);
+    const own = ["Dagger", "unarmed strike", "Longbow"];
+    expect(withUnarmedStrike(own)).toEqual(["Unarmed Strike", "Dagger", "Longbow"]);
+    expect(own).toEqual(["Dagger", "unarmed strike", "Longbow"]);
   });
 });

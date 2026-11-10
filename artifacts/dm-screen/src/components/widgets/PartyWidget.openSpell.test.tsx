@@ -86,4 +86,18 @@ describe("PartyWidget — open a spell in the Wizard's Tome", () => {
     expect(weaponsOpened).toEqual(["Dagger", "Dagger"]);
     expect(screen.queryByRole("heading", { name: "Selene" })).toBeNull();
   });
+
+  it("shows Unarmed Strike on every character, row and sheet, linking to the Compendium", () => {
+    addCharacter({ name: "Brawler", race: null, class: null, level: 1, ac: null, hp: null, spells: [], weapons: [] });
+    render(<PartyWidget />);
+    // One Unarmed Strike pill per character (Selene + Brawler), even with no weapons.
+    const pills = screen.getAllByRole("button", { name: "Open Unarmed Strike in the Compendium" });
+    expect(pills).toHaveLength(2);
+    expect(pills[0].textContent).toMatch(/1 \+ Str/);
+    fireEvent.click(pills[1]);
+    expect(weaponsOpened).toEqual(["Unarmed Strike"]);
+
+    fireEvent.click(screen.getAllByTitle("View character sheet")[1]);
+    expect(screen.getAllByRole("button", { name: "Open Unarmed Strike in the Compendium" })).toHaveLength(3);
+  });
 });

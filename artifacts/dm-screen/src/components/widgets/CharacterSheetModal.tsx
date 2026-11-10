@@ -6,6 +6,7 @@ import { X, Shield, Heart, Star, Sword, BookOpen, Sparkles } from "lucide-react"
 import type { PlayerCharacter } from "@/types";
 import type { Weapon } from "@/data/weapons";
 import type { Spell } from "@/data/spells";
+import { withUnarmedStrike } from "@/data/unarmedStrike";
 
 type WeaponInfo = Pick<
   Weapon,
@@ -185,7 +186,8 @@ export function CharacterSheetModal({
   onOpenSpell,
   onOpenWeapon,
 }: Props) {
-  const weapons = character.weapons ?? [];
+  // Unarmed Strike first — every character can make one (display-only).
+  const weapons = withUnarmedStrike(character.weapons);
   const spells = character.spells ?? [];
   const sortedSpells = [...spells].sort((a, b) => {
     const la = spellStats.get(a.toLowerCase())?.level ?? 99;
@@ -247,20 +249,16 @@ export function CharacterSheetModal({
           >
             <Sword className="w-3.5 h-3.5" />Weapons
           </div>
-          {weapons.length === 0 ? (
-            <p className="text-xs" style={{ color: "var(--dm-t3)" }}>No weapons equipped.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {weapons.map((w) => (
-                <WeaponRow
-                  key={w}
-                  name={w}
-                  info={weaponStats.get(w.toLowerCase())}
-                  onOpen={onOpenWeapon ? () => onOpenWeapon(w) : undefined}
-                />
-              ))}
-            </div>
-          )}
+          <div className="space-y-1.5">
+            {weapons.map((w) => (
+              <WeaponRow
+                key={w}
+                name={w}
+                info={weaponStats.get(w.toLowerCase())}
+                onOpen={onOpenWeapon ? () => onOpenWeapon(w) : undefined}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Spells */}

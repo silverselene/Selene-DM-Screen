@@ -34,7 +34,8 @@ scrolls — nothing is ever cut off out of reach.
     properties and its **2024 Weapon Mastery** (e.g. Dagger → Nick). Click any
     property or mastery on the card to read the official rule inline. The
     weapon list shows damage + mastery at a glance, and weapon properties are
-    searchable rules entries too.
+    searchable rules entries too. **Unarmed Strike** is listed as well, with
+    its three 2024 options (Damage, Grapple, Shove) and their save DCs.
 - **Initiative Tracker** — add monsters, party members, or custom combatants
   (the add form opens on the Monster tab), roll initiative, and track HP and AC
   round by round. Click a combatant's HP to type a new value directly (for big
@@ -65,6 +66,9 @@ scrolls — nothing is ever cut off out of reach.
   - **Character sheet** — click a party member to open a mini sheet: AC, HP,
     each weapon's damage, properties and mastery, and each spell's casting
     time, range, duration and damage/healing, sorted by level.
+  - **Unarmed Strike on everyone** — every character shows an Unarmed Strike
+    (1 + Str bludgeoning) alongside their own weapons, since anyone can make
+    one. It's added automatically, so there's nothing to type in.
   - **Click to look things up** — click any spell (on the roster row or the
     sheet) to open it in the Wizard's Tome, or any weapon to open its card in
     the Compendium. If that widget isn't on the screen it's placed in the first

@@ -8,6 +8,7 @@ import { Sword, Crosshair, Weight, Coins, Sparkles } from "lucide-react";
 
 import type { Weapon, WeaponRule } from "@/data/weapons";
 import {
+  isSpecialWeapon,
   masteryRuleFor,
   propertyRuleFor,
   weaponRange,
@@ -72,6 +73,12 @@ export function WeaponCard({ weapon }: { weapon: Weapon }) {
             {weapon.cost}
           </Stat>
         )}
+        {isSpecialWeapon(weapon) &&
+          weapon.stats.map((st) => (
+            <Stat key={st.label} label={st.label} wide={st.value.length > 12}>
+              {st.value}
+            </Stat>
+          ))}
       </div>
 
       {/* Mastery + properties — each chip explains itself */}
@@ -142,6 +149,23 @@ export function WeaponCard({ weapon }: { weapon: Weapon }) {
         <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line border-t border-gray-800 pt-2">
           {weapon.description}
         </p>
+      )}
+
+      {/* A special weapon's per-use choices (Unarmed Strike: Damage /
+          Grapple / Shove) — the core of the card, so always shown. */}
+      {isSpecialWeapon(weapon) && (
+        <div className="space-y-1.5">
+          {weapon.options.map((o) => (
+            <div
+              key={o.name}
+              className="rounded border border-amber-900/40 bg-amber-950/20 px-2.5 py-1.5"
+            >
+              <p className="text-sm font-semibold text-amber-300">{o.name}</p>
+              <p className="text-sm text-gray-300 leading-relaxed">{o.description}</p>
+            </div>
+          ))}
+          <p className="text-[12px] text-gray-500 italic">{weapon.note}</p>
+        </div>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
 import { weaponsData, type Weapon } from "@/data/weapons";
+import { UNARMED_STRIKE, withUnarmedStrike } from "@/data/unarmedStrike";
 import { spellData, type Spell } from "@/data/spells";
 import {
   addCharacter,
@@ -460,8 +461,9 @@ function FormFields({
 }
 
 // Lowercased-name lookup for the inline weapon stat pills. Built once.
+// Includes Unarmed Strike, which every character is shown with.
 const WEAPON_STATS_BY_NAME: Map<string, WeaponInfo> = new Map(
-  weaponsData.map(w => [w.name.toLowerCase(), w]),
+  [UNARMED_STRIKE, ...weaponsData].map(w => [w.name.toLowerCase(), w]),
 );
 
 // Same idea, but for spell pills.
@@ -899,16 +901,15 @@ export function PartyWidget() {
                   </div>
                 )}
 
-                {/* Weapons + spells detail row */}
-                {((c.weapons?.length ?? 0) > 0 || (c.spells?.length ?? 0) > 0) && (
-                  <div className="px-2 py-1.5 border-t border-gray-800/40 space-y-1">
-                    {(c.weapons?.length ?? 0) > 0 && (
-                      <div className="flex items-start gap-1 flex-wrap">
-                        {c.weapons.map(w => (
-                          <WeaponPill key={w} name={w} statsMap={weaponStats} />
-                        ))}
-                      </div>
-                    )}
+                {/* Weapons + spells detail row. Always shown: every character
+                    can make an Unarmed Strike, listed first (display-only —
+                    it isn't added to the stored weapons). */}
+                <div className="px-2 py-1.5 border-t border-gray-800/40 space-y-1">
+                    <div className="flex items-start gap-1 flex-wrap">
+                      {withUnarmedStrike(c.weapons).map(w => (
+                        <WeaponPill key={w} name={w} statsMap={weaponStats} />
+                      ))}
+                    </div>
                     {(c.spells?.length ?? 0) > 0 && (
                       <div className="flex items-start gap-1 flex-wrap">
                         {c.spells.map(s => (
@@ -916,8 +917,7 @@ export function PartyWidget() {
                         ))}
                       </div>
                     )}
-                  </div>
-                )}
+                </div>
               </>
             )}
           </div>

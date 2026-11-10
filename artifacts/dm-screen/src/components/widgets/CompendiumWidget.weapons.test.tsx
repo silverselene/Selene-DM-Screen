@@ -8,7 +8,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 
-vi.mock("@/data/compendiumRules", () => ({ compendiumRulesData: [] }));
+// Just the generated "Unarmed Strike" variant rule — the weapon card
+// supersedes it, so it must not show up as a second search result.
+vi.mock("@/data/compendiumRules", () => ({
+  compendiumRulesData: [
+    {
+      id: "variant-unarmed-strike",
+      title: "Unarmed Strike",
+      category: "Variant Rules",
+      content: "Instead of using a weapon to make a melee attack…",
+      tags: ["variant rule"],
+    },
+  ],
+}));
 
 import { CompendiumWidget } from "./CompendiumWidget";
 
@@ -64,5 +76,20 @@ describe("CompendiumWidget — weapons", () => {
     const row = (await screen.findByText("Dagger")).closest("button")!;
     expect(row.textContent).toMatch(/1d4 P/);
     expect(row.textContent).toMatch(/Nick/);
+  });
+
+  it("shows Unarmed Strike as a weapon card with Damage / Grapple / Shove, listed once", async () => {
+    render(<CompendiumWidget target="Unarmed Strike" />);
+    expect(await screen.findByRole("heading", { name: "Unarmed Strike" })).toBeTruthy();
+    for (const o of ["Damage", "Grapple", "Shove"]) expect(screen.getAllByText(o).length).toBeGreaterThan(0);
+    expect(screen.getByText("Str mod + Proficiency")).toBeTruthy();
+
+    cleanup();
+    window.localStorage.setItem("dm-compendium-query-v1", JSON.stringify("unarmed strike"));
+    window.localStorage.setItem("dm-compendium-entry-v1", JSON.stringify(null));
+    render(<CompendiumWidget />);
+    await screen.findAllByRole("button");
+    const titled = screen.getAllByText("Unarmed Strike").filter((el) => el.closest("button"));
+    expect(titled).toHaveLength(1);
   });
 });

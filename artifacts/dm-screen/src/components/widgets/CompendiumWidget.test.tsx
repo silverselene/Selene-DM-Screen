@@ -27,13 +27,14 @@ const { HAND, RULES } = vi.hoisted(() => {
 
 vi.mock("@/data/compendium", () => ({ compendiumData: HAND }));
 vi.mock("@/data/compendiumRules", () => ({ compendiumRulesData: RULES }));
-// The weapons dataset also feeds the Compendium (weaponCompendium.ts); keep it
-// empty here so the counts above stay controlled. Weapon entries are covered
-// in CompendiumWidget.weapons.test.tsx.
-vi.mock("@/data/weapons", () => ({
-  weaponsData: [],
-  weaponPropertyRules: [],
-  weaponMasteryRules: [],
+// Weapons (and Unarmed Strike) also feed the Compendium via
+// weaponCompendium.ts; stub it out so the counts above stay controlled.
+// Weapon entries are covered in CompendiumWidget.weapons.test.tsx.
+vi.mock("@/lib/weaponCompendium", () => ({
+  weaponCompendiumEntries: [],
+  SUPERSEDED_ENTRY_IDS: new Set<string>(),
+  findWeaponEntryId: () => null,
+  weaponForEntryId: () => undefined,
 }));
 
 import { CompendiumWidget } from "./CompendiumWidget";

@@ -19,8 +19,24 @@ import {
   type Weapon,
   type WeaponRule,
 } from "@/data/weapons";
+import { UNARMED_STRIKE, type SpecialWeapon } from "@/data/unarmedStrike";
 
 export const WEAPONS_CATEGORY = "Weapons";
+
+/** Hand-curated weapon-like attacks listed alongside the generated weapons. */
+const SPECIAL_WEAPONS: SpecialWeapon[] = [UNARMED_STRIKE];
+
+/** Every weapon the Compendium lists: the specials first, then the dataset. */
+const ALL_WEAPONS: Weapon[] = [...SPECIAL_WEAPONS, ...weaponsData];
+
+export function isSpecialWeapon(w: Weapon): w is SpecialWeapon {
+  return "options" in w && Array.isArray((w as SpecialWeapon).options);
+}
+
+/** Generated Compendium entries a richer weapon entry replaces, so a search
+ *  doesn't list the same thing twice. The 2024 "Unarmed Strike" variant rule
+ *  is the same text as the Unarmed Strike weapon card's three options. */
+export const SUPERSEDED_ENTRY_IDS = new Set(["variant-unarmed-strike"]);
 export const WEAPON_PROPERTIES_CATEGORY = "Weapon Properties";
 export const WEAPON_MASTERIES_CATEGORY = "Weapon Masteries";
 
@@ -33,8 +49,11 @@ export const weaponEntryId = (name: string) => `weapon:${norm(name)}`;
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** "Simple Melee Weapon", "Martial Ranged Weapon", "Weapon". */
+/** "Simple Melee Weapon", "Martial Ranged Weapon", "Weapon" — or a special
+ *  weapon's own line ("Melee attack — every creature can make one"). */
 export function weaponTypeLine(w: Pick<Weapon, "category" | "kind">): string {
+  const special = (w as Partial<SpecialWeapon>).typeLine;
+  if (special) return special;
   return [w.category && cap(w.category), w.kind && cap(w.kind), "Weapon"]
     .filter(Boolean)
     .join(" ");
@@ -66,7 +85,10 @@ function summarize(w: Weapon): string {
     w.mastery?.length ? `Mastery: ${w.mastery.join(", ")}.` : null,
     [w.weight, w.cost].filter(Boolean).join(", ") || null,
   ];
-  return [lines.filter(Boolean).join(" "), w.description].filter(Boolean).join("\n\n");
+  const options = isSpecialWeapon(w)
+    ? w.options.map((o) => `${o.name}: ${o.description}`).join("\n")
+    : null;
+  return [lines.filter(Boolean).join(" "), w.description, options].filter(Boolean).join("\n\n");
 }
 
 function weaponEntry(w: Weapon): CompendiumEntry {
@@ -101,7 +123,7 @@ function ruleEntry(prefix: string, category: string, r: WeaponRule): CompendiumE
 }
 
 export const weaponCompendiumEntries: CompendiumEntry[] = [
-  ...weaponsData.map(weaponEntry),
+  ...ALL_WEAPONS.map(weaponEntry),
   ...weaponPropertyRules
     .map((r) => ruleEntry("Weapon Property", WEAPON_PROPERTIES_CATEGORY, r))
     .filter((e): e is CompendiumEntry => e != null),
@@ -111,7 +133,7 @@ export const weaponCompendiumEntries: CompendiumEntry[] = [
 ];
 
 const WEAPON_BY_ENTRY_ID = new Map<string, Weapon>(
-  weaponsData.map((w) => [weaponEntryId(w.name), w]),
+  ALL_WEAPONS.map((w) => [weaponEntryId(w.name), w]),
 );
 
 export function weaponForEntryId(id: string): Weapon | undefined {
