@@ -75,7 +75,7 @@ Two tiers, and the default env is **`"node"`** — keep it that way:
 
 Full verification is `pnpm test` + `pnpm typecheck` + the production build + bundle scans (e.g. `grep "/api/" dist/public/assets/*.js` must return zero). New deps are subject to the `minimumReleaseAge: 1440` gate. Note that `vitest` takes an optional peer on `jsdom`, so adding/removing it re-hashes vitest's `.pnpm` path for **every** workspace project — run a full `pnpm install` (not a filtered one) afterward or the other packages' `vitest` symlinks dangle.
 
-That same peer edge means `jsdom` is downloaded during the Docker build (which installs dm-screen's devDeps — it has to; `vite`/`typescript` live there). **Moving `jsdom` to the root `package.json` does not avoid this** and has been tried: dm-screen's vitest resolves to `vitest@4.1.9(…)(jsdom@29.1.1)(…)` regardless of which manifest declares jsdom, so the filtered install materializes the peer anyway. Test-only deps stay in the package whose tests import them; the build-image cost is accepted.
+That same peer edge means `jsdom` is downloaded during the Docker build (which installs dm-screen's devDeps — it has to; `vite`/`typescript` live there). **Moving `jsdom` to the root `package.json` does not avoid this** and has been tried: dm-screen's vitest resolves to `vitest@4.1.10(…)(jsdom@30.1.3)(…)` regardless of which manifest declares jsdom, so the filtered install materializes the peer anyway. Test-only deps stay in the package whose tests import them; the build-image cost is accepted.
 
 ## Repository layout
 
