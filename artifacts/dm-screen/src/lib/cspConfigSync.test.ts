@@ -16,6 +16,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { EMBED_HOSTS } from "./portalEmbed";
+import { DDB_CHARACTER_SERVICE_ORIGIN } from "./ddbImport";
 
 const dmScreenRoot = path.resolve(import.meta.dirname, "..", "..");
 
@@ -79,5 +80,11 @@ describe("CSP connect-src <-> AI-bridge default port", () => {
     // must be present (matching the security-headers.conf comment).
     expect(connectSrc).toContain(`http://127.0.0.1:${port}`);
     expect(connectSrc).toContain(`http://localhost:${port}`);
+  });
+});
+
+describe("CSP connect-src <-> D&D Beyond character import", () => {
+  it("allows the character-service origin the Party import fetches from", () => {
+    expect(directiveSources("connect-src")).toContain(DDB_CHARACTER_SERVICE_ORIGIN);
   });
 });

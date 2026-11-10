@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
-  Heart, Star, BookOpen, Sword, Download, Upload,
+  Heart, Star, BookOpen, Sword, Download, Upload, CloudDownload,
 } from "lucide-react";
 import type { PlayerCharacter, Combatant } from "@/types";
 import { weaponsData, type Weapon } from "@/data/weapons";
@@ -30,6 +30,8 @@ import { Combobox } from "@/lib/Combobox";
 import { isImeComposing } from "@/lib/keyboard";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
 import { CharacterSheetModal } from "./CharacterSheetModal";
+import { DdbImportPanel } from "./DdbImportPanel";
+import type { DdbImportResult } from "@/lib/ddbImport";
 
 // ── Weapon summary used by the tag-input and pill components ─────────────
 type WeaponInfo = Pick<
@@ -444,6 +446,36 @@ const SPELL_STATS_BY_NAME: Map<string, SpellInfo> = new Map(
   spellData.map(s => [s.name.toLowerCase(), s]),
 );
 
+// D&D Beyond names → the bundled datasets' spelling where they match
+// case-insensitively, so imported tags get the same stat pills as picked ones.
+function canonicalNames(names: string[], byName: Map<string, { name: string }>): string[] {
+  return names.map(n => byName.get(n.toLowerCase())?.name ?? n);
+}
+
+function importToForm(r: DdbImportResult): CharacterForm {
+  const c = r.character;
+  return {
+    name: c.name,
+    race: c.race ?? "",
+    class: c.class ?? "",
+    level: String(c.level),
+    ac: c.ac != null ? String(c.ac) : "",
+    hp: c.hp != null ? String(c.hp) : "",
+    weapons: canonicalNames(c.weapons, WEAPON_STATS_BY_NAME),
+    spells: canonicalNames(c.spells, SPELL_STATS_BY_NAME),
+  };
+}
+
+// Shown above the prefilled form until the DM saves or cancels it.
+function ImportReviewNote({ warnings }: { warnings: string[] }) {
+  return (
+    <div className="mb-2 text-[12px] text-amber-300 bg-amber-900/20 border border-amber-800/40 rounded px-2 py-1 space-y-0.5">
+      <p>Imported from D&amp;D Beyond — check AC and Max HP against the sheet, then save.</p>
+      {warnings.map(w => <p key={w} className="text-amber-400/80">• {w}</p>)}
+    </div>
+  );
+}
+
 // ── Main widget ────────────────────────────────────────────────────────────
 export function PartyWidget() {
   const characters = useParty();
@@ -455,6 +487,13 @@ export function PartyWidget() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState(emptyForm());
+
+  // D&D Beyond import: the panel, and the review note shown over whichever
+  // form (new, or editing an existing same-named character) it prefilled.
+  const [showDdb, setShowDdb] = useState(false);
+  const [importNote, setImportNote] = useState<
+    { target: "new" | number; warnings: string[] } | null
+  >(null);
 
   const weaponStats = useMemo(() => WEAPON_STATS_BY_NAME, []);
   const spellStats = useMemo(() => SPELL_STATS_BY_NAME, []);
@@ -491,7 +530,7 @@ export function PartyWidget() {
         spells: form.spells,
         weapons: form.weapons,
       });
-      setForm(emptyForm()); setShowAdd(false); setError(null);
+      setForm(emptyForm()); setShowAdd(false); setError(null); setImportNote(null);
     } catch (e) { setError(`Failed to save: ${(e as Error).message}`); }
   };
 
@@ -509,7 +548,7 @@ export function PartyWidget() {
         spells: editForm.spells,
         weapons: editForm.weapons,
       });
-      setEditingId(null); setError(null);
+      setEditingId(null); setError(null); setImportNote(null);
     } catch (e) { setError(`Failed to update: ${(e as Error).message}`); }
   };
 
@@ -522,6 +561,7 @@ export function PartyWidget() {
   };
 
   const startEdit = (c: PlayerCharacter) => {
+    setImportNote(null);
     setEditingId(c.id);
     setEditForm({
       name: c.name, race: c.race || "", class: c.class || "",
@@ -530,6 +570,30 @@ export function PartyWidget() {
       spells: c.spells || [],
       weapons: c.weapons || [],
     });
+  };
+
+  // A D&D Beyond character lands in an editable form, never straight in the
+  // roster: AC / HP are re-derived from equipment + modifiers and may need a
+  // tweak. If a character with the same name already exists, the import
+  // refreshes that one (Save updates it) instead of creating a duplicate.
+  const applyDdbImport = (r: DdbImportResult) => {
+    const next = importToForm(r);
+    const key = next.name.trim().toLowerCase();
+    const existing = characters.find(c => c.name.trim().toLowerCase() === key);
+    setShowDdb(false);
+    setError(null);
+    if (existing) {
+      setImportNote({ target: existing.id, warnings: r.warnings });
+      setShowAdd(false);
+      setEditingId(existing.id);
+      setEditForm(next);
+      setNotice(`${existing.name} is already in the party — review the D&D Beyond data and Save to update.`);
+    } else {
+      setImportNote({ target: "new", warnings: r.warnings });
+      setEditingId(null);
+      setForm(next);
+      setShowAdd(true);
+    }
   };
 
   const exportParty = () => {
@@ -636,6 +700,15 @@ export function PartyWidget() {
             <Upload className="w-3 h-3" />
           </button>
           <button
+            onClick={() => setShowDdb(v => !v)}
+            title="Import a character from D&D Beyond"
+            aria-label="Import from D&D Beyond"
+            aria-pressed={showDdb}
+            className="w-6 h-6 flex items-center justify-center text-sky-500 hover:text-sky-300 hover:bg-sky-900/30 rounded transition-colors"
+          >
+            <CloudDownload className="w-3.5 h-3.5" />
+          </button>
+          <button
             onClick={() => setShowAdd(v => !v)}
             className="flex items-center gap-1 text-sm px-2 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 rounded text-emerald-400 transition-colors"
           >
@@ -656,17 +729,22 @@ export function PartyWidget() {
         </div>
       )}
 
+      {showDdb && (
+        <DdbImportPanel onImported={applyDdbImport} onCancel={() => setShowDdb(false)} />
+      )}
+
       {/* Add form */}
       {showAdd && (
         <div className="mb-2 p-2 bg-gray-900/80 border border-emerald-700/40 rounded shrink-0">
           <p className="text-sm font-semibold text-emerald-400 mb-2">New character</p>
+          {importNote?.target === "new" && <ImportReviewNote warnings={importNote.warnings} />}
           <FormFields f={form} setF={setForm} />
           <div className="flex gap-1 mt-2">
             <button onClick={save} disabled={!form.name.trim()}
               className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-sm text-white font-semibold transition-colors">
               Save Character
             </button>
-            <button onClick={() => { setShowAdd(false); setForm(emptyForm()); }}
+            <button onClick={() => { setShowAdd(false); setForm(emptyForm()); setImportNote(null); }}
               className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm text-gray-400 transition-colors">
               Cancel
             </button>
@@ -680,7 +758,7 @@ export function PartyWidget() {
           <div className="text-center py-6 flex flex-col items-center gap-2">
             <Users className="w-8 h-8 text-gray-700" />
             <p className="text-sm text-gray-500">No characters yet</p>
-            <p className="text-[12px] text-gray-600">Click "Add Character" to create one</p>
+            <p className="text-[12px] text-gray-600">Click "Add Character" to create one, or the cloud icon to import from D&amp;D Beyond</p>
           </div>
         )}
 
@@ -688,13 +766,14 @@ export function PartyWidget() {
           <div key={c.id} className="bg-gray-900/60 border border-gray-800/60 rounded overflow-hidden">
             {editingId === c.id ? (
               <div className="p-2">
+                {importNote?.target === c.id && <ImportReviewNote warnings={importNote.warnings} />}
                 <FormFields f={editForm} setF={setEditForm} />
                 <div className="flex gap-1 mt-2">
                   <button onClick={saveEdit}
                     className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 rounded text-sm text-white font-semibold">
                     Save
                   </button>
-                  <button onClick={() => setEditingId(null)}
+                  <button onClick={() => { setEditingId(null); setImportNote(null); }}
                     className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm text-gray-400">
                     Cancel
                   </button>

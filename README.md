@@ -42,7 +42,12 @@ saved in the sidebar for quick restore. Layout persists across sessions via
   healers, a short effect blurb otherwise.
 - **Party** — full CRUD for player characters. Tracks name, race, class,
   level, AC, HP, weapons (with live autocomplete against 251 weapons), and
-  spells. One-click dispatch to the Initiative Tracker.
+  spells. One-click dispatch to the Initiative Tracker. **Import from D&D
+  Beyond** (cloud icon in the header): paste a *public* character's link and
+  the widget fetches its sheet, derives AC / max HP from equipment and
+  modifiers, and prefills the form for review before saving. If the browser
+  can't reach D&D Beyond, paste (or load) the character JSON instead. A
+  same-named character is refreshed rather than duplicated.
 - **Portal** — paste a YouTube, Spotify, SoundCloud, or Vimeo link to embed a
   player for table music or ambience. The link is remembered across
   sessions, and the embed resizes with the tile.
