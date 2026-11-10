@@ -12,6 +12,13 @@ History: this used to be a three-tier app (React + Express + PostgreSQL on Repli
 
 The app runs from a clean clone with `pnpm install && pnpm dev` and zero env vars. `vite.config.ts` defaults `PORT` to `38080` and `base` to `'/'`.
 
+## Owner workflow: rebuild locally after every push to `master`
+
+The owner runs the app locally (via their own `dmscreen` shell command, on `http://localhost:38080` / `127.0.0.1:38080`) and wants it to **always be the latest `master`**. So whenever you push to `master` (the default branch — there is no `main`), finish by getting the owner's local copy rebuilt:
+
+- **Running on the owner's machine** (Claude Code CLI / desktop in their local clone, or a cloud session with their local folder attached via Remote Control): do it yourself. Check what `dmscreen` runs (`type dmscreen`, or look in their shell rc file), then `git checkout master && git pull origin master` in the local clone and rebuild/restart to match — `docker compose up --build -d` if it uses Docker, or stop and restart `pnpm dev` / `pnpm dev:app` after `pnpm install` if it uses the dev server. Confirm with `git log --oneline -1`.
+- **Running in a cloud session with no access to their machine:** you can't rebuild it — say so plainly, and give the owner the exact commands to run locally (pull `master`, then the rebuild above), plus a reminder to hard-reload the browser (Cmd/Ctrl+Shift+R) so the PWA service worker drops the cached build.
+
 ## Commands
 
 Always use `pnpm` — the root `preinstall` script rejects npm/yarn.
