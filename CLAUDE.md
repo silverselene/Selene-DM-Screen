@@ -132,7 +132,7 @@ Every package extends `tsconfig.base.json` (`moduleResolution: "bundler"`, `cust
 | Spells | `src/data/spells.ts` | 557 | 5etools `data/spells/*.json` + `sources.json` |
 | Monsters | `src/data/monsters.ts` | 2,160 | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools `data/bestiary/*.json` (XMM > MM) + Open5e `data/v1/{tob,cc,tob2,tob3,menagerie}/Monster.json` (OGL) |
 | Weapons | `src/data/weapons.ts` | 251 (+13 property / 8 mastery rules) | 5etools `data/items.json` + `items-base.json` (2024 wins); also emits `weaponPropertyRules` / `weaponMasteryRules` from `itemProperty` / `itemMastery` |
-| Compendium (hand-curated) | `src/data/compendium.ts` | 78 | hand-curated DM summaries — never touched by a generator |
+| Compendium (hand-curated) | `src/data/compendium.ts` | 77 | hand-curated DM summaries — never touched by a generator |
 | Compendium (bulk rules) | `src/data/compendiumRules.ts` | 561 | 5etools `data/{feats,actions,skills,senses,variantrules}.json` + Open5e `data/v1/{a5e,toh,taldorei}/Feat.json` (OGL/CC-BY) |
 | Oracle / generators | `src/data/{generators,playerOptions}.ts` | — | hand-curated |
 

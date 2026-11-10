@@ -297,7 +297,7 @@ Dockerfile, docker-compose.yml, .dockerignore
 | Spells | 557 | 5etools v2.31.0 (`data/spells/*.json` + `sources.json`) |
 | Monsters | 2,160 (2,144 with full stat blocks) | `attached_assets/Monsters_&_Beasts_*.csv` + 5etools v2.31.0 bestiary (2024 XMM preferred) + Open5e (OGL) |
 | Weapons | 251 (203 with a 2024 Weapon Mastery) + property & mastery rules text | 5etools v2.31.0 (`data/items.json` + `items-base.json`) |
-| Compendium (hand-curated) | 78 | hand-curated DM summaries |
+| Compendium (hand-curated) | 77 | hand-curated DM summaries |
 | Compendium (bulk rules) | 561 | 5etools v2.31.0 (feats, actions, skills, senses, variant rules) + Open5e (OGL) |
 
 The data is generated **offline** from local sibling clones of `5etools-src`

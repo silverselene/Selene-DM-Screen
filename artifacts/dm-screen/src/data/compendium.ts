@@ -201,68 +201,64 @@ export const compendiumData: CompendiumEntry[] = [
   },
 
   // ── WEAPON MASTERIES ─────────────────────────────────────────────────
+  // The eight 2024 (PHB 2024) masteries. Weapon lists match the bundled
+  // weapons data (weapons.ts `mastery`) — weaponCompendium.test.ts fails if
+  // they drift. "DMG firearms" are the 2024 DMG's modern/futuristic guns.
   {
     id: "wm-cleave",
     title: "Weapon Mastery: Cleave",
     category: "Weapon Masteries",
-    content: "If you hit a creature with a melee attack using this weapon, you can make a free melee attack against a second creature within 5 ft. of the first using the same weapon. No ability modifier is added to the damage of this bonus attack. Weapons: Greataxe, Halberd.",
+    content: "If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with the weapon against a second creature within 5 ft. of the first that is also within your reach. On a hit, the second creature takes the weapon's damage, but don't add your ability modifier to that damage unless it's negative. You can make this extra attack only once per turn. Weapons: Greataxe, Halberd.",
     tags: ["weapon mastery", "cleave", "fighter", "melee", "2024"],
   },
   {
     id: "wm-graze",
     title: "Weapon Mastery: Graze",
     category: "Weapon Masteries",
-    content: "If your attack roll misses a creature, you can deal damage equal to the ability modifier you used for the attack. This damage is the same type as the weapon's damage and ignores resistance and immunity. Weapons: Glaive, Greatsword.",
+    content: "If your attack roll with this weapon misses a creature, you can deal damage to that creature equal to the ability modifier you used for the attack roll. This damage is the same type the weapon deals, and it can be increased only by increasing the ability modifier. Weapons: Glaive, Greatsword.",
     tags: ["weapon mastery", "graze", "miss", "damage", "2024"],
   },
   {
     id: "wm-nick",
     title: "Weapon Mastery: Nick",
     category: "Weapon Masteries",
-    content: "When you make the extra attack granted by the Light property, you can make it as part of the Attack action itself (not as a Bonus Action). You can still make this extra attack only once per turn. Weapons: Dagger, Handaxe, Light Hammer, Sickle.",
+    content: "When you make the extra attack granted by the Light property, you can make it as part of the Attack action itself (not as a Bonus Action). You can still make this extra attack only once per turn. Weapons: Dagger, Light Hammer, Scimitar, Sickle.",
     tags: ["weapon mastery", "nick", "light", "dual wield", "2024"],
   },
   {
     id: "wm-push",
     title: "Weapon Mastery: Push",
     category: "Weapon Masteries",
-    content: "If you hit a creature with this weapon, you can push the creature up to 10 ft. straight away from yourself if it is Large or smaller. Weapons: Greatclub, Heavy Crossbow, Pike, Warhammer.",
+    content: "If you hit a creature with this weapon, you can push the creature up to 10 ft. straight away from yourself if it is Large or smaller. Weapons: Greatclub, Heavy Crossbow, Pike, Warhammer. DMG firearms: Shotgun.",
     tags: ["weapon mastery", "push", "forced movement", "2024"],
   },
   {
     id: "wm-sap",
     title: "Weapon Mastery: Sap",
     category: "Weapon Masteries",
-    content: "If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn. Weapons: Flail, Mace, Morningstar, Quarterstaff, Shortsword, War Pick.",
+    content: "If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn. Weapons: Flail, Longsword, Mace, Morningstar, Spear, War Pick. DMG firearms: Antimatter Rifle, Revolver.",
     tags: ["weapon mastery", "sap", "disadvantage", "2024"],
   },
   {
     id: "wm-slow",
     title: "Weapon Mastery: Slow",
     category: "Weapon Masteries",
-    content: "If you hit a creature with this weapon, the creature's Speed is reduced by 10 ft. until the start of your next turn. If the creature is hit multiple times, the speeds don't stack beyond 10. Weapons: Club, Javelin, Light Crossbow, Longbow, Longsword, Rapier, Scimitar, Whip.",
+    content: "If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 ft. until the start of your next turn. If the creature is hit more than once by weapons with this property, the Speed reduction doesn't exceed 10 ft. Weapons: Club, Javelin, Light Crossbow, Longbow, Musket, Sling, Whip. DMG firearms: Automatic Rifle, Hunting Rifle, Laser Rifle.",
     tags: ["weapon mastery", "slow", "speed reduction", "2024"],
   },
   {
     id: "wm-topple",
     title: "Weapon Mastery: Topple",
     category: "Weapon Masteries",
-    content: "If you hit a creature with this weapon, you can force it to make a Constitution saving throw (DC = 8 + proficiency bonus + ability modifier). On a failed save, the creature has the Prone condition. Weapons: Battleaxe, Greatclub (alt), Lance, Maul, Trident.",
+    content: "If you hit a creature with this weapon, you can force it to make a Constitution saving throw (DC = 8 + the ability modifier used for the attack roll + your proficiency bonus). On a failed save, the creature has the Prone condition. Weapons: Battleaxe, Lance, Maul, Quarterstaff, Trident.",
     tags: ["weapon mastery", "topple", "prone", "saving throw", "2024"],
   },
   {
     id: "wm-vex",
     title: "Weapon Mastery: Vex",
     category: "Weapon Masteries",
-    content: "If you hit a creature with this weapon and deal damage, you have Advantage on your next attack roll against that creature before the end of your next turn. Weapons: Blowgun, Dart, Handcrossbow, Shortbow, Spear.",
+    content: "If you hit a creature with this weapon and deal damage to it, you have Advantage on your next attack roll against that creature before the end of your next turn. Weapons: Blowgun, Dart, Hand Crossbow, Handaxe, Pistol, Rapier, Shortbow, Shortsword. DMG firearms: Laser Pistol, Semiautomatic Pistol.",
     tags: ["weapon mastery", "vex", "advantage", "2024"],
-  },
-  {
-    id: "wm-flex",
-    title: "Weapon Mastery: Flex",
-    category: "Weapon Masteries",
-    content: "This weapon can be used with one hand (using the listed damage die) or two hands (upgrade the damage die by one size: d6→d8, d8→d10, etc.). You gain Mastery only once for the weapon, regardless of how many hands you use.",
-    tags: ["weapon mastery", "flex", "versatile", "2024"],
   },
 
   // ── SPELLCASTING ─────────────────────────────────────────────────────

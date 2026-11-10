@@ -89,3 +89,40 @@ describe("card helpers", () => {
     expect(masteryRuleFor("nick")?.description).toMatch(/Light property/);
   });
 });
+
+describe("hand-curated Weapon Mastery entries (compendium.ts)", () => {
+  // The curated entries list each mastery's weapons by hand; they once drifted
+  // badly from the rules (Longsword under Slow, Spear under Vex, a non-2024
+  // "Flex" mastery). Pin them to the generated data in both directions.
+  const curated = compendiumData.filter((e) => e.title.startsWith("Weapon Mastery: "));
+
+  // Mundane base weapons = no item text, plus the Lance (its mounted-combat
+  // rule is stored as item text). Excluded: spellcasting-focus staves (usable
+  // as a Quarterstaff, which IS listed) and the Soulknife's Psychic Blade (a
+  // class feature, not a weapon you pick up).
+  const ALSO_BASE = new Set(["Lance"]);
+  const NOT_LISTED = new Set(["Staff", "Wooden Staff", "Psychic Blade"]);
+  const baseWithMastery = (m: string) =>
+    weaponsData
+      .filter((w) => (!w.description || ALSO_BASE.has(w.name)) && w.mastery.includes(m))
+      .filter((w) => !NOT_LISTED.has(w.name))
+      .map((w) => w.name)
+      .sort();
+
+  const listed = (content: string) =>
+    [...content.matchAll(/(?:Weapons|DMG firearms): ([^.]+)\./g)]
+      .flatMap((m) => m[1].split(","))
+      .map((n) => n.trim())
+      .sort();
+
+  it("covers exactly the eight 2024 masteries", () => {
+    expect(curated.map((e) => e.title.replace("Weapon Mastery: ", "")).sort()).toEqual(
+      weaponMasteryRules.map((r) => r.name).sort(),
+    );
+  });
+
+  it.each(weaponMasteryRules.map((r) => r.name))("lists exactly the %s weapons", (m) => {
+    const entry = curated.find((e) => e.title === `Weapon Mastery: ${m}`)!;
+    expect(listed(entry.content)).toEqual(baseWithMastery(m));
+  });
+});
