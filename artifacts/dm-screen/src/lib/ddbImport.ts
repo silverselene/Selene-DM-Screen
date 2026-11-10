@@ -26,7 +26,7 @@
 // so every field is read through narrow `unknown` guards and a missing or
 // odd field degrades to "unknown" rather than throwing.
 
-import type { PlayerCharacter } from "@/types";
+import { SKILL_KEYS, type PlayerCharacter, type SkillKey, type SkillLevel } from "@/types";
 
 /** Origin of the D&D Beyond character service. The Docker CSP `connect-src`
  *  (docker/security-headers.conf) must list it — cspConfigSync.test.ts
@@ -234,6 +234,26 @@ function totalLevel(c: Obj): number {
   let lvl = 0;
   for (const cl of objs(c.classes)) lvl += num(cl.level) ?? 0;
   return Math.max(1, Math.min(LEVEL_MAX, Math.trunc(lvl) || 1));
+}
+
+/** Skill proficiencies from the active modifiers: D&D Beyond records every
+ *  skill choice (class, background, species, feat) as a `proficiency`
+ *  modifier and Expertise as an `expertise` one, with the skill's slug
+ *  ("sleight-of-hand") as the subType. */
+export function skillProficiencies(
+  mods: Obj[],
+): Partial<Record<SkillKey, SkillLevel>> | null {
+  const known = new Set<string>(SKILL_KEYS);
+  const out: Partial<Record<SkillKey, SkillLevel>> = {};
+  for (const m of mods) {
+    const k = typeof m.subType === "string" ? m.subType : "";
+    if (!known.has(k)) continue;
+    if (m.type === "expertise") out[k as SkillKey] = "expertise";
+    else if (m.type === "proficiency" && out[k as SkillKey] !== "expertise") {
+      out[k as SkillKey] = "proficient";
+    }
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 /** Max HP = the sheet's override if set, else rolled/fixed base + bonus +
@@ -489,6 +509,7 @@ export function ddbCharacterToPlayer(doc: unknown): DdbImportResult {
         wis: abilityScore(c, mods, 5),
         cha: abilityScore(c, mods, 6),
       },
+      skills: skillProficiencies(mods),
       weapons,
     },
     ddbId: num(c.id),

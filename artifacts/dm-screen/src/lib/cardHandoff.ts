@@ -84,7 +84,7 @@ export function characterCardToCombatant(card: ToolResultCard, d20: number): Com
  *  ChatCardActions. */
 export type PlayerDraft = Omit<
   PlayerCharacter,
-  "id" | "spells" | "weapons" | "prepared" | "abilities" | "ddbUrl"
+  "id" | "spells" | "weapons" | "prepared" | "abilities" | "ddbUrl" | "skills"
 >;
 
 /** Sanitize a card's `spells`/`weapons` into clean roster lists: trim, drop

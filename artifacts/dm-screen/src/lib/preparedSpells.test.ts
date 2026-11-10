@@ -82,6 +82,15 @@ describe("partyStore keeps `prepared` consistent", () => {
     expect(b.ddbUrl).toBeNull();
   });
 
+  it("keeps only real skills with a valid level", () => {
+    install();
+    addCharacter({
+      ...pc, spells: [],
+      skills: { arcana: "proficient", history: "expertise", flying: "proficient", stealth: "master" } as never,
+    });
+    expect(loadParty()[0].skills).toEqual({ arcana: "proficient", history: "expertise" });
+  });
+
   it("round-trips through the party export / import", () => {
     install();
     addCharacter({ ...pc, ...claude });

@@ -130,4 +130,29 @@ describe("PartyWidget — collapsed rows + character sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(loadParty()[0].ddbUrl).toBe("https://www.dndbeyond.com/characters/98765");
   });
+
+  it("lists all 18 skills with modifiers, and cycles proficiency by clicking a circle", () => {
+    render(<PartyWidget />);
+    fireEvent.click(screen.getByTitle("View character sheet"));
+    const skills = within(screen.getByRole("dialog", { name: /Claude Skamos/ })).getByRole("group", { name: "Skills" });
+    expect(within(skills).getAllByRole("listitem")).toHaveLength(18);
+
+    const arcanaRow = () => within(skills).getByText("Arcana").closest("li")!;
+    expect(arcanaRow().textContent).toContain("+3"); // INT 16, not proficient
+    fireEvent.click(within(skills).getByRole("button", { name: "Arcana: not proficient" }));
+    expect(arcanaRow().textContent).toContain("+5"); // + PB 2
+    expect(loadParty()[0].skills).toEqual({ arcana: "proficient" });
+    fireEvent.click(within(skills).getByRole("button", { name: "Arcana: proficient" }));
+    expect(arcanaRow().textContent).toContain("+7"); // expertise
+    expect(within(skills).getByText("Passive Perception").parentElement!.textContent).toContain("11");
+  });
+
+  it("keeps skills when the character is edited and saved", () => {
+    window.localStorage.clear();
+    addCharacter({ ...CLAUDE, skills: { arcana: "expertise" } });
+    render(<PartyWidget />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit character" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(loadParty()[0].skills).toEqual({ arcana: "expertise" });
+  });
 });

@@ -93,6 +93,17 @@ export interface AbilityScores {
 export const ABILITY_KEYS = ["str", "dex", "con", "int", "wis", "cha"] as const;
 export type AbilityKey = (typeof ABILITY_KEYS)[number];
 
+/** The 18 skills, as D&D Beyond spells them (labels + abilities live in
+ *  lib/skills.ts). */
+export const SKILL_KEYS = [
+  "acrobatics", "animal-handling", "arcana", "athletics", "deception",
+  "history", "insight", "intimidation", "investigation", "medicine",
+  "nature", "perception", "performance", "persuasion", "religion",
+  "sleight-of-hand", "stealth", "survival",
+] as const;
+export type SkillKey = (typeof SKILL_KEYS)[number];
+export type SkillLevel = "proficient" | "expertise";
+
 export interface PlayerCharacter {
   id: number;
   name: string;
@@ -116,4 +127,7 @@ export interface PlayerCharacter {
   /** Link to the character's D&D Beyond sheet. Optional and additive; only
    *  https dndbeyond.com URLs survive the store's normalizer. */
   ddbUrl?: string | null;
+  /** Skill proficiencies: only skills the character is proficient in (or has
+   *  Expertise in) are listed. Optional and additive like `abilities`. */
+  skills?: Partial<Record<SkillKey, SkillLevel>> | null;
 }

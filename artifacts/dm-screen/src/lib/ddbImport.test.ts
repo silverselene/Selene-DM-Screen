@@ -100,6 +100,23 @@ describe("ddbCharacterToPlayer — identity fields", () => {
     expect(character.abilities).toEqual({ str: 8, dex: 14, con: 14, int: 18, wis: 12, cha: 10 });
   });
 
+  it("reads skill proficiencies and Expertise, ignoring non-skill proficiencies", () => {
+    const { character } = ddbCharacterToPlayer(
+      sheet({
+        modifiers: {
+          class: [
+            { type: "proficiency", subType: "arcana" },
+            { type: "proficiency", subType: "light-armor" },
+            { type: "expertise", subType: "history" },
+          ],
+          background: [{ type: "proficiency", subType: "history" }, { type: "proficiency", subType: "sleight-of-hand" }],
+        },
+      }),
+    );
+    expect(character.skills).toEqual({ arcana: "proficient", history: "expertise", "sleight-of-hand": "proficient" });
+    expect(ddbCharacterToPlayer(sheet()).character.skills).toBeNull();
+  });
+
   it("reads name / race / class / level from the v5 envelope", () => {
     const { character, ddbId } = ddbCharacterToPlayer(wrap(sheet()));
     expect(character).toMatchObject({ name: "Selene", race: "High Elf", class: "Wizard", level: 5 });

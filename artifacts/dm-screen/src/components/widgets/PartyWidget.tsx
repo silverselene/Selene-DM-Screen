@@ -455,6 +455,9 @@ const emptyForm = () => ({
   weapons: [] as string[],
   abilities: abilitiesToForm(null),
   ddbUrl: "",
+  // Not edited in the form (set by clicking on the character sheet, or by a
+  // D&D Beyond import) — carried through so saving an edit keeps them.
+  skills: null as PlayerCharacter["skills"],
 });
 
 type CharacterForm = ReturnType<typeof emptyForm>;
@@ -617,6 +620,7 @@ function importToForm(r: DdbImportResult): CharacterForm {
     abilities: abilitiesToForm(c.abilities),
     // An imported character always gets its D&D Beyond sheet link.
     ddbUrl: r.ddbId != null ? ddbCharacterSheetUrl(r.ddbId) : "",
+    skills: c.skills ?? null,
   };
 }
 
@@ -731,6 +735,7 @@ export function PartyWidget() {
         prepared: form.prepared,
         abilities: formToAbilities(form.abilities),
         ddbUrl: formDdbUrl(form),
+        skills: form.skills,
         weapons: form.weapons,
       });
       setForm(emptyForm()); setShowAdd(false); setError(null); setImportNote(null);
@@ -752,6 +757,7 @@ export function PartyWidget() {
         prepared: editForm.prepared,
         abilities: formToAbilities(editForm.abilities),
         ddbUrl: formDdbUrl(editForm),
+        skills: editForm.skills,
         weapons: editForm.weapons,
       });
       setEditingId(null); setError(null); setImportNote(null);
@@ -778,6 +784,7 @@ export function PartyWidget() {
       abilities: abilitiesToForm(c.abilities),
       weapons: c.weapons || [],
       ddbUrl: c.ddbUrl ?? "",
+      skills: c.skills ?? null,
     });
   };
 
@@ -1153,6 +1160,12 @@ export function PartyWidget() {
             try {
               updateCharacter(id, { ...rest, ddbUrl: url });
             } catch (e) { setError(`Failed to save the link: ${(e as Error).message}`); }
+          }}
+          onSetSkills={(skills) => {
+            const { id, ...rest } = sheetChar;
+            try {
+              updateCharacter(id, { ...rest, skills });
+            } catch (e) { setError(`Failed to save skills: ${(e as Error).message}`); }
           }}
         />
       )}

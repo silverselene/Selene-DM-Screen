@@ -13,6 +13,14 @@ import { normalizeDdbUrl } from "@/lib/ddbImport";
 import { isImeComposing } from "@/lib/keyboard";
 import { ABILITY_KEYS, type PlayerCharacter } from "@/types";
 import { ABILITY_LABELS, abilityMod, formatMod, proficiencyBonus } from "@/lib/abilities";
+import {
+  SKILLS,
+  cycleSkill,
+  hasJackOfAllTrades,
+  passivePerception,
+  skillLevel,
+  skillModifier,
+} from "@/lib/skills";
 import type { Weapon } from "@/data/weapons";
 import type { Spell } from "@/data/spells";
 import { UNARMED_STRIKE_NAME, withUnarmedStrike } from "@/data/unarmedStrike";
@@ -40,6 +48,9 @@ interface Props {
   /** Save (or, with null, remove) the character's D&D Beyond link. When set,
    *  the sheet offers to add / change / remove it. */
   onSetDdbUrl?: (url: string | null) => void;
+  /** Save the character's skill proficiencies. When set, each skill's circle
+   *  cycles none → proficient → expertise on click. */
+  onSetSkills?: (skills: PlayerCharacter["skills"]) => void;
 }
 
 function WeaponRow({
@@ -208,6 +219,7 @@ export function CharacterSheetModal({
   onOpenSpell,
   onOpenWeapon,
   onSetDdbUrl,
+  onSetSkills,
 }: Props) {
   // Unarmed Strike first — every character can make one (display-only).
   const weapons = withUnarmedStrike(character.weapons);
@@ -286,7 +298,7 @@ export function CharacterSheetModal({
           <CombatStat icon={<Award className="w-4 h-4" />} label="Proficiency" value={formatMod(pb)} tone="purple" />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
           {/* ── Left: ability scores ── */}
           <section aria-label="Ability scores">
             <SectionTitle>Abilities</SectionTitle>
@@ -321,6 +333,8 @@ export function CharacterSheetModal({
                 No ability scores yet — add them with Edit, or re-import from D&amp;D Beyond.
               </p>
             )}
+
+            <SkillsList character={character} onSetSkills={onSetSkills} />
           </section>
 
           {/* ── Right: weapons, then spells ── */}
@@ -544,5 +558,107 @@ function DdbLink({
         </>
       )}
     </div>
+  );
+}
+
+/** The 18 skills under the ability scores: a proficiency circle (empty /
+ *  filled / double ring for Expertise), the modifier, the name and its
+ *  ability. Clicking a circle cycles it when the sheet can save. */
+function SkillsList({
+  character,
+  onSetSkills,
+}: {
+  character: PlayerCharacter;
+  onSetSkills?: (skills: PlayerCharacter["skills"]) => void;
+}) {
+  const passive = passivePerception(character);
+  const jack = hasJackOfAllTrades(character);
+  return (
+    <div className="mt-4" aria-label="Skills" role="group">
+      <SectionTitle>Skills</SectionTitle>
+      <ul className="space-y-0.5">
+        {SKILLS.map((sk) => {
+          const level = skillLevel(character, sk.key);
+          const mod = skillModifier(character, sk.key);
+          const stateLabel =
+            level === "expertise" ? "expertise" : level === "proficient" ? "proficient" : "not proficient";
+          return (
+            <li key={sk.key} className="flex items-center gap-1.5 text-[13px] leading-6">
+              <ProficiencyDot
+                level={level}
+                label={`${sk.label}: ${stateLabel}`}
+                onClick={onSetSkills ? () => onSetSkills(cycleSkill(character.skills, sk.key)) : undefined}
+              />
+              <span
+                className="w-7 text-right font-mono font-semibold tabular-nums"
+                style={{ color: level ? "var(--dm-t1)" : "var(--dm-t2)" }}
+              >
+                {mod != null ? formatMod(mod) : "—"}
+              </span>
+              <span className="truncate" style={{ color: level ? "var(--dm-t1)" : "var(--dm-t2)" }}>
+                {sk.label}
+              </span>
+              <span className="ml-auto text-[10px] font-semibold" style={{ color: "var(--dm-t3)" }}>
+                {ABILITY_LABELS[sk.ability].short}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <div
+        className="mt-2 flex items-center justify-between rounded border px-2 py-1 text-[13px]"
+        style={{ borderColor: "var(--dm-border)", color: "var(--dm-t2)" }}
+      >
+        <span>Passive Perception</span>
+        <span className="font-bold" style={{ color: "var(--dm-t1)" }}>{passive ?? "—"}</span>
+      </div>
+      <p className="text-[11px] mt-1.5" style={{ color: "var(--dm-t3)" }}>
+        ● proficient · ◉ expertise{jack ? " · Jack of All Trades adds half proficiency to the rest" : ""}
+        {onSetSkills ? " — click a circle to change it." : ""}
+      </p>
+    </div>
+  );
+}
+
+function ProficiencyDot({
+  level,
+  label,
+  onClick,
+}: {
+  level: "proficient" | "expertise" | null;
+  label: string;
+  onClick?: () => void;
+}) {
+  const dot = (
+    <span
+      aria-hidden
+      className="relative inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border-2 shrink-0"
+      style={{
+        borderColor: level ? "var(--dm-accent)" : "var(--dm-t4, var(--dm-t3))",
+        background: level === "proficient" ? "var(--dm-accent)" : "transparent",
+      }}
+    >
+      {level === "expertise" && (
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--dm-accent)" }} />
+      )}
+    </span>
+  );
+  if (!onClick) {
+    return (
+      <span role="img" aria-label={label} title={label} className="inline-flex">
+        {dot}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={`${label} — click to change`}
+      className="inline-flex p-0.5 -m-0.5 rounded-full hover:bg-white/10"
+    >
+      {dot}
+    </button>
   );
 }

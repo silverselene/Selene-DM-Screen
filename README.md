@@ -65,7 +65,9 @@ scrolls — nothing is ever cut off out of reach.
   spells. One-click dispatch to the Initiative Tracker.
   - **Character sheet** — click a party member's name to open a sheet laid
     out like a printed one: AC, HP, initiative and proficiency bonus across
-    the top; the six ability scores (with modifiers) on the left; weapons and
+    the top; the six ability scores (with modifiers) and all 18 skills on the
+    left — a filled circle marks proficiency, a double ring Expertise, with
+    Passive Perception underneath (click a circle to change it); weapons and
     spells on the right — each weapon's damage, properties and mastery
     (Unarmed Strike with its real to-hit and damage once Strength is known),
     and each spell's casting time, range, duration and damage/healing.

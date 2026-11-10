@@ -8,7 +8,14 @@
 
 import { useEffect, useState } from "react";
 
-import { ABILITY_KEYS, type AbilityScores, type PlayerCharacter } from "@/types";
+import {
+  ABILITY_KEYS,
+  SKILL_KEYS,
+  type AbilityScores,
+  type PlayerCharacter,
+  type SkillKey,
+  type SkillLevel,
+} from "@/types";
 import { parseEnvelopeHead } from "@/lib/envelope";
 import { normalizeDdbUrl } from "@/lib/ddbImport";
 
@@ -147,7 +154,20 @@ function normalize(c: unknown): PlayerCharacter {
     abilities: normalizeAbilities(obj.abilities),
     // Rendered as a link, so only https dndbeyond.com URLs are kept.
     ddbUrl: normalizeDdbUrl(obj.ddbUrl),
+    skills: normalizeSkills(obj.skills),
   };
+}
+
+/** Optional + additive: keep only known skill keys with a valid level; an
+ *  empty result is null. */
+function normalizeSkills(v: unknown): Partial<Record<SkillKey, SkillLevel>> | null {
+  if (!isPlainObject(v)) return null;
+  const out: Partial<Record<SkillKey, SkillLevel>> = {};
+  for (const k of SKILL_KEYS) {
+    const lvl = v[k];
+    if (lvl === "proficient" || lvl === "expertise") out[k] = lvl;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 // 1–30 is the full 5e range (a 30 is the hard cap even for gods).
