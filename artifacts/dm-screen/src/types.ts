@@ -113,4 +113,7 @@ export interface PlayerCharacter {
   /** Ability scores for the character sheet. Optional and additive like
    *  `prepared`: absent/null = not recorded. Filled by the D&D Beyond import. */
   abilities?: AbilityScores | null;
+  /** Link to the character's D&D Beyond sheet. Optional and additive; only
+   *  https dndbeyond.com URLs survive the store's normalizer. */
+  ddbUrl?: string | null;
 }

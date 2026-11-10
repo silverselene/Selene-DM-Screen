@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 
 import { ABILITY_KEYS, type AbilityScores, type PlayerCharacter } from "@/types";
 import { parseEnvelopeHead } from "@/lib/envelope";
+import { normalizeDdbUrl } from "@/lib/ddbImport";
 
 const STORAGE_KEY = "dm-party-v1";
 const CHANGED_EVENT = "dm-party-changed";
@@ -144,6 +145,8 @@ function normalize(c: unknown): PlayerCharacter {
     prepared: normalizePrepared(obj.prepared, spells),
     weapons: Array.isArray(obj.weapons) ? filterStrings(obj.weapons) : [],
     abilities: normalizeAbilities(obj.abilities),
+    // Rendered as a link, so only https dndbeyond.com URLs are kept.
+    ddbUrl: normalizeDdbUrl(obj.ddbUrl),
   };
 }
 

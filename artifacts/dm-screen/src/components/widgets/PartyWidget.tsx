@@ -42,7 +42,11 @@ import {
   togglePrepared,
 } from "@/lib/preparedSpells";
 import { DdbImportPanel } from "./DdbImportPanel";
-import type { DdbImportResult } from "@/lib/ddbImport";
+import {
+  ddbCharacterSheetUrl,
+  normalizeDdbUrl,
+  type DdbImportResult,
+} from "@/lib/ddbImport";
 
 // ── Weapon summary used by the tag-input and pill components ─────────────
 type WeaponInfo = Pick<
@@ -450,6 +454,7 @@ const emptyForm = () => ({
   prepared: null as string[] | null,
   weapons: [] as string[],
   abilities: abilitiesToForm(null),
+  ddbUrl: "",
 });
 
 type CharacterForm = ReturnType<typeof emptyForm>;
@@ -505,6 +510,22 @@ function FormFields({
           <input type="number" value={f.hp}
             onChange={e => setF({ ...f, hp: e.target.value })} className={INPUT_CLS} />
         </div>
+      </div>
+      {/* D&D Beyond link — optional; shown as a link on the character sheet */}
+      <div>
+        <label className="text-[12px] text-gray-500 block mb-0.5">D&amp;D Beyond link</label>
+        <input
+          type="url"
+          inputMode="url"
+          aria-label="D&D Beyond link"
+          placeholder="https://www.dndbeyond.com/characters/…"
+          value={f.ddbUrl}
+          onChange={e => setF({ ...f, ddbUrl: e.target.value })}
+          className={INPUT_CLS}
+        />
+        {f.ddbUrl.trim() && !normalizeDdbUrl(f.ddbUrl) && (
+          <p className="text-[11px] text-red-400 mt-0.5">Paste a dndbeyond.com link (or the character's number).</p>
+        )}
       </div>
       {/* Ability scores — optional; shown on the character sheet */}
       <div>
@@ -594,7 +615,19 @@ function importToForm(r: DdbImportResult): CharacterForm {
     spells: canonicalNames(c.spells, SPELL_STATS_BY_NAME),
     prepared: c.prepared ? canonicalNames(c.prepared, SPELL_STATS_BY_NAME) : null,
     abilities: abilitiesToForm(c.abilities),
+    // An imported character always gets its D&D Beyond sheet link.
+    ddbUrl: r.ddbId != null ? ddbCharacterSheetUrl(r.ddbId) : "",
   };
+}
+
+/** The form's link field → a stored URL. "" saves as no link; anything that
+ *  isn't a D&D Beyond link throws so the save shows an error instead of
+ *  silently dropping what the DM pasted. */
+function formDdbUrl(f: CharacterForm): string | null {
+  if (!f.ddbUrl.trim()) return null;
+  const url = normalizeDdbUrl(f.ddbUrl);
+  if (!url) throw new Error("the D&D Beyond link isn't a dndbeyond.com address");
+  return url;
 }
 
 // Shown above the prefilled form until the DM saves or cancels it.
@@ -697,6 +730,7 @@ export function PartyWidget() {
         spells: form.spells,
         prepared: form.prepared,
         abilities: formToAbilities(form.abilities),
+        ddbUrl: formDdbUrl(form),
         weapons: form.weapons,
       });
       setForm(emptyForm()); setShowAdd(false); setError(null); setImportNote(null);
@@ -717,6 +751,7 @@ export function PartyWidget() {
         spells: editForm.spells,
         prepared: editForm.prepared,
         abilities: formToAbilities(editForm.abilities),
+        ddbUrl: formDdbUrl(editForm),
         weapons: editForm.weapons,
       });
       setEditingId(null); setError(null); setImportNote(null);
@@ -742,6 +777,7 @@ export function PartyWidget() {
       prepared: c.prepared ?? null,
       abilities: abilitiesToForm(c.abilities),
       weapons: c.weapons || [],
+      ddbUrl: c.ddbUrl ?? "",
     });
   };
 
@@ -1111,6 +1147,12 @@ export function PartyWidget() {
           onOpenWeapon={(name) => {
             setSheetForId(null);
             openWeaponInCompendium(name);
+          }}
+          onSetDdbUrl={(url) => {
+            const { id, ...rest } = sheetChar;
+            try {
+              updateCharacter(id, { ...rest, ddbUrl: url });
+            } catch (e) { setError(`Failed to save the link: ${(e as Error).message}`); }
           }}
         />
       )}

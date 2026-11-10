@@ -4,8 +4,13 @@
 // can do (weapons, then prepared and known spells, with stats from the
 // bundled datasets) on the right. Stacks to one column on a narrow screen.
 // Opened by clicking a roster row in PartyWidget.
-import type { ReactNode } from "react";
-import { X, Shield, Heart, Star, Sword, BookOpen, Sparkles, Zap, Award } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import {
+  X, Shield, Heart, Star, Sword, BookOpen, Sparkles, Zap, Award,
+  ExternalLink, Link2, Pencil, Trash2,
+} from "lucide-react";
+import { normalizeDdbUrl } from "@/lib/ddbImport";
+import { isImeComposing } from "@/lib/keyboard";
 import { ABILITY_KEYS, type PlayerCharacter } from "@/types";
 import { ABILITY_LABELS, abilityMod, formatMod, proficiencyBonus } from "@/lib/abilities";
 import type { Weapon } from "@/data/weapons";
@@ -32,6 +37,9 @@ interface Props {
   onOpenSpell?: (name: string) => void;
   /** Open a weapon's card in the Compendium. When set, weapon rows are clickable. */
   onOpenWeapon?: (name: string) => void;
+  /** Save (or, with null, remove) the character's D&D Beyond link. When set,
+   *  the sheet offers to add / change / remove it. */
+  onSetDdbUrl?: (url: string | null) => void;
 }
 
 function WeaponRow({
@@ -199,6 +207,7 @@ export function CharacterSheetModal({
   onClose,
   onOpenSpell,
   onOpenWeapon,
+  onSetDdbUrl,
 }: Props) {
   // Unarmed Strike first — every character can make one (display-only).
   const weapons = withUnarmedStrike(character.weapons);
@@ -257,6 +266,7 @@ export function CharacterSheetModal({
             <div className="text-sm truncate" style={{ color: "var(--dm-t2)" }}>
               {[character.race, character.class].filter(Boolean).join(" · ") || "—"}
             </div>
+            <DdbLink url={character.ddbUrl ?? null} onSave={onSetDdbUrl} />
           </div>
           <button
             onClick={onClose}
@@ -406,6 +416,133 @@ function CombatStat({
         {label}
       </span>
       <span className="text-xl font-bold leading-tight">{value}</span>
+    </div>
+  );
+}
+
+/** The character's D&D Beyond link under the sheet header, with an inline
+ *  field to add / change / remove it. Only dndbeyond.com links are accepted
+ *  (they're rendered as clickable links). */
+function DdbLink({
+  url,
+  onSave,
+}: {
+  url: string | null;
+  onSave?: (url: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const start = () => {
+    setDraft(url ?? "");
+    setError(null);
+    setEditing(true);
+  };
+  const save = () => {
+    if (!onSave) return;
+    if (!draft.trim()) {
+      onSave(null);
+      setEditing(false);
+      return;
+    }
+    const clean = normalizeDdbUrl(draft);
+    if (!clean) {
+      setError("Paste a dndbeyond.com link (or the character's number).");
+      return;
+    }
+    onSave(clean);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-1.5 max-w-md">
+        <div className="flex gap-1">
+          <input
+            autoFocus
+            type="url"
+            inputMode="url"
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setError(null); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !isImeComposing(e)) save();
+              if (e.key === "Escape") { e.stopPropagation(); setEditing(false); }
+            }}
+            placeholder="https://www.dndbeyond.com/characters/…"
+            aria-label="D&D Beyond link"
+            className="flex-1 min-w-0 px-2 py-1 rounded border text-sm bg-transparent outline-none focus:border-purple-500"
+            style={{ borderColor: "var(--dm-border)", color: "var(--dm-t1)" }}
+          />
+          <button
+            type="button"
+            onClick={save}
+            className="px-2 py-1 rounded text-sm font-semibold bg-purple-700 hover:bg-purple-600 text-white"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="px-2 py-1 rounded text-sm"
+            style={{ color: "var(--dm-t2)" }}
+          >
+            Cancel
+          </button>
+        </div>
+        {error && <p role="alert" className="text-xs text-red-400 mt-0.5">{error}</p>}
+      </div>
+    );
+  }
+
+  if (!url) {
+    return onSave ? (
+      <button
+        type="button"
+        onClick={start}
+        className="mt-1 inline-flex items-center gap-1 text-xs hover:underline"
+        style={{ color: "var(--dm-accent)" }}
+      >
+        <Link2 className="w-3.5 h-3.5" />Add D&amp;D Beyond link
+      </button>
+    ) : null;
+  }
+
+  return (
+    <div className="mt-1 flex items-center gap-2">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-sm font-semibold hover:underline"
+        style={{ color: "var(--dm-accent)" }}
+      >
+        <ExternalLink className="w-3.5 h-3.5" />Open on D&amp;D Beyond
+      </a>
+      {onSave && (
+        <>
+          <button
+            type="button"
+            onClick={start}
+            aria-label="Change D&D Beyond link"
+            title="Change link"
+            className="hover:opacity-70"
+            style={{ color: "var(--dm-t3)" }}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(null)}
+            aria-label="Remove D&D Beyond link"
+            title="Remove link"
+            className="hover:opacity-70"
+            style={{ color: "var(--dm-t3)" }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
     </div>
   );
 }

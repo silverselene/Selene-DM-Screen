@@ -85,6 +85,8 @@ describe("PartyWidget — D&D Beyond import", () => {
       // Canonicalized to the bundled datasets' spelling.
       weapons: ["Quarterstaff"],
       spells: ["Fire Bolt"],
+      // The import fills the D&D Beyond link from the character's id.
+      ddbUrl: "https://www.dndbeyond.com/characters/42",
     });
     expect(screen.queryByText(/Imported from D&D Beyond/)).toBeNull();
   });

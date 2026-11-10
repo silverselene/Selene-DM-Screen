@@ -73,6 +73,15 @@ describe("partyStore keeps `prepared` consistent", () => {
     expect(loadParty()[0].abilities).toBeNull();
   });
 
+  it("keeps a D&D Beyond link but drops anything else (it's rendered as a link)", () => {
+    install();
+    addCharacter({ ...pc, spells: [], ddbUrl: "https://www.dndbeyond.com/characters/1" });
+    addCharacter({ ...pc, name: "Mallory", spells: [], ddbUrl: "javascript:alert(1)" });
+    const [a, b] = loadParty();
+    expect(a.ddbUrl).toBe("https://www.dndbeyond.com/characters/1");
+    expect(b.ddbUrl).toBeNull();
+  });
+
   it("round-trips through the party export / import", () => {
     install();
     addCharacter({ ...pc, ...claude });

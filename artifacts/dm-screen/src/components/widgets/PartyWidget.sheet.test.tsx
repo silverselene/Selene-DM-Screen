@@ -89,4 +89,45 @@ describe("PartyWidget — collapsed rows + character sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(loadParty()[0].abilities).toEqual({ str: 15, dex: 10, con: 12, int: 16, wis: 13, cha: null });
   });
+
+  it("adds, opens, changes and removes a D&D Beyond link from the sheet", () => {
+    render(<PartyWidget />);
+    fireEvent.click(screen.getByTitle("View character sheet"));
+    const sheet = () => screen.getByRole("dialog", { name: /Claude Skamos/ });
+
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Add D&D Beyond link" }));
+    const input = within(sheet()).getByLabelText("D&D Beyond link");
+    fireEvent.change(input, { target: { value: "https://evil.example/x" } });
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Save" }));
+    expect(within(sheet()).getByRole("alert").textContent).toMatch(/dndbeyond\.com/);
+    expect(loadParty()[0].ddbUrl).toBeNull();
+
+    fireEvent.change(within(sheet()).getByLabelText("D&D Beyond link"), {
+      target: { value: "dndbeyond.com/characters/12345678" },
+    });
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Save" }));
+    const link = within(sheet()).getByRole("link", { name: /Open on D&D Beyond/ }) as HTMLAnchorElement;
+    expect(link.href).toBe("https://dndbeyond.com/characters/12345678");
+    expect(link.target).toBe("_blank");
+    expect(link.rel).toContain("noopener");
+    expect(loadParty()[0].ddbUrl).toBe("https://dndbeyond.com/characters/12345678");
+
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Remove D&D Beyond link" }));
+    expect(within(sheet()).queryByRole("link", { name: /Open on D&D Beyond/ })).toBeNull();
+    expect(loadParty()[0].ddbUrl).toBeNull();
+  });
+
+  it("edits the link in the edit form, refusing to save a non-D&D Beyond address", () => {
+    render(<PartyWidget />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit character" }));
+    const field = screen.getByLabelText("D&D Beyond link");
+    fireEvent.change(field, { target: { value: "https://example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByText(/isn't a dndbeyond\.com address/)).toBeTruthy();
+    expect(loadParty()[0].ddbUrl).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("D&D Beyond link"), { target: { value: "98765" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(loadParty()[0].ddbUrl).toBe("https://www.dndbeyond.com/characters/98765");
+  });
 });

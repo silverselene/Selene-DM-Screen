@@ -8,6 +8,7 @@ import {
   parseDdbCharacterId,
   parseDdbCharacterJson,
   MAX_DDB_JSON_CHARS,
+  normalizeDdbUrl,
 } from "./ddbImport";
 
 // Minimal documents in the D&D Beyond character-service v5 shape. Only the
@@ -393,5 +394,35 @@ describe("fetchDdbCharacter", () => {
       throw abort;
     });
     await expect(fetchDdbCharacter("1", { fetchImpl })).rejects.toBe(abort);
+  });
+});
+
+describe("normalizeDdbUrl", () => {
+  it.each([
+    ["https://www.dndbeyond.com/characters/12345678", "https://www.dndbeyond.com/characters/12345678"],
+    ["  https://www.dndbeyond.com/characters/12345678/AbCdEf  ", "https://www.dndbeyond.com/characters/12345678/AbCdEf"],
+    ["dndbeyond.com/profile/someone/characters/42", "https://dndbeyond.com/profile/someone/characters/42"],
+    ["http://www.dndbeyond.com/characters/42", "https://www.dndbeyond.com/characters/42"],
+    ["12345678", "https://www.dndbeyond.com/characters/12345678"],
+  ])("accepts %s", (input, out) => {
+    expect(normalizeDdbUrl(input)).toBe(out);
+  });
+
+  it.each([
+    "",
+    "not a link",
+    "javascript:alert(1)",
+    "https://evil.example/characters/1",
+    "https://dndbeyond.com.evil.example/x",
+    "https://user:pass@www.dndbeyond.com/characters/1",
+    "ftp://www.dndbeyond.com/x",
+    "data:text/html,hi",
+  ])("rejects %s", (input) => {
+    expect(normalizeDdbUrl(input)).toBeNull();
+  });
+
+  it("rejects non-strings", () => {
+    expect(normalizeDdbUrl(42)).toBeNull();
+    expect(normalizeDdbUrl(null)).toBeNull();
   });
 });

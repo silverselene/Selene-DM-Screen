@@ -70,7 +70,9 @@ scrolls — nothing is ever cut off out of reach.
     (Unarmed Strike with its real to-hit and damage once Strength is known),
     and each spell's casting time, range, duration and damage/healing.
     Ability scores come in with a D&D Beyond import or can be typed into the
-    edit form.
+    edit form. The sheet can also hold a link to the character's D&D Beyond
+    page: paste it on the sheet ("Add D&D Beyond link") or in the edit form —
+    imported characters get it automatically.
   - **Collapse a character to one line** — the arrow button on a row hides
     its weapons and spells (handy for a big party); the choice is remembered.
   - **Prepared vs known spells** — a caster's row shows the spells they have

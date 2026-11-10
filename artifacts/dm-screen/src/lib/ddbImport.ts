@@ -67,6 +67,35 @@ export function parseDdbCharacterId(input: string): string | null {
   return m ? m[1] : null;
 }
 
+/** A pasted D&D Beyond link → a safe https URL on dndbeyond.com, or null.
+ *  Accepts a full URL, one missing its scheme ("dndbeyond.com/characters/1"),
+ *  or a bare character id. Anything off D&D Beyond (or a `javascript:` URL
+ *  from a hand-edited party file) is rejected, since it's rendered as a
+ *  clickable link. */
+export function normalizeDdbUrl(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const s = input.trim();
+  if (!s || s.length > 500) return null;
+  if (/^\d{1,12}$/.test(s)) return `https://www.dndbeyond.com/characters/${s}`;
+  let url: URL;
+  try {
+    url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  const host = url.hostname.toLowerCase();
+  if (host !== "dndbeyond.com" && !host.endsWith(".dndbeyond.com")) return null;
+  if (url.username || url.password) return null;
+  url.protocol = "https:";
+  return url.toString();
+}
+
+/** The D&D Beyond sheet URL for a character id. */
+export function ddbCharacterSheetUrl(id: string | number): string {
+  return `https://www.dndbeyond.com/characters/${id}`;
+}
+
 export function ddbCharacterJsonUrl(id: string): string {
   return `${DDB_CHARACTER_SERVICE_ORIGIN}/character/v5/character/${encodeURIComponent(id)}`;
 }
