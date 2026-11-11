@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 
 vi.mock("@/data/weapons", () => ({
-  weaponsData: [{ id: 1, name: "Dagger", category: "simple", damage: "1d4", damage_type: "Piercing", properties: ["Finesse"], mastery: ["Nick"] }],
+  weaponsData: [{ id: 1, name: "Dagger", category: "simple", damage: "1d4", damage_type: "Piercing", properties: ["Finesse", "Thrown", "Range 20/60"], mastery: ["Nick"], kind: "melee" }],
 }));
 vi.mock("@/data/spells", () => ({
   spellData: [{ name: "Fire Bolt", level: 0, school: "Evocation", classes: ["Wizard"], description: "" }],
@@ -73,12 +73,33 @@ describe("PartyWidget — collapsed rows + character sheet", () => {
     // Initiative = DEX mod, proficiency from level 2.
     expect(within(sheet).getByText("Initiative").parentElement!.textContent).toContain("+0");
     expect(within(sheet).getByText("Proficiency").parentElement!.textContent).toContain("+2");
+    // Passive Perception is the fifth combat tile, right after Proficiency.
+    const tiles = [...sheet.querySelectorAll("[data-combat-stat]")].map((t) => t.textContent);
+    expect(tiles).toHaveLength(5);
+    expect(tiles[3]).toContain("Proficiency");
+    expect(tiles[4]).toContain("Passive Perception");
+    expect(tiles[4]).toContain("11"); // 10 + WIS 13 → +1
 
     const weapons = within(sheet).getByRole("region", { name: "Weapons" });
     // STR 8 → −1: Unarmed Strike to hit −1 + 2 = +1, damage 1 − 1 = 0.
     expect(weapons.textContent).toContain("+1 to hit · 0 Bludgeoning");
     expect(within(weapons).getByText("Dagger")).toBeTruthy();
+    // Reach / range sit on the damage line; the range isn't repeated as a property chip.
+    const dagger = within(weapons).getByText("Dagger").closest("button")!;
+    const damageLine = within(dagger).getByText("1d4 Piercing").parentElement!;
+    expect(damageLine.textContent).toContain("Reach 5 ft");
+    expect(damageLine.textContent).toContain("Range 20/60 ft");
+    expect(within(dagger).queryByText("Range 20/60")).toBeNull();
+    expect(weapons.textContent).toContain("+1 to hit · 0 BludgeoningReach 5 ft");
     expect(within(within(sheet).getByRole("region", { name: "Spells" })).getByText("Fire Bolt")).toBeTruthy();
+  });
+
+  it("shows each weapon pill's range (or reach) right after its damage", () => {
+    render(<PartyWidget />);
+    const dagger = screen.getByRole("button", { name: "Open Dagger in the Compendium" });
+    expect(dagger.textContent).toBe("Dagger1d4 P20/60 ft");
+    const unarmed = screen.getByRole("button", { name: "Open Unarmed Strike in the Compendium" });
+    expect(unarmed.textContent).toBe("Unarmed Strike1 + Str B5 ft");
   });
 
   it("saves ability scores entered in the edit form", () => {
@@ -144,7 +165,7 @@ describe("PartyWidget — collapsed rows + character sheet", () => {
     expect(loadParty()[0].skills).toEqual({ arcana: "proficient" });
     fireEvent.click(within(skills).getByRole("button", { name: "Arcana: proficient" }));
     expect(arcanaRow().textContent).toContain("+7"); // expertise
-    expect(within(skills).getByText("Passive Perception").parentElement!.textContent).toContain("11");
+    expect(within(skills).queryByText("Passive Perception")).toBeNull(); // moved to the top tiles
   });
 
   it("keeps skills when the character is edited and saved", () => {

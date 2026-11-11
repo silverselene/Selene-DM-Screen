@@ -59,14 +59,7 @@ export function weaponTypeLine(w: Pick<Weapon, "category" | "kind">): string {
     .join(" ");
 }
 
-/** Normal / long range from a "Range 20/60" property, if any. */
-export function weaponRange(w: Pick<Weapon, "properties">): string | null {
-  for (const p of w.properties) {
-    const m = p.match(/^Range\s+(.+)$/i);
-    if (m) return m[1];
-  }
-  return null;
-}
+export { weaponRange } from "@/lib/weaponRange";
 
 /** Two-handed damage from a "Versatile 1d10" property, if any. */
 export function weaponVersatile(w: Pick<Weapon, "properties">): string | null {

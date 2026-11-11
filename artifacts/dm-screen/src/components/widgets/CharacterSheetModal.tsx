@@ -1,13 +1,13 @@
 // Character sheet: a read-only popup for a single party member, laid out like
 // a printed sheet — header and combat numbers (AC, HP, initiative,
-// proficiency) across the top, ability scores down the left, and what they
+// proficiency, Passive Perception) across the top, ability scores down the left, and what they
 // can do (weapons, then prepared and known spells, with stats from the
 // bundled datasets) on the right. Stacks to one column on a narrow screen.
 // Opened by clicking a roster row in PartyWidget.
 import { useState, type ReactNode } from "react";
 import {
   X, Shield, Heart, Star, Sword, BookOpen, Sparkles, Zap, Award,
-  ExternalLink, Link2, Pencil, Trash2,
+  ExternalLink, Link2, Pencil, Trash2, Eye, MoveHorizontal,
 } from "lucide-react";
 import { normalizeDdbUrl } from "@/lib/ddbImport";
 import { isImeComposing } from "@/lib/keyboard";
@@ -25,10 +25,11 @@ import type { Weapon } from "@/data/weapons";
 import type { Spell } from "@/data/spells";
 import { UNARMED_STRIKE_NAME, withUnarmedStrike } from "@/data/unarmedStrike";
 import { splitSpells } from "@/lib/preparedSpells";
+import { isRangeProperty, weaponDistance } from "@/lib/weaponRange";
 
 type WeaponInfo = Pick<
   Weapon,
-  "name" | "category" | "damage" | "damage_type" | "properties" | "mastery"
+  "name" | "category" | "damage" | "damage_type" | "properties" | "mastery" | "kind"
 >;
 type SpellInfo = Pick<
   Spell,
@@ -67,6 +68,10 @@ function WeaponRow({
 }) {
   const Tag = onOpen ? "button" : "div";
   const mastery = info?.mastery ?? [];
+  // The range gets its own badge beside the damage, so it isn't repeated as
+  // a property chip.
+  const properties = (info?.properties ?? []).filter((p) => !isRangeProperty(p));
+  const { reach, range } = info ? weaponDistance(info) : { reach: null, range: null };
   return (
     <Tag
       {...(onOpen
@@ -90,17 +95,22 @@ function WeaponRow({
           </span>
         )}
       </div>
-      {attack && (
-        <p className="text-xs font-mono font-semibold mt-0.5 text-amber-300">{attack}</p>
+      {(attack || info?.damage || reach != null || range) && (
+        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+          {attack ? (
+            <span className="text-xs font-mono font-semibold text-amber-300">{attack}</span>
+          ) : info?.damage ? (
+            <span className="text-xs font-mono font-semibold text-amber-400">
+              {info.damage}{info.damage_type ? ` ${info.damage_type}` : ""}
+            </span>
+          ) : null}
+          {reach != null && <DistanceBadge label="Reach" value={`${reach} ft`} />}
+          {range && <DistanceBadge label="Range" value={`${range} ft`} />}
+        </div>
       )}
       {info ? (
-        (((info.damage ?? null) !== null && !attack) || info.properties.length > 0 || mastery.length > 0) && (
+        (properties.length > 0 || mastery.length > 0) && (
           <div className="flex items-center gap-1.5 flex-wrap mt-1">
-            {info.damage && !attack && (
-              <span className="text-xs font-mono font-semibold text-amber-400">
-                {info.damage}{info.damage_type ? ` ${info.damage_type}` : ""}
-              </span>
-            )}
             {mastery.map((m) => (
               <span
                 key={`m-${m}`}
@@ -110,7 +120,7 @@ function WeaponRow({
                 <Sparkles className="w-2.5 h-2.5" />{m}
               </span>
             ))}
-            {info.properties.map((p) => (
+            {properties.map((p) => (
               <span
                 key={p}
                 className="text-[10px] px-1 py-0.5 rounded"
@@ -127,6 +137,20 @@ function WeaponRow({
         </p>
       )}
     </Tag>
+  );
+}
+
+/** Reach / range beside a weapon's damage: a bordered sky-blue chip so it
+ *  stands out from the amber damage and the grey property chips. */
+function DistanceBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-px rounded border border-sky-700/60 bg-sky-900/40 text-sky-300"
+      title={label === "Reach" ? "Melee reach" : "Normal / long range"}
+    >
+      <MoveHorizontal className="w-3 h-3" aria-hidden />
+      {label} {value}
+    </span>
   );
 }
 
@@ -291,11 +315,12 @@ export function CharacterSheetModal({
         </div>
 
         {/* ── Combat numbers ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
           <CombatStat icon={<Shield className="w-4 h-4" />} label="Armor Class" value={character.ac ?? "—"} tone="blue" />
           <CombatStat icon={<Heart className="w-4 h-4" />} label="Hit Points" value={character.hp ?? "—"} tone="red" />
           <CombatStat icon={<Zap className="w-4 h-4" />} label="Initiative" value={dexMod != null ? formatMod(dexMod) : "—"} tone="amber" />
           <CombatStat icon={<Award className="w-4 h-4" />} label="Proficiency" value={formatMod(pb)} tone="purple" />
+          <CombatStat icon={<Eye className="w-4 h-4" />} label="Passive Perception" value={passivePerception(character) ?? "—"} tone="teal" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
@@ -407,6 +432,7 @@ const TONES = {
   red: "border-red-800/40 bg-red-900/20 text-red-300",
   amber: "border-amber-800/40 bg-amber-900/20 text-amber-300",
   purple: "border-purple-800/40 bg-purple-900/20 text-purple-300",
+  teal: "border-teal-800/40 bg-teal-900/20 text-teal-300",
 } as const;
 
 function CombatStat({
@@ -425,7 +451,7 @@ function CombatStat({
       data-combat-stat={tone}
       className={`flex flex-col items-center justify-center py-2 rounded border ${TONES[tone]}`}
     >
-      <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide opacity-90">
+      <span className="flex items-center justify-center flex-wrap gap-x-1 px-1 text-center text-[11px] leading-tight uppercase tracking-wide opacity-90">
         {icon}
         {label}
       </span>
@@ -571,7 +597,6 @@ function SkillsList({
   character: PlayerCharacter;
   onSetSkills?: (skills: PlayerCharacter["skills"]) => void;
 }) {
-  const passive = passivePerception(character);
   const jack = hasJackOfAllTrades(character);
   return (
     <div className="mt-4" aria-label="Skills" role="group">
@@ -605,13 +630,6 @@ function SkillsList({
           );
         })}
       </ul>
-      <div
-        className="mt-2 flex items-center justify-between rounded border px-2 py-1 text-[13px]"
-        style={{ borderColor: "var(--dm-border)", color: "var(--dm-t2)" }}
-      >
-        <span>Passive Perception</span>
-        <span className="font-bold" style={{ color: "var(--dm-t1)" }}>{passive ?? "—"}</span>
-      </div>
       <p className="text-[11px] mt-1.5" style={{ color: "var(--dm-t3)" }}>
         ● proficient · ◉ expertise{jack ? " · Jack of All Trades adds half proficiency to the rest" : ""}
         {onSetSkills ? " — click a circle to change it." : ""}

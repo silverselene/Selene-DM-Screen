@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users, Plus, Trash2, Pencil, Check, X, Swords, Shield,
   Heart, Star, BookOpen, Sword, Download, Upload, CloudDownload,
-  CircleCheck, Circle, ChevronUp, ChevronDown,
+  CircleCheck, Circle, ChevronUp, ChevronDown, MoveHorizontal,
 } from "lucide-react";
 import { ABILITY_KEYS, type AbilityScores, type PlayerCharacter, type Combatant } from "@/types";
 import { ABILITY_LABELS } from "@/lib/abilities";
@@ -35,6 +35,7 @@ import { Combobox } from "@/lib/Combobox";
 import { isImeComposing } from "@/lib/keyboard";
 import { PLAYER_CLASSES, PLAYER_RACES } from "@/data/playerOptions";
 import { CharacterSheetModal } from "./CharacterSheetModal";
+import { weaponDistanceShort, weaponRange } from "@/lib/weaponRange";
 import {
   isPrepared,
   preparedAfterAdding,
@@ -51,7 +52,7 @@ import {
 // ── Weapon summary used by the tag-input and pill components ─────────────
 type WeaponInfo = Pick<
   Weapon,
-  "id" | "name" | "category" | "damage" | "damage_type" | "properties" | "cost" | "weight" | "mastery"
+  "id" | "name" | "category" | "damage" | "damage_type" | "properties" | "cost" | "weight" | "mastery" | "kind"
 >;
 
 // ── Weapon tag-input component ─────────────────────────────────────────────
@@ -192,6 +193,8 @@ function openWeaponInCompendium(name: string): void {
 
 function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, WeaponInfo> }) {
   const info = statsMap.get(name.toLowerCase());
+  // Range for a ranged / thrown weapon, else melee reach — right after the damage.
+  const distance = info ? weaponDistanceShort(info) : null;
   return (
     <button
       type="button"
@@ -204,6 +207,15 @@ function WeaponPill({ name, statsMap }: { name: string; statsMap: Map<string, We
       {info?.damage && (
         <span className="text-amber-500 font-mono">
           {info.damage}{info.damage_type ? ` ${info.damage_type.slice(0, 1)}` : ""}
+        </span>
+      )}
+      {distance && (
+        <span
+          className="inline-flex items-center gap-0.5 text-[11px] font-semibold rounded px-1 bg-sky-900/50 border border-sky-700/60 text-sky-300"
+          title={info && weaponRange(info) ? "Normal / long range" : "Melee reach"}
+        >
+          <MoveHorizontal className="w-2.5 h-2.5 shrink-0" aria-hidden />
+          {distance}
         </span>
       )}
     </button>
