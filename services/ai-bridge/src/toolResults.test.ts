@@ -4,6 +4,7 @@ import {
   extractToolResultText,
   capCardMarkdown,
   MAX_CARD_MARKDOWN_CHARS,
+  stripUntrustedDelimiters,
 } from "./toolResults";
 
 const MONSTER_MD = `# Goblin
@@ -490,5 +491,174 @@ describe("extractToolResultText", () => {
   it("returns empty string for missing/odd content", () => {
     expect(extractToolResultText(undefined)).toBe("");
     expect(extractToolResultText(42)).toBe("");
+  });
+});
+
+// ── ddb-mcp 3.0.0 output format ─────────────────────────────────────────────
+// 3.0.0 changed the text these parsers scrape: a `Rules: …` provenance line
+// under every title, ruleset tags on names (`Sage [2014]`), model-facing
+// `<untrusted_dndbeyond_content>` delimiter lines around player-written text,
+// attack spells + Unarmed Strike as ACTIONS rows, and off-hand weapons under
+// BONUS ACTIONS. Fixtures below are verbatim excerpts of real 3.0.0 output
+// unless marked synthetic (those follow the row formats in ddb-mcp's
+// tools/character/{weapons,spell-attacks,spells}.js).
+
+// Real `full` sheet (Bard 4) from ddb-mcp 3.0.0, trimmed to the parsed sections.
+const V3_BARD_SHEET = `═══════════════════════════════════════
+<untrusted_dndbeyond_content>
+  Barakas Skamos
+</untrusted_dndbeyond_content>
+  Rules: 2024 · 2014 content: Sage (background), 1 spell, 11 items · third-party: Dark Bargain (feat)
+  Tiefling (Abyssal) | Bard (College of Lore) 4 | Level 4
+  Background: Sage [2014] | XP: 0
+  Inspiration: No
+═══════════════════════════════════════
+
+HP: 23/23   Temp HP: —   Prof Bonus: +2
+AC: 12   Initiative: +3   Speed: 30 ft.
+
+ACTIONS
+• Dragon Slayer Rapier [2014] +2 to hit   1d8+2 piercing + 3d6 piercing (Against Dragons)   reach 5 ft.   Finesse
+• Dagger           +3 to hit   1d4+1 piercing   reach 5 ft. / thrown 20/60 ft.   Finesse, Light, Thrown
+• Light Crossbow   +3 to hit   1d8+1 piercing   range 80/320 ft.   Ammunition, Loading, Range, Two-Handed
+• Unarmed Strike   +1 to hit   0 bludgeoning   reach 5 ft.
+• Poison Spray (cantrip)     +4 to hit   1d12 poison   range 30 ft.
+• Ray of Sickness (1st level) +4 to hit   2d8 poison   range 60 ft.
+
+BONUS ACTIONS
+• Bardic Inspiration   1d6
+
+REACTIONS
+• Opportunity Attack
+• Cutting Words   1d6
+
+SPELLS
+  From Racial Trait: Poison Spray, Ray of Sickness (L1), Thaumaturgy
+  From Item: Web (L2), Web [2014] (L2)
+  ⚠ Duplicate spell grants detected — the following spells are already
+  provided by an earlier source; the extra grant may be a wasted choice:
+  • Ray of Sickness (L1) — already granted by Racial Trait, also in Racial Trait
+
+EQUIPPED`;
+
+// Real ddb_get_monster output (3.0.0), head of the stat block: the Rules line
+// and a renamed-creature note sit between the title and the type subtitle.
+const V3_MONSTER_MD = `# Goblin Warrior
+Rules: 2024 · Monster Manual (2024)
+(2014 name: Goblin · 2024 name: Goblin Warrior)
+*Small Fey, Chaotic Neutral*
+**Source** Monster Manual [mm-2024]
+
+**Armor Class** 15
+**Hit Points** 10 (3d6)
+**Speed** 30 ft.
+
+**Challenge** 1/4 (50 XP)`;
+
+describe("parseToolResult — ddb-mcp 3.0.0 format", () => {
+  describe("real captured sheet (Bard 4)", () => {
+    const ev = parseToolResult("ddb_get_character", V3_BARD_SHEET);
+    it("titles the card with the character name, not the Rules line or a delimiter", () => {
+      expect(ev?.title).toBe("Barakas Skamos");
+    });
+    it("strips ruleset tags from identity fields", () => {
+      expect(ev?.fields).toMatchObject({
+        race: "Tiefling (Abyssal)",
+        class: "Bard (College of Lore) 4",
+        level: "4",
+        background: "Sage",
+        hp: "23/23",
+        ac: "12",
+        initiative: "+3",
+      });
+    });
+    it("keeps only real weapons: no spell rows, no Unarmed Strike, tags stripped", () => {
+      expect(ev?.weapons).toEqual(["Dragon Slayer Rapier", "Dagger", "Light Crossbow"]);
+    });
+    it("strips ruleset tags from spell names so both editions de-dupe to one", () => {
+      expect(ev?.spells).toEqual(["Poison Spray", "Ray of Sickness", "Thaumaturgy", "Web"]);
+    });
+    it("drops the untrusted-content delimiter lines from the DM-facing markdown", () => {
+      expect(ev?.markdown).not.toContain("untrusted_dndbeyond_content");
+      expect(ev?.markdown).toContain("Barakas Skamos");
+      // The Rules line stays visible: the DM still sees which edition it is.
+      expect(ev?.markdown).toContain("Rules: 2024");
+    });
+  });
+
+  it("reads an off-hand weapon from BONUS ACTIONS but not a bonus-action spell (synthetic)", () => {
+    const txt = `═══════════════════════════════════════
+  Test Ranger
+  Rules: 2024
+  Wood Elf | Ranger 5 | Level 5
+═══════════════════════════════════════
+
+ACTIONS
+• Scimitar         +7 to hit   1d6+4 slashing   reach 5 ft.   Finesse, Light, Nick
+• Unarmed Strike   +3 to hit   2 bludgeoning   reach 5 ft.
+
+BONUS ACTIONS
+• Shortsword       +7 to hit   1d6 piercing   reach 5 ft.   Finesse, Light, Vex
+• Hunter's Mark (spell, 1st-level slot)   1d6 bludgeoning/piercing/slashing   range 90 ft.
+• Spiritual Weapon (spell, 2nd-level slot)   +6 to hit   1d8+3 force   range 60 ft.
+
+SPELLS
+  Spells: Hunter's Mark (L1)`;
+    const ev = parseToolResult("ddb_get_character", txt);
+    expect(ev?.title).toBe("Test Ranger");
+    expect(ev?.weapons).toEqual(["Scimitar", "Shortsword"]);
+  });
+
+  it("parses homebrew spells on their own wrapped `(homebrew)` line (synthetic)", () => {
+    const txt = `═══════════════════════════════════════
+  Test Wizard
+  Human | Wizard 3 | Level 3
+═══════════════════════════════════════
+
+SPELLS
+  Cantrips: Fire Bolt
+<untrusted_dndbeyond_content>
+  Cantrips (homebrew): Frost Whisper
+</untrusted_dndbeyond_content>
+  Spells: Shield (L1)
+<untrusted_dndbeyond_content>
+  Spells (homebrew): Arcane Lantern (L2)
+</untrusted_dndbeyond_content>`;
+    const ev = parseToolResult("ddb_get_character", txt);
+    expect(ev?.spells).toEqual(["Fire Bolt", "Frost Whisper", "Shield", "Arcane Lantern"]);
+  });
+
+  it("finds the monster type past the Rules line and the renamed-creature note", () => {
+    const ev = parseToolResult("ddb_get_monster", V3_MONSTER_MD);
+    expect(ev?.title).toBe("Goblin Warrior");
+    expect(ev?.fields).toEqual({
+      type: "Small Fey, Chaotic Neutral",
+      ac: "15",
+      hp: "10 (3d6)",
+      speed: "30 ft.",
+      cr: "1/4 (50 XP)",
+    });
+  });
+
+  it("titles a spell card by its bare name when ddb-mcp tags its edition", () => {
+    const ev = parseToolResult(
+      "ddb_get_spell",
+      "**Web [2014]** — Level 2 Conjuration\nRules: 2014 · Player's Handbook (2014)",
+    );
+    expect(ev?.title).toBe("Web");
+  });
+});
+
+describe("stripUntrustedDelimiters", () => {
+  it("removes delimiter lines and keeps the wrapped content", () => {
+    expect(
+      stripUntrustedDelimiters("a\n<untrusted_dndbeyond_content>\n  b\n</untrusted_dndbeyond_content>\nc"),
+    ).toBe("a\n  b\nc");
+  });
+  it("handles a delimiter on the last line with no trailing newline", () => {
+    expect(stripUntrustedDelimiters("a\n</untrusted_dndbeyond_content>")).toBe("a\n");
+  });
+  it("leaves text without delimiters unchanged", () => {
+    expect(stripUntrustedDelimiters("# Goblin\n*Small humanoid*")).toBe("# Goblin\n*Small humanoid*");
   });
 });

@@ -18,6 +18,9 @@ import {
 const FORBIDDEN_TOOLS = [
   // Write / destructive
   "ddb_login",
+  // Added in ddb-mcp 3.0.0: signs out and wipes the stored session — the
+  // bridge must never be able to log the DM out mid-session.
+  "ddb_logout",
   "ddb_close_browser",
   "ddb_clear_cache",
   "ddb_download_character",

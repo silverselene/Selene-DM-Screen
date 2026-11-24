@@ -15,8 +15,8 @@ export const MCP_SERVER_NAME = "dndbeyond";
  *
  * Deliberately EXCLUDED (never reachable by the chat model), per the epic's
  * non-goals:
- *   Write / destructive : ddb_login, ddb_close_browser, ddb_clear_cache,
- *                         ddb_download_character, ddb_interact
+ *   Write / destructive : ddb_login, ddb_logout, ddb_close_browser,
+ *                         ddb_clear_cache, ddb_download_character, ddb_interact
  *   Browser-driving     : ddb_navigate, ddb_get_page, ddb_search_site
  *   Redundant / verbose : ddb_get_character_raw (use ddb_get_character instead)
  */

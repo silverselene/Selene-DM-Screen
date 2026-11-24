@@ -27,6 +27,14 @@
 # ============================================================================
 minimumReleaseAge: 1440
 
+# TEMPORARY — remove after 2026-11-25T11:26Z (24 h after publish).
+# @iamjameslennon/ddb-mcp is our own first-party package; 3.0.0 was published
+# 2026-11-24T11:26Z and pinned the same day after an end-to-end check in the
+# AI bridge. Scoped to that exact version so any later release still waits
+# out the full window.
+minimumReleaseAgeExclude:
+  - "@iamjameslennon/ddb-mcp@3.0.0"
+
 packages:
   - artifacts/*
   - packages/*
