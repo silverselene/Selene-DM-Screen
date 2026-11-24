@@ -25,6 +25,40 @@ export function extractToolResultText(content: unknown): string {
   return "";
 }
 
+/**
+ * ddb-mcp (≥3.0) wraps text other people wrote (homebrew, character names,
+ * notes, book text) in these delimiters, each on its own line, so the MODEL
+ * treats it as data rather than instructions. They are addressed to the model,
+ * not the DM: the model still receives the raw, wrapped tool result through the
+ * SDK, while the card (DM-facing display + parsing input) drops the delimiter
+ * lines so they neither render as literal tags nor get mistaken for content
+ * (e.g. the character-name line the card title is read from).
+ */
+const UNTRUSTED_DELIMITER_LINE_RE = /^[ \t]*<\/?untrusted_dndbeyond_content>[ \t]*(?:\r?\n|$)/gm;
+
+/** Remove ddb-mcp's untrusted-content delimiter lines. Exported for tests. */
+export function stripUntrustedDelimiters(text: string): string {
+  return text.replace(UNTRUSTED_DELIMITER_LINE_RE, "");
+}
+
+/**
+ * ddb-mcp (≥3.0) labels names with their ruleset — `Sage [2014]`, `Web [2014]`,
+ * `Dark Bargain [third-party]` — and heads each result with a `Rules: …` line.
+ * Neither is part of the name the party roster stores (or the bundled datasets
+ * match against), so both are stripped from extracted names/fields. The full
+ * markdown keeps them: the DM still sees which edition a card came from.
+ */
+const EDITION_TAG_RE = /\s*\[(?:2014|2024|third-party|homebrew|playtest|edition not stated)\]/gi;
+
+function stripEditionTags(name: string): string {
+  return name.replace(EDITION_TAG_RE, "").trim();
+}
+
+/** The `Rules: 2024 · …` provenance line ddb-mcp (≥3.0) puts under a title. */
+function isRulesLine(line: string): boolean {
+  return /^Rules:\s/.test(line.trim());
+}
+
 /** First `# ` heading text, else "". */
 function firstHeading(text: string): string {
   const heading = /^#\s+(.+)$/m.exec(text);
@@ -62,6 +96,9 @@ function parseMonsterCard(text: string): ToolResultEvent {
   // position — the first non-empty line is the title, the next non-empty line
   // is the subtitle — rather than the first italic anywhere in the block, so an
   // italic trait/action name later on can't be mistaken for the creature's type.
+  // ddb-mcp ≥3.0 inserts provenance lines between the two — `Rules: 2024 · …`
+  // and, for a renamed creature, `(2014 name: Goblin · 2024 name: Goblin
+  // Warrior)` — which are skipped rather than ending the search.
   const lines = text.split("\n").map((l) => l.trim());
   let seenTitle = false;
   for (const line of lines) {
@@ -70,6 +107,7 @@ function parseMonsterCard(text: string): ToolResultEvent {
       seenTitle = true;
       continue;
     }
+    if (isRulesLine(line) || /^\(\d{4} name: .*\)$/.test(line)) continue;
     const italic = /^\*([^*\n]+)\*$/.exec(line);
     if (italic && italic[1].trim()) fields.type = italic[1].trim();
     break; // only the first non-empty line after the title is the subtitle
@@ -82,7 +120,7 @@ function parseMonsterCard(text: string): ToolResultEvent {
     type: "tool_result",
     tool: "ddb_get_monster",
     kind: "monster",
-    title: firstHeadingOrLine(text),
+    title: stripEditionTags(firstHeadingOrLine(text)),
     ...(Object.keys(fields).length ? { fields } : {}),
     markdown: text,
   };
@@ -94,21 +132,27 @@ function parseCharacterCard(text: string): ToolResultEvent {
   const idLine = /^\s*(.+?)\s*\|\s*(.+?)\s*\|\s*Level\s+(\d+)\s*$/m.exec(text);
   let title = "";
   if (idLine) {
-    fields.race = idLine[1].trim();
-    fields.class = idLine[2].trim();
+    fields.race = stripEditionTags(idLine[1]);
+    fields.class = stripEditionTags(idLine[2]);
     fields.level = idLine[3].trim();
-    // Name is the non-empty line directly above the identity line (skip box rules).
+    // Name is the non-empty line directly above the identity line (skip box
+    // rules, and the `Rules: …` provenance line ddb-mcp ≥3.0 puts between them).
     const lines = text.split("\n");
     const idx = lines.findIndex((l) => /\|\s*Level\s+\d+\s*$/.test(l));
     for (let i = idx - 1; i >= 0; i--) {
       const t = lines[i].replace(/[═─—]+/g, "").trim();
-      if (t) {
-        title = t;
+      if (t && !isRulesLine(t)) {
+        title = stripEditionTags(t);
         break;
       }
     }
   }
   addField(fields, "background", /^\s*Background:\s*([^\n|]+)/m, text);
+  if (fields.background) {
+    const background = stripEditionTags(fields.background);
+    if (background) fields.background = background;
+    else delete fields.background;
+  }
   addField(fields, "hp", /^\s*HP:\s*(\d+\s*\/\s*\d+)/m, text);
   addField(fields, "ac", /^\s*AC:\s*(\d+)/m, text);
   addField(fields, "initiative", /Initiative:\s*([+\-]?\d+)/, text);
@@ -176,36 +220,71 @@ function sectionBody(text: string, header: string): string {
 export function parseSheetSpells(text: string): string[] {
   const block = sectionBody(text, "SPELLS");
   const names: string[] = [];
-  const re = /^\s*(?:Cantrips|Spells|From [^:\n]+):\s*(.+)$/gm;
+  // ddb-mcp ≥3.0 moves homebrew spells onto their own `Cantrips (homebrew): …`
+  // line (`From <source> (homebrew):` is already covered by `From [^:\n]+`),
+  // and labels a name with its ruleset (`Web [2014] (L2)`) — stripped after
+  // the level annotation so `Web` and `Web [2014]` de-dupe to one entry.
+  const re = /^\s*(?:Cantrips|Spells|From [^:\n]+?)(?: \(homebrew\))?:\s*(.+)$/gm;
   let m: RegExpExecArray | null;
   while ((m = re.exec(block)) !== null) {
     for (const raw of m[1].split(",")) {
-      names.push(raw.replace(/\s*\(L\d+[^)]*\)\s*$/, ""));
+      names.push(stripEditionTags(raw.replace(/\s*\(L\d+[^)]*\)\s*$/, "")));
     }
   }
   return dedupeNames(names);
 }
 
+/** An ACTIONS / BONUS ACTIONS row label that names a spell, not a weapon:
+ *  ddb-mcp ≥3.0 lists attack spells as `Fire Bolt (cantrip)` / `Chromatic Orb
+ *  (1st level)` under ACTIONS and bonus-action/reaction spells as `Hunter's
+ *  Mark (spell, 1st-level slot)`. */
+const SPELL_ROW_LABEL_RE = /\((?:cantrip|\d+(?:st|nd|rd|th) level|spell\b[^)]*)\)$/i;
+
+/** Every character can make an Unarmed Strike; the Party widget already shows
+ *  one on every character (display-only), so it isn't a roster weapon — the
+ *  same as the D&D Beyond JSON import, which never stores it. */
+const UNARMED_STRIKE = "unarmed strike";
+
+/** A weapon attack row carries a reach or range figure after its damage (e.g.
+ *  `reach 5 ft.`, `range 80/320 ft.`); used to tell an off-hand weapon row in
+ *  BONUS ACTIONS from a bonus-action ability that also rolls to hit. */
+const WEAPON_REACH_OR_RANGE_RE = /\b(?:reach|range)\s+\d/;
+
 /**
- * Extract weapon names from a character sheet's ACTIONS block. Each weapon
+ * Extract weapon names from a character sheet's combat rows. Each weapon
  * attack is a `• <name>   <+N> to hit   …` line (name padded to 16 chars, an
- * optional `×N` quantity prefix). Scoped to the ACTIONS section (like
- * parseSheetSpells is to SPELLS) — a `to hit` bullet under BONUS ACTIONS /
- * REACTIONS (e.g. Spiritual Weapon) is an ability, not a weapons-roster entry.
- * `exclude` drops names that are really spells (an attack cantrip in ACTIONS
- * carries a `to hit` too). De-duplicated, order preserved. Best-effort: a
- * summary-only sheet has no ACTIONS block → `[]`.
+ * optional `×N` quantity prefix).
+ *
+ * Main-hand weapons are the ACTIONS rows. ddb-mcp ≥3.0 prints an off-hand
+ * weapon (two-weapon fighting) under BONUS ACTIONS instead, so that section is
+ * read too — but only weapon-shaped rows (a reach/range figure, no spell
+ * label): any other `to hit` bullet there or under REACTIONS (e.g. Spiritual
+ * Weapon) is an ability, not a weapons-roster entry.
+ *
+ * Dropped: spell rows (`exclude` = the sheet's spell names, plus anything
+ * labelled `(cantrip)` / `(Nth level)` / `(spell, …)`) and Unarmed Strike
+ * (see UNARMED_STRIKE). Ruleset tags (`Dragon Slayer Rapier [2014]`) are
+ * stripped. De-duplicated, order preserved — an off-hand weapon of the same
+ * kind as the main-hand one appears once. Best-effort: a summary-only sheet
+ * has no ACTIONS block → `[]`.
  */
 export function parseSheetWeapons(text: string, exclude: readonly string[] = []): string[] {
-  const block = sectionBody(text, "ACTIONS");
   const excluded = new Set(exclude.map((s) => s.toLowerCase()));
+  excluded.add(UNARMED_STRIKE);
   const names: string[] = [];
-  const re = /^\s*•\s*(?:×\d+\s+)?(.+?)\s+[+\-]?\d+\s+to hit\b/gm;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(block)) !== null) {
-    const name = m[1].trim();
-    if (!excluded.has(name.toLowerCase())) names.push(name);
-  }
+  const re = /^\s*•\s*(?:×\d+\s+)?(.+?)\s+[+\-]?\d+\s+to hit\b.*$/gm;
+  const collect = (block: string, weaponShapedOnly: boolean): void => {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(block)) !== null) {
+      if (weaponShapedOnly && !WEAPON_REACH_OR_RANGE_RE.test(m[0])) continue;
+      const label = m[1].trim();
+      if (SPELL_ROW_LABEL_RE.test(label)) continue;
+      const name = stripEditionTags(label);
+      if (name && !excluded.has(name.toLowerCase())) names.push(name);
+    }
+  };
+  collect(sectionBody(text, "ACTIONS"), false);
+  collect(sectionBody(text, "BONUS ACTIONS"), true);
   return dedupeNames(names);
 }
 
@@ -217,7 +296,7 @@ export function parseSheetWeapons(text: string, exclude: readonly string[] = [])
  */
 function parseSpellCard(text: string): ToolResultEvent {
   const m = /^\s*\*\*(.+?)\*\*/m.exec(text);
-  const title = (m ? m[1] : firstHeadingOrLine(text)).trim();
+  const title = stripEditionTags(m ? m[1] : firstHeadingOrLine(text));
   return {
     type: "tool_result",
     tool: "ddb_get_spell",
@@ -265,8 +344,12 @@ export function capCardMarkdown(text: string): string {
  * everything else (including `ddb_character_lookup`, a feature-description
  * lookup) is a generic titled card.
  */
-export function parseToolResult(bareToolName: string, text: string): ToolResultEvent | null {
+export function parseToolResult(bareToolName: string, rawText: string): ToolResultEvent | null {
   if (SUPPRESSED_CARD_TOOLS.has(bareToolName)) return null;
+  // The card is DM-facing: drop the model-facing untrusted-content delimiters
+  // before parsing so they can't be read as a name line (see
+  // stripUntrustedDelimiters). The model's own copy is untouched.
+  const text = stripUntrustedDelimiters(rawText);
   let card: ToolResultEvent;
   if (bareToolName === "ddb_get_monster") card = parseMonsterCard(text);
   else if (bareToolName === "ddb_get_character") card = parseCharacterCard(text);
